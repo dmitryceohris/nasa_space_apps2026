@@ -1,0 +1,10 @@
+{
+  "name": "Barnard's Star",
+  "ra": 269.45207696,
+  "dec": 4.69336497,
+  "pmra_masyr": -801.551,
+  "pmdec_masyr": 10362.394,
+  "parallax_mas": 546.9759,
+  "ref_epoch": 2000.0,
+  "source": "SIMBAD (via CDS Sesame)"
+}

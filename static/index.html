@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SPHEREx blink</title>
+<style>
+body{font:14px system-ui;background:#111;color:#eee;margin:0;padding:16px;max-width:1160px}
+input,select,button{font:inherit;padding:6px;background:#222;color:#eee;border:1px solid #444;border-radius:4px}
+button{cursor:pointer}
+#wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+#stage{position:relative;width:512px;height:512px;margin-top:12px;background:#000}
+#stage img{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+#mark{position:absolute;width:24px;height:24px;margin:-12px 0 0 -12px;border:2px solid #0f0;border-radius:50%;display:none}
+#aladin{width:512px;height:512px;margin-top:12px}
+#info,#warn{margin-top:8px;color:#aaa;min-height:20px}
+#warn{color:#fc6}
+.row{margin-top:8px}
+</style></head><body>
+<h3>SPHEREx blink</h3>
+<div id="presets"></div>
+<div class="row">
+ <input id="q" size="24" placeholder="имя объекта или RA,Dec">
+ FOV <input id="fov" type="number" min="1" max="20" step="0.5" value="5" style="width:60px"> arcmin
+ Det <select id="det"></select>
+ Mode <select id="mode"><option>coadd</option><option>single</option><option>diff</option></select>
+ <button id="go">Load</button>
+</div>
+<div id="info">Введите имя или "RA,Dec" и нажмите Load. Холодный запрос может занять несколько минут.</div>
+<div id="warn"></div>
+<div id="wrap">
+ <div>
+  <div id="stage"><img id="img"><img id="flags" style="display:none"><div id="mark"></div><div id="cands"></div></div>
+  <div class="row"><button id="play">Pause</button> <label><input type="checkbox" id="showflags"> флаги</label> <span id="lbl"></span></div>
+ </div>
+ <div id="side">
+  <div id="aladin"></div>
+  <div class="row">
+   <select id="bg"><option value="P/2MASS/color">2MASS</option><option value="P/allWISE/color">AllWISE</option></select>
+   <label><input type="checkbox" id="gaia" checked> Gaia DR3</label>
+   <label><input type="checkbox" id="catwise" checked> CatWISE2020</label>
+  </div>
+ </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/aladin-lite@3.8.2/dist/aladin.js" charset="utf-8"></script>
+<script>
+const $=id=>document.getElementById(id);
+let frames=[],i=0,timer=null,runId=0,gridPx=[1,1];
+const info=t=>$('info').textContent=t;
+
+// ---- Aladin panel (wrapped: the player must work even if Aladin fails to load) ----
+let aladin=null,cats=[];
+try{
+  A.init.then(()=>{
+    aladin=A.aladin('#aladin',{survey:'P/2MASS/color',fov:0.1});
+    $('bg').onchange=()=>aladin.setImageSurvey($('bg').value);
+    $('gaia').onchange=$('catwise').onchange=refreshCats;
+  });
+}catch(e){console.warn('Aladin unavailable',e)}
+function syncAladin(ra,dec,fovDeg,j2000){
+  if(!aladin)return;
+  aladin.gotoRaDec(ra,dec);aladin.setFoV(Math.max(fovDeg,0.02));
+  cats.forEach(c=>c.hide());cats=[];
+  const pos=`${ra} ${dec}`,mk=(id,name,color,box)=>{const c=A.catalogFromVizieR(id,pos,fovDeg,{name,color,onClick:'showTable'});aladin.addCatalog(c);c.box=box;cats.push(c)};
+  mk('I/355/gaiadr3','Gaia DR3','cyan','gaia');
+  mk('II/365/catwise','CatWISE2020','orange','catwise');
+  if(j2000){const tg=A.catalog({name:'Target J2000',color:'red',sourceSize:14});aladin.addCatalog(tg);
+    tg.addSources([A.source(j2000.ra,j2000.dec,{name:'J2000 position'})]);tg.box='';cats.push(tg)}
+  refreshCats();
+}
+function refreshCats(){cats.forEach(c=>{if(!c.box||$(c.box).checked)c.show();else c.hide()})}
+
+// ---- API ----
+async function api(url){
+  const r=await fetch(url);let b=null;try{b=await r.json()}catch(e){}
+  if(!r.ok)throw new Error(b?.error?.message||`${url} ${r.status}`);
+  return {status:r.status,body:b};
+}
+function qs(){
+  const q=$('q').value.trim(),p=new URLSearchParams();
+  const m=q.split(',');
+  if(m.length==2&&m[0].trim()&&m[1].trim()){p.set('ra',m[0].trim());p.set('dec',m[1].trim())}
+  else if(q)p.set('target',q);
+  p.set('fov',$('fov').value);p.set('det',$('det').value);p.set('mode',$('mode').value);
+  return p;
+}
+async function load(){
+  clearInterval(timer);timer=null;frames=[];$('warn').textContent='';
+  const my=++runId,p=qs();
+  if(![...p.keys()].some(k=>k=='target'||k=='ra')){info('Укажите имя объекта или RA,Dec');return}
+  history.replaceState(null,'','?'+p.toString());
+  let j2000=null;
+  if(p.get('target')){try{const r=await api('/api/resolve?target='+encodeURIComponent(p.get('target')));j2000=r.body}catch(e){info('Ошибка: '+e.message);return}}
+  else j2000={ra:+p.get('ra'),dec:+p.get('dec')};
+  for(;;){
+    let r;try{r=await api('/api/view?'+p.toString())}catch(e){info('Ошибка: '+e.message);return}
+    if(my!=runId)return;
+    const b=r.body;
+    if(r.status==202){info(`${b.stage}: ${b.message||''} ${b.total?`(${b.done}/${b.total})`:''}`);await new Promise(s=>setTimeout(s,2000));continue}
+    if(b.status=='error'){info('Ошибка задачи: '+b.message);return}
+    frames=b.frames;gridPx=[b.grid.width_px,b.grid.height_px];$('warn').textContent=(b.warnings||[]).join(' | ');
+    if(!frames.length){info('Кадров нет.');return}
+    try{syncAladin(b.query.ra,b.query.dec,b.query.fov/60,(isFinite(j2000.ra)&&isFinite(j2000.dec))?j2000:null)}catch(e){console.warn(e)}
+    info(`${frames.length} кадров, det ${b.query.det}, mode ${b.query.mode}. Зелёный круг: предсказанное положение (собственное движение + параллакс). ${b.credits}`);
+    i=0;draw();play();return;
+  }
+}
+function draw(){
+  const f=frames[i%frames.length];if(!f)return;
+  $('img').src=f.image_url;$('flags').src=f.flags_url;
+  const m=$('mark');
+  if(f.predicted_px){m.style.display='block';
+    m.style.left=(f.predicted_px[0]+.5)/gridPx[0]*100+'%';m.style.top=(f.predicted_px[1]+.5)/gridPx[1]*100+'%'}
+  else m.style.display='none';
+  // measured centres: cyan = largest object, yellow = central object (one white ring when they are the same)
+  const cs=$('cands');cs.innerHTML='';
+  (f.measured_candidates||[]).forEach(c=>{
+    const d=document.createElement('div');d.title=c.kind+' ('+c.area_px+' px)';
+    d.style.cssText=`position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border:2px solid ${c.kind=='largest'?'#0ff':c.kind=='central'?'#ff0':'#fff'};border-radius:2px;left:${(c.xy[0]+.5)/gridPx[0]*100}%;top:${(c.xy[1]+.5)/gridPx[1]*100}%`;
+    cs.appendChild(d)});
+  $('lbl').textContent=`${f.label}  ${f.date}  ${f.wave_um?f.wave_um.toFixed(2)+' um':''}  n=${f.n_exp}  (${i%frames.length+1}/${frames.length})`;
+}
+function play(){clearInterval(timer);timer=setInterval(()=>{i=(i+1)%frames.length;draw()},800);$('play').textContent='Pause'}
+$('play').onclick=()=>{if(timer){clearInterval(timer);timer=null;$('play').textContent='Play'}else play()};
+$('showflags').onchange=()=>$('flags').style.display=$('showflags').checked?'block':'none';
+document.onkeydown=e=>{if(!frames.length||e.target.tagName=='INPUT')return;if(e.key=='ArrowRight'){i=(i+1)%frames.length;draw()}if(e.key=='ArrowLeft'){i=(i-1+frames.length)%frames.length;draw()}};
+$('go').onclick=()=>load();
+$('q').onkeydown=e=>{if(e.key=='Enter')load()};
+$('det').innerHTML=[1,2,3,4,5,6].map(d=>`<option${d==3?' selected':''}>${d}</option>`).join('');
+
+// ---- init: presets + URL parameters (?target=&ra=&dec=&fov=&det=&mode=) ----
+(async()=>{
+  try{
+    const t=(await api('/api/targets')).body;
+    $('presets').innerHTML=t.map(x=>`<button data-id="${x.id}" title="${x.note}">${x.name}</button> `).join('');
+    $('presets').onclick=e=>{const b=e.target.closest('button');if(!b)return;const x=t.find(y=>y.id==b.dataset.id);
+      $('q').value=x.name;$('fov').value=x.fov;$('det').value=x.det;load()};
+  }catch(e){console.warn(e)}
+  const u=new URLSearchParams(location.search);
+  if(u.get('fov'))$('fov').value=u.get('fov');
+  if(u.get('det'))$('det').value=u.get('det');
+  if(u.get('mode'))$('mode').value=u.get('mode');
+  if(u.get('ra')&&u.get('dec'))$('q').value=u.get('ra')+','+u.get('dec');
+  else if(u.get('target'))$('q').value=u.get('target');
+  if($('q').value)load();
+})();
+</script></body></html>
