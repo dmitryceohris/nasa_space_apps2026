@@ -1,8 +1,8 @@
 {
   "status": "ready",
   "query": {
-    "ra": 269.4460737572098,
-    "dec": 4.770705068717708,
+    "ra": 269.44607270990747,
+    "dec": 4.770723702300067,
     "fov": 3.0,
     "det": 3,
     "mode": "coadd",
@@ -15,8 +15,8 @@
     "wcs": {
       "CTYPE1": "RA---TAN",
       "CTYPE2": "DEC--TAN",
-      "CRVAL1": 269.4460737572098,
-      "CRVAL2": 4.770705068717708,
+      "CRVAL1": 269.44607270990747,
+      "CRVAL2": 4.770723702300067,
       "CRPIX1": 15.0,
       "CRPIX2": 15.0,
       "CDELT1": -0.0017083333333333334,
@@ -27,34 +27,37 @@
     {
       "index": 0,
       "label": "Эпоха 1",
-      "mjd": 60907.837165000004,
-      "date": "2025-08-20",
+      "mjd": 60908.7776,
+      "date": "2025-08-21",
+      "mjd_span": [
+        60902.8654,
+        60914.4848
+      ],
       "det": 3,
-      "wave_um": 2.0323500000000005,
-      "n_exp": 6,
-      "image_url": "/cache/d0ca3c6d5036de28/f0.png",
-      "flags_url": "/cache/d0ca3c6d5036de28/f0_flags.png",
+      "wave_um": 2.0725,
+      "n_exp": 5,
+      "image_url": "/cache/6eee915f7c97b2db/f0.png",
+      "flags_url": "/cache/6eee915f7c97b2db/f0_flags.png",
       "predicted_px": [
-        13.83923783767779,
-        16.07808813490466
+        13.839,
+        16.075
       ],
       "measured_px": [
-        13.65226346370968,
-        16.078101105754293
+        14.025,
+        15.943
       ],
       "measured_candidates": [
         {
           "kind": "largest+central",
           "xy": [
-            13.65226346370968,
-            16.078101105754293
+            14.025,
+            15.943
           ],
-          "area_px": 145
+          "area_px": 146
         }
       ],
       "obs_ids": [
         "2025W33_2C_0321_1",
-        "2025W33_2C_0386_3",
         "2025W34_1B_0164_3",
         "2025W34_2B_0030_3",
         "2025W35_1A_0008_3",
@@ -64,66 +67,149 @@
     {
       "index": 1,
       "label": "Эпоха 2",
-      "mjd": 61128.266536333336,
-      "date": "2026-03-29",
+      "mjd": 61120.6643,
+      "date": "2026-03-21",
+      "mjd_span": [
+        61118.3099,
+        61124.8949
+      ],
       "det": 3,
-      "wave_um": 2.0323500000000005,
+      "wave_um": 1.9127,
       "n_exp": 6,
-      "image_url": "/cache/d0ca3c6d5036de28/f1.png",
-      "flags_url": "/cache/d0ca3c6d5036de28/f1_flags.png",
+      "image_url": "/cache/6eee915f7c97b2db/f1.png",
+      "flags_url": "/cache/6eee915f7c97b2db/f1_flags.png",
       "predicted_px": [
-        13.91790311314851,
-        15.06122338741625
+        13.915,
+        15.096
       ],
       "measured_px": [
-        13.825088984880608,
-        14.963665098519387
+        13.654,
+        14.958
       ],
       "measured_candidates": [
         {
           "kind": "largest+central",
           "xy": [
-            13.825088984880608,
-            14.963665098519387
+            13.654,
+            14.958
           ],
-          "area_px": 147
+          "area_px": 158
         }
       ],
       "obs_ids": [
         "2026W12_1A_0598_1",
-        "2026W12_1A_0610_2",
-        "2026W12_2A_0324_2",
+        "2026W12_1A_0610_1",
+        "2026W12_1A_0610_4",
+        "2026W12_2A_0520_2",
         "2026W13_1A_0129_1",
-        "2026W13_1A_0549_1",
-        "2026W19_1A_0403_1"
+        "2026W13_1A_0549_1"
       ]
     },
     {
       "index": 2,
       "label": "Эпоха 3",
-      "mjd": 61270.37161,
-      "date": "2026-08-18",
+      "mjd": 61140.0307,
+      "date": "2026-04-10",
+      "mjd_span": [
+        61140.0307,
+        61140.0307
+      ],
       "det": 3,
-      "wave_um": 2.0323500000000005,
-      "n_exp": 6,
-      "image_url": "/cache/d0ca3c6d5036de28/f2.png",
-      "flags_url": "/cache/d0ca3c6d5036de28/f2_flags.png",
+      "wave_um": 1.7932,
+      "n_exp": 1,
+      "image_url": "/cache/6eee915f7c97b2db/f2.png",
+      "flags_url": "/cache/6eee915f7c97b2db/f2_flags.png",
       "predicted_px": [
-        13.96861656362007,
-        14.405677217952425
+        13.922,
+        15.007
       ],
       "measured_px": [
-        14.06242265556265,
-        14.410592753274416
+        13.286,
+        14.303
       ],
       "measured_candidates": [
         {
           "kind": "largest+central",
           "xy": [
-            14.06242265556265,
-            14.410592753274416
+            13.286,
+            14.303
           ],
-          "area_px": 151
+          "area_px": 158
+        }
+      ],
+      "obs_ids": [
+        "2026W15_2A_0137_1"
+      ]
+    },
+    {
+      "index": 3,
+      "label": "Эпоха 4",
+      "mjd": 61164.6763,
+      "date": "2026-05-04",
+      "mjd_span": [
+        61164.1338,
+        61165.0836
+      ],
+      "det": 3,
+      "wave_um": 2.1805,
+      "n_exp": 4,
+      "image_url": "/cache/6eee915f7c97b2db/f3.png",
+      "flags_url": "/cache/6eee915f7c97b2db/f3_flags.png",
+      "predicted_px": [
+        13.931,
+        14.893
+      ],
+      "measured_px": [
+        13.713,
+        14.773
+      ],
+      "measured_candidates": [
+        {
+          "kind": "largest+central",
+          "xy": [
+            13.713,
+            14.773
+          ],
+          "area_px": 168
+        }
+      ],
+      "obs_ids": [
+        "2026W19_1A_0046_1",
+        "2026W19_1A_0216_1",
+        "2026W19_1A_0326_1",
+        "2026W19_1A_0403_1"
+      ]
+    },
+    {
+      "index": 4,
+      "label": "Эпоха 5",
+      "mjd": 61270.3723,
+      "date": "2026-08-18",
+      "mjd_span": [
+        61268.6315,
+        61272.9068
+      ],
+      "det": 3,
+      "wave_um": 1.9969,
+      "n_exp": 6,
+      "image_url": "/cache/6eee915f7c97b2db/f4.png",
+      "flags_url": "/cache/6eee915f7c97b2db/f4_flags.png",
+      "predicted_px": [
+        13.969,
+        14.405
+      ],
+      "measured_px": [
+        14.283,
+        13.98
+      ],
+      "measured_candidates": [
+        {
+          "kind": "largest+central",
+          "xy": [
+            14.283,
+            13.98
+          ],
+          "area_px": 187
         }
       ],
       "obs_ids": [
@@ -137,7 +223,18 @@
     }
   ],
   "trail_url": null,
-  "motion": null,
-  "warnings": [],
+  "motion": {
+    "pm_reference_arcsec_yr": [
+      -0.8016,
+      10.3624
+    ],
+    "source": "Gaia DR3 / gaiadr3.gaia_source",
+    "pm_measured_arcsec_yr": null
+  },
+  "warnings": [
+    "Не удалось получить или обработать 1 из 23 снимков",
+    "λ в точке цели меняется между эпохами (1.79-2.18 мкм): у объектов с крутым спектром остатки в разностном кадре могут быть не движением",
+    "В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)"
+  ],
   "credits": "NASA SPHEREx via NASA/IPAC IRSA"
 }

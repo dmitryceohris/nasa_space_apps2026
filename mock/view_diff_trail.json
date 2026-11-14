@@ -1,0 +1,215 @@
+{
+  "status": "ready",
+  "query": {
+    "ra": 133.75778760470473,
+    "dec": -7.242024493644443,
+    "fov": 3.0,
+    "det": 6,
+    "mode": "diff",
+    "target": "WISE 0855-0714"
+  },
+  "grid": {
+    "width_px": 29,
+    "height_px": 29,
+    "pixel_scale_arcsec": 6.15,
+    "wcs": {
+      "CTYPE1": "RA---TAN",
+      "CTYPE2": "DEC--TAN",
+      "CRVAL1": 133.75778760470473,
+      "CRVAL2": -7.242024493644443,
+      "CRPIX1": 15.0,
+      "CRPIX2": 15.0,
+      "CDELT1": -0.0017083333333333334,
+      "CDELT2": 0.0017083333333333334
+    }
+  },
+  "frames": [
+    {
+      "index": 0,
+      "label": "Эпоха 1",
+      "mjd": 60800.746,
+      "date": "2025-05-05",
+      "mjd_span": [
+        60800.7007,
+        60800.8351
+      ],
+      "det": 6,
+      "wave_um": 4.9436,
+      "n_exp": 3,
+      "image_url": "/cache/f640d60517f96c47/f0.png",
+      "flags_url": "/cache/f640d60517f96c47/f0_flags.png",
+      "predicted_px": [
+        11.985,
+        14.167
+      ],
+      "measured_px": null,
+      "measured_candidates": [
+        {
+          "kind": "largest",
+          "xy": [
+            20.406,
+            10.047
+          ],
+          "area_px": 25
+        },
+        {
+          "kind": "central",
+          "xy": [
+            13.511,
+            13.567
+          ],
+          "area_px": 4
+        }
+      ],
+      "obs_ids": [
+        "2025W19_1B_0116_1",
+        "2025W19_1B_0116_2",
+        "2025W19_1B_0138_1"
+      ]
+    },
+    {
+      "index": 1,
+      "label": "Эпоха 2",
+      "mjd": 60991.5958,
+      "date": "2025-11-12",
+      "mjd_span": [
+        60989.2975,
+        60993.9136
+      ],
+      "det": 6,
+      "wave_um": 4.6931,
+      "n_exp": 6,
+      "image_url": "/cache/f640d60517f96c47/f1.png",
+      "flags_url": "/cache/f640d60517f96c47/f1_flags.png",
+      "predicted_px": [
+        12.675,
+        14.11
+      ],
+      "measured_px": null,
+      "measured_candidates": [
+        {
+          "kind": "largest",
+          "xy": [
+            22.861,
+            3.461
+          ],
+          "area_px": 4
+        },
+        {
+          "kind": "central",
+          "xy": [
+            2.61,
+            16.0
+          ],
+          "area_px": 3
+        }
+      ],
+      "obs_ids": [
+        "2025W46_1A_0075_4",
+        "2025W46_1A_0076_3",
+        "2025W46_1A_0238_1",
+        "2025W46_2A_0214_2",
+        "2025W46_2A_0226_2",
+        "2025W46_2A_0289_1"
+      ]
+    },
+    {
+      "index": 2,
+      "label": "Эпоха 3",
+      "mjd": 61021.5551,
+      "date": "2025-12-12",
+      "mjd_span": [
+        61021.2835,
+        61022.0298
+      ],
+      "det": 6,
+      "wave_um": 4.6905,
+      "n_exp": 3,
+      "image_url": "/cache/f640d60517f96c47/f2.png",
+      "flags_url": "/cache/f640d60517f96c47/f2_flags.png",
+      "predicted_px": [
+        12.783,
+        14.101
+      ],
+      "measured_px": null,
+      "measured_candidates": [
+        {
+          "kind": "largest",
+          "xy": [
+            20.817,
+            1.379
+          ],
+          "area_px": 9
+        },
+        {
+          "kind": "central",
+          "xy": [
+            0.0,
+            15.556
+          ],
+          "area_px": 3
+        }
+      ],
+      "obs_ids": [
+        "2025W50_2A_0232_1",
+        "2025W50_2A_0254_1",
+        "2025W50_2A_0428_1"
+      ]
+    },
+    {
+      "index": 3,
+      "label": "Эпоха 4",
+      "mjd": 61158.9392,
+      "date": "2026-04-28",
+      "mjd_span": [
+        61151.1986,
+        61171.097
+      ],
+      "det": 6,
+      "wave_um": 4.7065,
+      "n_exp": 6,
+      "image_url": "/cache/f640d60517f96c47/f3.png",
+      "flags_url": "/cache/f640d60517f96c47/f3_flags.png",
+      "predicted_px": [
+        13.28,
+        14.06
+      ],
+      "measured_px": [
+        12.963,
+        14.206
+      ],
+      "measured_candidates": [
+        {
+          "kind": "largest+central",
+          "xy": [
+            12.963,
+            14.206
+          ],
+          "area_px": 9
+        }
+      ],
+      "obs_ids": [
+        "2026W17_1B_0227_2",
+        "2026W17_1B_0507_2",
+        "2026W17_1B_0634_3",
+        "2026W17_2A_0609_2",
+        "2026W19_2A_0568_1",
+        "2026W20_1A_0033_1"
+      ]
+    }
+  ],
+  "trail_url": "/cache/f640d60517f96c47/trail.png",
+  "motion": {
+    "pm_reference_arcsec_yr": [
+      -8.1237,
+      0.6732
+    ],
+    "source": "Kirkpatrick et al. (2021), Table 5 / VizieR J/ApJS/253/7/plx",
+    "pm_measured_arcsec_yr": null
+  },
+  "warnings": [
+    "λ в точке цели меняется между эпохами (4.69-4.94 мкм): у объектов с крутым спектром остатки в разностном кадре могут быть не движением",
+    "В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)"
+  ],
+  "credits": "NASA SPHEREx via NASA/IPAC IRSA"
+}
