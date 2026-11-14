@@ -11,9 +11,11 @@
   .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   button.active { background: #2a6; color: #fff; }
   #wrap { position: relative; margin-top: 8px; }
-  #frame { width: 100%; background: #000; display: block; }
-  #flagbox { display: none; position: absolute; left: 45%; top: 45%; width: 10%; height: 10%; background: rgba(255,0,0,.4); }
-  #marker { display: none; position: absolute; width: 24px; height: 24px; border: 2px solid #0f0; border-radius: 50%; transform: translate(-50%,-50%); }
+  #frame { width: 100%; background: #000; display: block; image-rendering: pixelated; }
+  #flagimg { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; }
+  #flagbox { display: none; position: absolute; left: 45%; top: 45%; width: 10%; height: 10%; background: rgba(255,0,0,.4); pointer-events: none; }
+  #marker { display: none; position: absolute; width: 24px; height: 24px; border: 2px solid #0f0; border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; }
+  #measured { display: none; position: absolute; width: 24px; height: 24px; border: 2px dashed #fd0; border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; }
   #info { margin: 6px 0; font-size: 14px; color: #bbb; }
 </style>
 </head>
@@ -26,11 +28,14 @@
     <option value="">Test objects...</option>
     <option value="133.7951,-7.2451">WISE 0855</option>
   </select>
+  <input id="target" placeholder="Object name, e.g. Barnard's Star" size="24">
+</div>
+<div class="row">
   <input id="ra" placeholder="RA (deg)" size="10">
   <input id="dec" placeholder="Dec (deg)" size="10">
 </div>
 <div class="row">
-  <label>Field of view <input id="fov" type="range" min="1" max="30" value="5"></label>
+  <label>Field of view (arcmin) <input id="fov" type="range" min="1" max="20" value="5"></label>
   <label>Detector
     <select id="det"><option>1</option><option>2</option><option>3</option>
     <option>4</option><option>5</option><option>6</option></select>
@@ -43,8 +48,10 @@
 <!-- IMAGE -->
 <div id="wrap">
   <img id="frame">
+  <img id="flagimg">
   <div id="flagbox"></div>
   <div id="marker"></div>
+  <div id="measured"></div>
 </div>
 <div id="info"></div>
 
@@ -58,6 +65,7 @@
 <div class="row">
   <label><input type="checkbox" id="flags"> Show flags</label>
   <label><input type="checkbox" id="mk"> Show expected position</label>
+  <label><input type="checkbox" id="ms"> Show measured position</label>
 </div>
 
 <!-- GRAPHS -->
@@ -69,8 +77,23 @@
 
 <script>
 // ================= DATA LAYER (the only part that changes later) =================
-const API = "http://localhost:8000";
-const USE_MOCK = true;            // set to false when the backend is ready
+const P = new URLSearchParams(location.search);
+const API = P.get("api") || "";
+// Double-click the file (no ?api=) -> fake data. Any server address -> real data.
+const USE_MOCK = P.get("mock") === "1" || (location.protocol === "file:" && !P.get("api"));
+let lastGrid = null;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function apiJson(path) {
+  const r = await fetch(API + path);
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error ? d.error.message : "HTTP " + r.status);
+  return d;
+}
+function center() {
+  return lastGrid ? {ra: lastGrid.wcs.CRVAL1, dec: lastGrid.wcs.CRVAL2}
+                  : {ra: $("ra").value, dec: $("dec").value};
+}
 
 function makeFakeFrame(n, total) {
   const c = document.createElement("canvas");
@@ -82,43 +105,97 @@ function makeFakeFrame(n, total) {
   return c.toDataURL();
 }
 
-async function getFrames(ra, dec, fov, det, mode) {
-  if (!USE_MOCK) {
-    const r = await fetch(`${API}/api/epochs?ra=${ra}&dec=${dec}&fov=${fov}`);
-    return (await r.json());   // TODO: adapt to the real response format
+async function getFrames(ra, dec, fov, det, mode, my) {
+  if (USE_MOCK) {
+    const dates = ["2025-06", "2025-12", "2026-06", "2026-12"];
+    return dates.map((d, i) => ({
+      url: makeFakeFrame(i, dates.length), date: d,
+      expected: [(40 + i * (120 / dates.length) + 3) / 200, (100 + i * 6 + 3) / 200]
+    }));
   }
-  const dates = ["2025-06", "2025-12", "2026-06", "2026-12"];
-  return dates.map((d, i) => ({ url: makeFakeFrame(i, dates.length), date: d }));
+  const q = new URLSearchParams({fov, det, mode});
+  const target = $("target").value.trim();
+  if (ra !== "" && dec !== "") { q.set("ra", ra); q.set("dec", dec); }
+  else if (target) q.set("target", target);
+  else throw new Error("Pick a test object or type a name or RA and Dec");
+  const url = `${API}/api/view?${q}`;
+
+  while (true) {                                   // ask again until the job is ready
+    if (my !== reqId) return null;                 // user changed something: stop
+    const r = await fetch(url);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error ? d.error.message : "HTTP " + r.status);
+    if (r.status === 202) {
+      $("info").textContent = d.message + (d.total ? ` (${d.done}/${d.total})` : "");
+      await sleep(2000);
+      continue;
+    }
+    if (d.status === "error") throw new Error(d.message);
+    if (!d.frames.length) throw new Error((d.warnings || []).join(" ") || "No frames for this area");
+
+    const g = d.grid; lastGrid = g;
+    // API pixels start at 0, so the pixel centre is x + 0.5; convert to fractions 0..1
+    const fr = p => p ? [(p[0] + 0.5) / g.width_px, (p[1] + 0.5) / g.height_px] : null;
+    const out = d.frames.map(f => ({
+      date: f.date, wavelength: f.wave_um.toFixed(2), n_exp: f.n_exp,
+      url: API + f.image_url, flagsUrl: API + f.flags_url,
+      expected: fr(f.predicted_px), measured: fr(f.measured_px),
+      candidates: f.measured_candidates || []
+    }));
+    $("info").textContent = "Loading pictures...";
+    await Promise.all(out.map(f => new Promise(res => {   // preload: no flicker while blinking
+      const im = new Image(); im.onload = im.onerror = res; im.src = f.url;
+    })));
+    return out;
+  }
 }
 
-async function getSpectrum(ra, dec) {
-  if (!USE_MOCK) return (await fetch(`${API}/api/spectrum?ra=${ra}&dec=${dec}`)).json();
+async function getSpectrum() {
+  if (!USE_MOCK) { const c = center(); return apiJson(`/api/spectrum?ra=${c.ra}&dec=${c.dec}`); }
   const wavelength = Array.from({length: 102}, (_, k) => 0.75 + k * (4.25 / 101));
   const flux = wavelength.map(w => 10 + 5 * Math.sin(w * 3) + Math.random());
   return {wavelength, flux};
 }
 
-async function getLightCurve(ra, dec, det) {
-  if (!USE_MOCK) return (await fetch(`${API}/api/lightcurve?ra=${ra}&dec=${dec}&det=${det}`)).json();
+async function getLightCurve() {
+  if (!USE_MOCK) { const c = center(); return apiJson(`/api/lightcurve?ra=${c.ra}&dec=${c.dec}&det=${$("det").value}`); }
   return {dates: ["2025-06", "2025-12", "2026-06", "2026-12"], flux: [10, 14, 9, 13]};
 }
 
 // ================= STATE =================
 const $ = id => document.getElementById(id);
 const MODES = ["single", "coadd", "diff", "trail"];
-let frames = [], i = 0, timer = null, mode = "single", tab = "spec";
+let frames = [], i = 0, timer = null, mode = "coadd", tab = "spec";
 
 // ================= PLAYER =================
+function put(el, p, on) {
+  el.style.display = (on && p) ? "block" : "none";
+  if (p) { el.style.left = (p[0] * 100) + "%"; el.style.top = (p[1] * 100) + "%"; }
+}
 function show(n) {
   if (!frames.length) return;
   i = (n + frames.length) % frames.length;
-  $("frame").src = frames[i].url;
-  $("info").textContent = `Frame ${i + 1} / ${frames.length}  |  ${frames[i].date}  |  mode: ${mode}`;
-  $("flagbox").style.display = $("flags").checked ? "block" : "none";
-  $("marker").style.display = $("mk").checked ? "block" : "none";
-  // fake expected position (matches makeFakeFrame); real one will come from the backend
-  $("marker").style.left = ((40 + i * (120 / frames.length) + 3) / 200 * 100) + "%";
-  $("marker").style.top  = ((100 + i * 6 + 3) / 200 * 100) + "%";
+  const f = frames[i];
+  $("frame").src = f.url;
+  const wl = f.wavelength ? `  |  ${f.wavelength} µm` : "";
+  const ne = f.n_exp ? `  |  ${f.n_exp} exposures` : "";
+  let ms = "";
+  if (f.candidates && !f.measured) {
+    ms = f.candidates.length ? `  |  ${f.candidates.length} candidates, no single centre` : "  |  no source found";
+  }
+  $("info").textContent = `Frame ${i + 1} / ${frames.length}  |  ${f.date}${wl}${ne}  |  mode: ${mode}${ms}`;
+
+  const flagsOn = $("flags").checked;
+  if (f.flagsUrl) {                      // real mask picture from the API
+    $("flagimg").src = f.flagsUrl;
+    $("flagimg").style.display = flagsOn ? "block" : "none";
+    $("flagbox").style.display = "none";
+  } else {                               // fake red box for the demo
+    $("flagimg").style.display = "none";
+    $("flagbox").style.display = flagsOn ? "block" : "none";
+  }
+  put($("marker"), f.expected, $("mk").checked);     // green: where the object should be
+  put($("measured"), f.measured, $("ms").checked);   // yellow dashed: where it was measured
 }
 function toggle() {
   if (timer) { clearInterval(timer); timer = null; $("play").textContent = "Play"; }
@@ -130,6 +207,7 @@ $("next").onclick = () => show(i + 1);
 $("speed").oninput = () => { if (timer) { toggle(); toggle(); } };
 $("flags").onchange = () => show(i);
 $("mk").onchange = () => show(i);
+$("ms").onchange = () => show(i);
 document.addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT") return;      // don't steal arrows while typing
   if (e.key === "ArrowRight") show(i + 1);
@@ -155,50 +233,73 @@ const layout = (xt, yt) => ({
 async function drawPlot() {
   try {
     if (tab === "spec") {
-      const d = await getSpectrum($("ra").value, $("dec").value);
+      const d = await getSpectrum();
       Plotly.newPlot("plot", [{x: d.wavelength, y: d.flux, mode: "lines+markers"}], layout("Wavelength (µm)", "Flux"));
     } else {
-      const d = await getLightCurve($("ra").value, $("dec").value, $("det").value);
+      const d = await getLightCurve();
       Plotly.newPlot("plot", [{x: d.dates, y: d.flux, mode: "lines+markers"}], layout("Date", "Flux"));
     }
-  } catch (err) { $("plot").textContent = "Could not load the graph: " + err; }
+  } catch (err) { $("plot").textContent = "Could not load the graph: " + err.message; }
 }
 $("tab-spec").onclick = () => { tab = "spec"; $("tab-spec").classList.add("active"); $("tab-lc").classList.remove("active"); drawPlot(); };
 $("tab-lc").onclick   = () => { tab = "lc";   $("tab-lc").classList.add("active"); $("tab-spec").classList.remove("active"); drawPlot(); };
 
 // ================= URL SYNC =================
 function syncUrl() {
-  const p = new URLSearchParams({ra: $("ra").value, dec: $("dec").value,
-    fov: $("fov").value, det: $("det").value, mode});
+  const p = new URLSearchParams(location.search);   // keeps ?api= and ?mock=
+  ["target", "ra", "dec"].forEach(k => $(k).value ? p.set(k, $(k).value) : p.delete(k));
+  p.set("fov", $("fov").value); p.set("det", $("det").value); p.set("mode", mode);
   history.replaceState(null, "", "?" + p.toString());
 }
 function loadUrl() {
   const p = new URLSearchParams(location.search);
+  $("target").value = p.get("target") || "";
   $("ra").value = p.get("ra") || "";
   $("dec").value = p.get("dec") || "";
   $("fov").value = p.get("fov") || 5;
-  $("det").value = p.get("det") || 1;
-  mode = MODES.includes(p.get("mode")) ? p.get("mode") : "single";
+  $("det").value = p.get("det") || 3;
+  mode = MODES.includes(p.get("mode")) ? p.get("mode") : "coadd";
 }
 
 // ================= MAIN UPDATE =================
+let reqId = 0;
 async function update() {
+  const my = ++reqId;
   syncUrl();
   $("info").textContent = "Loading...";
   try {
-    frames = await getFrames($("ra").value, $("dec").value, $("fov").value, $("det").value, mode);
-    show(0);
-  } catch (err) { $("info").textContent = "Could not load frames: " + err; }
-  drawPlot();
+    const f = await getFrames($("ra").value, $("dec").value, $("fov").value, $("det").value, mode, my);
+    if (f === null || my !== reqId) return;      // a newer request replaced this one
+    frames = f; show(0);
+  } catch (err) {
+    if (my === reqId) $("info").textContent = "Could not load frames: " + err.message;
+  }
+  if (my === reqId) drawPlot();
 }
 ["ra", "dec", "fov", "det"].forEach(id => $(id).onchange = update);
-$("preset").onchange = () => {
-  if (!$("preset").value) return;
-  const [ra, dec] = $("preset").value.split(",");
-  $("ra").value = ra; $("dec").value = dec; update();
-};
+$("target").onchange = () => { $("ra").value = ""; $("dec").value = ""; update(); };
 
-loadUrl(); highlight(); update();
+$("preset").onchange = () => {
+  const o = $("preset").selectedOptions[0];
+  if (!o.value) return;
+  if (o.dataset.fov) {                     // real presets from /api/targets
+    $("target").value = o.value; $("ra").value = ""; $("dec").value = "";
+    $("fov").value = o.dataset.fov; $("det").value = o.dataset.det;
+  } else {                                 // the demo option with coordinates
+    const [ra, dec] = o.value.split(","); $("ra").value = ra; $("dec").value = dec; $("target").value = "";
+  }
+  update();
+};
+async function loadPresets() {
+  if (USE_MOCK) return;
+  try {
+    const list = await apiJson("/api/targets");
+    $("preset").innerHTML = '<option value="">Test objects...</option>' +
+      list.map(t => `<option value="${t.id}" data-fov="${t.fov}" data-det="${t.det}">${t.name}</option>`).join("");
+  } catch (e) { console.warn("presets failed", e); }
+}
+
+loadPresets(); loadUrl(); highlight(); update();
 </script>
 </body>
 </html>
