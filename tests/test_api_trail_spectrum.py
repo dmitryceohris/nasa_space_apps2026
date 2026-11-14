@@ -115,6 +115,7 @@ def test_spectrum_and_lightcurve(fake_irsa):
     for p in pts:
         by_epoch.setdefault(round(p["mjd"]), []).append(p["flux_ujy"])
     assert np.median(by_epoch[61080]) > 5 * np.median(by_epoch[60900])
+    assert len(s["wavelength"]) == len(s["flux"]) == sum(p["ok"] for p in pts)   # flat arrays for the frontend
     n_before = fake_irsa["cutout"]
 
     lc = c.get(f"/api/lightcurve?ra={RA}&dec={DEC}&per_epoch=1&det=2").json()
@@ -122,6 +123,7 @@ def test_spectrum_and_lightcurve(fake_irsa):
     assert lc["status"] == "ready" and lo < 1.36 < hi
     assert all(lo <= p["wave_um"] <= hi for p in lc["points"])
     assert [p["mjd"] for p in lc["points"]] == sorted(p["mjd"] for p in lc["points"])
+    assert len(lc["dates"]) == len(lc["flux"]) and all(len(d) == 10 for d in lc["dates"])   # "YYYY-MM-DD"
     assert fake_irsa["cutout"] == n_before                        # light curve reuses the spectrum, no downloads
 
 

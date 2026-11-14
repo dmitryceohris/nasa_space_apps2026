@@ -64,8 +64,12 @@ def run(j, ra: float, dec: float, r: dict, per_epoch: int, stage) -> dict:
     bad = sum(1 for p in pts if not p["ok"])
     if bad:
         warnings.append(f"{bad} точек с плохими пикселями в апертуре (часто насыщение яркой звезды): ok=false")
+    good = [p for p in pts if p["ok"] and p["flux_ujy"] is not None]
     return {"status": "ready", "query": {"ra": ra, "dec": dec, "target": r.get("label"), "per_epoch": per_epoch},
             "points": pts, "n_rejected": bad, "warnings": warnings, "credits": CREDITS,
+            # flat arrays of the reliable (ok) points only, the shape frontend/index.html plots directly
+            "wavelength": [p["wave_um"] for p in good], "flux": [p["flux_ujy"] for p in good],
+            "flux_err": [p["err_ujy"] for p in good],
             "bands_um": {str(k): [v[0], v[1]] for k, v in DETECTOR_BANDS.items()}}
 
 
@@ -80,7 +84,13 @@ def window(det: int | None, wave_min: float | None, wave_max: float | None) -> t
 
 
 def lightcurve(spec_result: dict, lo: float, hi: float) -> dict:
+    from astropy.time import Time
+
     pts = light_curve(spec_result["points"], lo, hi)
+    good = [p for p in pts if p["ok"]]
     return {"status": "ready", "query": spec_result.get("query"), "wave_window_um": [lo, hi],
             "points": [{k: p[k] for k in ("mjd", "flux_ujy", "err_ujy", "wave_um", "det", "ok", "flags")} for p in pts],
+            # flat arrays of the reliable (ok) points, the shape frontend/index.html plots directly
+            "dates": [Time(p["mjd"], format="mjd").iso[:10] for p in good], "flux": [p["flux_ujy"] for p in good],
+            "flux_err": [p["err_ujy"] for p in good],
             "credits": CREDITS}
