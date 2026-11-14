@@ -1,0 +1,39 @@
+## API-ревью (Асанали): согласовано с ограничениями
+
+Зона ревью: `api/` (кроме `centroid.py`), `docs/API.md`, Docker. Научная корректность порогов (`ASSOC_PX` и др.), масок и фотометрии этим ревью не оценивается.
+
+### Что проверено (ветка `03c22bc`, база `origin/main afa35ef`)
+
+- Свежий клон, `uv run --offline --locked pytest -q`, три прогона подряд: 259 passed, 1 skipped в каждом (skip: `tests/test_exposure.py:68`, нужен `SPHEREX_LIVE=1`). На `main` для сравнения 225 passed, 1 skipped.
+- `tests/test_api_acceptance.py` и `tests/test_api_public_limits.py`: 10 passed (по 5).
+- Docker: `docker build` проходит, контейнер `healthy`, `/api/health` отвечает 200.
+- Единый формат ошибок: `/api/resolve` без `target` даёт 400 `bad_param`, неизвестный путь даёт 404 `not_found`.
+- Контракт `measurement.target_association` (`no_prediction` / `no_measurement` / `consistent_with_prediction` / `far_from_prediction`), `measurement.offset_from_prediction_px` (округлён до 3 знаков или `null`) и `processing.registration` (`header_wcs_reprojection`, `independently_verified=false`, `astrometric_precision_arcsec=null`) совпадает с `docs/API.md`. Старые поля не удалены; новое условие `measured_px = null` при `far_from_prediction` описано.
+- Фиксированные RA/Dec дают `target_association = no_prediction`, `offset_from_prediction_px = null`, без ошибок (офлайн, синтетические данные через `/api/view`).
+- NaN в JSON не проходит: `cache.write` с NaN падает с `ValueError`, ответ сериализуется с `allow_nan=False`.
+- `cache.VERSION` 8 -> 10 обоснован новыми полями в `result.json`; `result.json` с `v=8` и `v=9` не отдаётся (`cache.read` возвращает `None`), с `v=10` отдаётся.
+- Недоступный архив (IRSA TAP отвечал 502, проверено на контейнере): `/api/view` даёт 202, а через 64–68 с HTTP 200 `{"status":"error","message":"IRSA недоступен (последний код 502)"}`, как в `docs/API.md`. Повторный запрос во время работы задачи возвращает тот же `job_id`. Ошибка не кэшируется: следующий запрос запускает новую задачу (202, новый `job_id`), `result.json` в кэше не появляется. На одну задачу 3 попытки к IRSA с паузами 5 и 10 с (`api/irsa.py:28-47`).
+
+### Замечания к документации (нужно от автора)
+
+1. `docs/API.md` (раздел про `spectral_sampling`, около строки 790): ключ `spectral_sampling.n_samples` не описан, хотя код его отдаёт (`src/processing/frames.py:196-212`). Не описано и то, что без спектральных отсчётов все поля равны `null`, включая `different_channels`.
+2. `spectral_sampling` кривой блеска (`src/processing/pipeline.py:182`) устроен иначе: нет `n_samples`, значения float не округлены. А `docs/API.md` описывает его как то же поле. Нужно либо выровнять состав и округление, либо описать различие.
+
+### Рекомендация (решает автор)
+
+Три новых постоянных предупреждения (`api/jobs.py:278-288`, вместе около 370 символов) добавляются в `warnings` каждого ответа с кадрами: два при любом числе кадров, третье при числе кадров больше одного. Синтетика для сравнения: на `main` `warnings` пустой, в этом PR в нём эти три строки.
+
+`frontend/index.html:175` склеивает все `warnings` в один абзац. Поэтому предупреждения, относящиеся к конкретному ответу, идут после этого текста: «прогноз вне поля» (`jobs.py:322`), «разные каналы» (`:381`), загрязнение центра (`:386`), смаз (`:393`). Они не теряются, но читаются хуже. Отказ загрузок и «одна эпоха» добавляются раньше и стоят перед постоянными.
+
+Предложение: перенести постоянные пояснения в `processing.registration.limitations`, а в `warnings` оставить только то, что относится к конкретному ответу. Frontend уже выводит `processing.*.limitations` в панели Limitations (`index.html:239-240`, `showMethod`); для `registration` нужна одна строка. Изменение описать в `docs/API.md`.
+
+### Не проверено
+
+- Живой `/api/view` (wise0855 до `ready`, фиксированные RA/Dec до `ready`, значения `target_association` и `offset_from_prediction_px` на реальных кадрах). IRSA TAP отвечал 502 и уходил в таймаут с 17:42:27 по 17:52:25 UTC; повторные проверки рабочим TAP-запросом в 17:56:43 и 17:58:52 UTC тоже завершились таймаутом.
+- Прогрев демо-кэша. После подъёма `VERSION` прежний кэш не отдаётся, перед показом его нужно пересобрать (`scripts/prepare_demo_cache.py`). Время прогрева не замерено.
+
+### Порядок слияния
+
+Рекомендую сливать #9 первым как более полный. После обновления PR #8 (`df04803`) в #8 появилось то, чего в #9 нет: значение `target_association = "prediction_outside_field"` (прогноз вне кадра, `measured_px = null`), отказ от повторов к IRSA на 4xx (кроме 408 и 429) в `api/irsa.py`, удаление неиспользуемых `Job.result` и статуса `ready`, а также правки вне API-зоны. Автору #8 предложено перебазироваться на `main` после слияния #9 и оставить в PR только это.
+
+Пробное слияние в свежем клоне симметрично: «#9, затем #8» и «#8, затем #9» дают конфликты в одних и тех же 10 файлах (21 блок), в API-зоне это `api/cache.py` (1), `api/jobs.py` (4), `docs/API.md` (4). Порядок не упрощает разрешение, поэтому первым выбран более полный PR. Если удобнее, prediction_outside_field и обработку 4xx из df04803 можно перенести прямо в #9 до слияния; тогда #8 после #9 нужно будет только закрыть.
