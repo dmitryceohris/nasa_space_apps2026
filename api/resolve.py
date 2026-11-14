@@ -146,7 +146,10 @@ def resolve(name: str) -> dict:
     k = name.strip().lower()
     with _lock:
         if not _mem and _FILE.exists():
-            _mem.update(json.loads(_FILE.read_text(encoding="utf-8")))
+            try:
+                _mem.update(json.loads(_FILE.read_text(encoding="utf-8")))
+            except (OSError, ValueError):  # interrupted write: names are simply asked again
+                log.warning("ignoring unreadable %s", _FILE)
         if k in _mem and _mem[k].get("resolver_version") == 3:
             return _mem[k]
     rec = _parse(name.strip(), _fetch_sesame(name.strip()))
@@ -154,7 +157,9 @@ def resolve(name: str) -> dict:
         raise ApiError(404, "not_found", f"объект {name!r} не найден в SIMBAD")
     with _lock:
         _mem[k] = rec
-        _FILE.write_text(json.dumps(_mem, ensure_ascii=False), encoding="utf-8")
+        tmp = _FILE.with_name(_FILE.name + ".tmp")
+        tmp.write_text(json.dumps(_mem, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(_FILE)
     return rec
 
 

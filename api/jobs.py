@@ -72,7 +72,8 @@ def _poll(k: str, runner):
                 JOBS.pop(old_key)
         j = JOBS.get(k)
         if j is None:
-            if len(JOBS) >= int(os.environ.get("MAX_PENDING_JOBS", "16")):
+            # Only queued/running work counts: retained failures wait to be reported, they hold no worker.
+            if sum(o.status == "running" for o in JOBS.values()) >= int(os.environ.get("MAX_PENDING_JOBS", "16")):
                 raise ApiError(503, "busy", "Очередь запросов заполнена. Повторите запрос позже")
             j = JOBS[k] = Job(k, uuid.uuid4().hex[:8])
             POOL.submit(_run, j, runner)
@@ -403,5 +404,8 @@ def lightcurve_view(p: Params, wave_min: float, wave_max: float):
     res = lightcurve_from_spectrum(payload, wave_min, wave_max)
     res["query"] = payload.get("query")
     res["target_info"] = payload.get("target_info")
-    res["warnings"] = payload.get("warnings", [])
+    res["warnings"] = list(payload.get("warnings", []))  # copy: never mutate the cached spectrum
+    if not res["flux"]:
+        res["warnings"].append(f"В окне {wave_min:.3f}–{wave_max:.3f} мкм нет надёжных точек спектра; "
+                               "задайте wave_min и wave_max шире или на другом детекторе")
     return 200, res
