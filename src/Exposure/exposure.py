@@ -157,6 +157,22 @@ class Exposure:
             return self.image - self.zodi
         return self.image - np.nanmedian(self.image[~self.bad_mask()])
 
+    def clean(self) -> np.ndarray:
+        """Снимок без зодиакального фона, плохие пиксели (HARD_BAD_FLAGS, NaN) = NaN. MJy/sr, float64."""
+        return np.where(self.bad_mask(), np.nan, self.background_subtracted()).astype(np.float64)
+
+    def to_numpy(self) -> np.ndarray:
+        """То же, что clean(): массив, с которым сразу можно работать в numpy."""
+        return self.clean()
+
+    def wave(self, x: float, y: float) -> float:
+        """Центральная длина волны (мкм) в пикселе (x, y) — у SPHEREx она своя в каждой точке кадра (LVF)."""
+        return self.wavelength_at(x, y)[0]
+
+    @property
+    def det(self) -> int:
+        return self.detector
+
     @staticmethod
     def mjysr_to_ujy_per_pixel() -> float:
         """Множитель MJy/sr -> μJy для одного пикселя (умножить на телесный угол пикселя)."""

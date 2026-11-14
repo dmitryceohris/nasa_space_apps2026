@@ -57,6 +57,10 @@ class Target:
         moved = c.apply_space_motion(new_obstime=t)
         return SkyCoord(moved.ra, moved.dec)
 
+    def at(self, time: Time | float) -> SkyCoord:
+        """Короткое имя для coord_at."""
+        return self.coord_at(time)
+
     def to_json(self) -> dict:
         return {"id": self.id, "name": self.name, "ra": self.ra, "dec": self.dec,
                 "pmra_masyr": self.pmra, "pmdec_masyr": self.pmdec,
