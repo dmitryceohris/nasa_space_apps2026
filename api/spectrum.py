@@ -15,6 +15,7 @@ from Exposure import DETECTOR_BANDS, load_exposure
 from processing.photometry import forced_photometry, light_curve
 
 from . import irsa, resolve
+from .errors import ApiError
 
 log = logging.getLogger("spectrum")
 CREDITS = "NASA SPHEREx via NASA/IPAC IRSA"
@@ -49,6 +50,9 @@ def run(j, ra: float, dec: float, r: dict, per_epoch: int, stage) -> dict:
             j.done += 1
             j.message = f"Скачано {j.done} из {j.total} снимков"
 
+    if chosen and failed == len(chosen):
+        raise ApiError(502, "upstream", f"IRSA недоступен: не удалось скачать ни одного снимка из {len(chosen)}")
+
     stage(j, "process", "Фотометрия", 0, len(exps))
     pts = []
     for e in exps:
@@ -65,12 +69,15 @@ def run(j, ra: float, dec: float, r: dict, per_epoch: int, stage) -> dict:
     if bad:
         warnings.append(f"{bad} точек с плохими пикселями в апертуре (часто насыщение яркой звезды): ok=false")
     good = [p for p in pts if p["ok"] and p["flux_ujy"] is not None]
-    return {"status": "ready", "query": {"ra": ra, "dec": dec, "target": r.get("label"), "per_epoch": per_epoch},
-            "points": pts, "n_rejected": bad, "warnings": warnings, "credits": CREDITS,
-            # flat arrays of the reliable (ok) points only, the shape frontend/index.html plots directly
-            "wavelength": [p["wave_um"] for p in good], "flux": [p["flux_ujy"] for p in good],
-            "flux_err": [p["err_ujy"] for p in good],
-            "bands_um": {str(k): [v[0], v[1]] for k, v in DETECTOR_BANDS.items()}}
+    out = {"status": "ready", "query": {"ra": ra, "dec": dec, "target": r.get("label"), "per_epoch": per_epoch},
+           "points": pts, "n_rejected": bad, "warnings": warnings, "credits": CREDITS,
+           # flat arrays of the reliable (ok) points only, the shape frontend/index.html plots directly
+           "wavelength": [p["wave_um"] for p in good], "flux": [p["flux_ujy"] for p in good],
+           "flux_err": [p["err_ujy"] for p in good],
+           "bands_um": {str(k): [v[0], v[1]] for k, v in DETECTOR_BANDS.items()}}
+    if failed > 0:
+        out["_partial"] = True
+    return out
 
 
 def window(det: int | None, wave_min: float | None, wave_max: float | None) -> tuple[float, float]:

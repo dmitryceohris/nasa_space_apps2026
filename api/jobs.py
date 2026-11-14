@@ -7,7 +7,9 @@ PNG files and adds the object centres.
 """
 import io
 import logging
+import os
 import threading
+import time
 import uuid
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -32,6 +34,7 @@ log = logging.getLogger("jobs")
 POOL = ThreadPoolExecutor(max_workers=4)
 JOBS = {}
 LOCK = threading.Lock()
+_active_jobs = 0
 WAVE_SPREAD_WARN = 0.05  # same threshold as src/processing/pipeline.py: lambda change between epochs
 warnings.filterwarnings("ignore")
 
@@ -40,54 +43,123 @@ warnings.filterwarnings("ignore")
 class Job:
     key: str
     id: str
-    status: str = "running"  # running | ready (empty result, not cached) | error
+    status: str = "running"  # running | ready (transient/partial/stale result) | error
     stage: str = "query"  # query -> download -> process -> render
     done: int = 0
     total: int = 0
     message: str = ""
     result: dict | None = None
+    hold_until: float = 0.0
+
+
+def _max_active() -> int:
+    return int(os.environ.get("JOB_MAX_ACTIVE", "16"))
+
+
+def _hold_sec() -> float:
+    return float(os.environ.get("JOB_HOLD_SEC", "2.0"))
+
+
+def _empty_ttl() -> float:
+    return float(os.environ.get("CACHE_EMPTY_TTL", "300.0"))
+
+
+def _retry_after() -> str:
+    return os.environ.get("JOB_RETRY_AFTER", "5")
 
 
 def _get_or_start(k: str, runner):
     """-> (http_status, payload): 200 cached/ready/error, 202 running. Starts runner(job) if nothing runs for k."""
-    res = cache.read(k)
-    if res:
-        return 200, res
+    global _active_jobs
     with LOCK:
+        res = cache.read(k)
+        if res is not None:
+            JOBS.pop(k, None)
+            return 200, res
+        now = time.monotonic()
         j = JOBS.get(k)
+        if j is not None and j.status in ("error", "ready") and now >= j.hold_until:
+            JOBS.pop(k, None)
+            j = None
         if j is None:
+            if _active_jobs >= _max_active():
+                raise ApiError(429, "queue_full", "очередь задач переполнена, повторите запрос позже",
+                               headers={"Retry-After": _retry_after()})
+            _active_jobs += 1
             j = JOBS[k] = Job(k, uuid.uuid4().hex[:8])
-            POOL.submit(_run, j, runner)
-        if j.status == "error":  # drop it so the next request retries
-            JOBS.pop(k)
+            try:
+                POOL.submit(_run, j, runner)
+            except Exception:
+                _active_jobs -= 1
+                JOBS.pop(k, None)
+                raise
+        if j.status == "error":
             return 200, {"status": "error", "message": j.message}
         if j.status == "ready":
-            JOBS.pop(k)
             return 200, j.result
         return 202, {"status": "running", "job_id": j.id, "stage": j.stage, "done": j.done, "total": j.total,
                      "message": j.message}
 
 
+def _stale_fallback(k: str, msg: str) -> dict | None:
+    stale = cache.read(k, allow_stale=True)
+    if stale is None:
+        return None
+    stale = dict(stale)
+    stale["stale"] = True
+    warns = list(stale.get("warnings") or [])
+    w_msg = f"Архив недоступен ({msg}); показан устаревший результат из кэша"
+    if w_msg not in warns:
+        warns.append(w_msg)
+    stale["warnings"] = warns
+    return stale
+
+
 def _run(j, runner):
+    global _active_jobs
     try:
         res = runner(j)
+        partial = bool(res.pop("_partial", False))
         empty = (res.get("frames") is not None and not res["frames"]) or (
             res.get("points") is not None and not res["points"])
-        if not empty:
+        if partial:
+            with LOCK:
+                j.result, j.status, j.hold_until = res, "ready", time.monotonic() + _hold_sec()
+        elif empty:
+            cache.write(j.key, res, ttl=_empty_ttl())
+            with LOCK:
+                JOBS.pop(j.key, None)
+        else:
             cache.write(j.key, res)
             with LOCK:
                 JOBS.pop(j.key, None)
-        else:  # nothing to show: do not cache, new SPHEREx releases may fill it later
-            j.result, j.status = res, "ready"
     except ApiError as e:
-        j.status, j.message = "error", e.message
+        if e.status == 502:
+            stale = _stale_fallback(j.key, e.message)
+            if stale is not None:
+                with LOCK:
+                    j.result, j.status, j.hold_until = stale, "ready", time.monotonic() + _hold_sec()
+                return
+        with LOCK:
+            j.status, j.message, j.hold_until = "error", e.message, time.monotonic() + _hold_sec()
     except Exception as e:
         log.exception("job %s failed", j.key)
-        j.status, j.message = "error", f"внутренняя ошибка: {e}"
+        with LOCK:
+            j.status, j.message, j.hold_until = "error", f"внутренняя ошибка: {e}", time.monotonic() + _hold_sec()
+    finally:
+        with LOCK:
+            _active_jobs = max(0, _active_jobs - 1)
 
 
 def _stage(j, stage, msg="", done=0, total=0):
     j.stage, j.message, j.done, j.total = stage, msg, done, total
+
+
+def _atomic_png(save_fn, target_path, first_arg, *args, **kwargs):
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target_path.parent / f".tmp_{uuid.uuid4().hex[:8]}_{target_path.name}"
+    save_fn(first_arg, tmp, *args, **kwargs)
+    tmp.replace(target_path)
 
 
 # ---------------------------------------------------------------- view
@@ -174,6 +246,9 @@ def _pipeline(j, p, r):
             j.done += 1
             j.message = f"Скачано {j.done} из {j.total} снимков"
 
+    if flat and failed == len(flat):
+        raise ApiError(502, "upstream", f"IRSA недоступен: не удалось скачать ни одного снимка из {len(flat)}")
+
     _stage(j, "process", "Обработка", 0, len(groups))
     frames = []
     for g in groups:
@@ -195,6 +270,7 @@ def _pipeline(j, p, r):
         j.done += 1
     if failed:
         res["warnings"].append(f"Не удалось получить или обработать {failed} из {len(flat)} снимков")
+        res["_partial"] = True
 
     diffs = template = None
     if p.mode in ("diff", "trail"):
@@ -207,17 +283,17 @@ def _pipeline(j, p, r):
 
     _stage(j, "render", "Рисую кадры", 0, len(frames))
     d = cache.CACHE / j.key
-    d.mkdir(exist_ok=True)
+    d.mkdir(parents=True, exist_ok=True)
     vmin, vmax = prender.shared_limits([f.image for f in frames]) if frames else (0.0, 1.0)
     h = shape[0]
     for i, f in enumerate(frames):
         signed = p.mode in ("diff", "trail")  # trail: the frames are the differences, plus one trail.png
         arr = diffs[i] if signed else f.image
         if signed:
-            prender.save_diff(arr, d / f"f{i}.png")
+            _atomic_png(prender.save_diff, d / f"f{i}.png", arr)
         else:
-            prender.save_gray(arr, d / f"f{i}.png", vmin, vmax, saturated=f.contam)
-        prender.save_mask(f.contam, d / f"f{i}_flags.png")  # bad and contaminated pixels; never SOURCE
+            _atomic_png(prender.save_gray, d / f"f{i}.png", arr, vmin, vmax, saturated=f.contam)
+        _atomic_png(prender.save_mask, d / f"f{i}_flags.png", f.contam)  # bad and contaminated pixels; never SOURCE
         pred = None
         if r["motion"]:  # where the object should be on the frame date
             x, y = wcs.world_to_pixel(_sky(r, f.mjd))
@@ -236,7 +312,7 @@ def _pipeline(j, p, r):
             "measured_candidates": cands, "obs_ids": f.obs_ids})
     if p.mode == "trail" and diffs is not None:
         # all epochs on one image, colour = time; residuals are ADDED (see src/processing/frames.trail)
-        prender.save_rgb(trail(diffs), d / "trail.png", background=template, vmin=vmin, vmax=vmax)
+        _atomic_png(prender.save_rgb, d / "trail.png", trail(diffs), background=template, vmin=vmin, vmax=vmax)
         res["trail_url"] = f"/cache/{j.key}/trail.png"
 
     waves = [f.wave_um for f in frames if np.isfinite(f.wave_um)]

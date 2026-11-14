@@ -19,13 +19,13 @@ app = FastAPI(title="SPHEREx blink API", version=VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-def _err(status, code, message):
-    return JSONResponse({"error": {"code": code, "message": message}}, status_code=status)
+def _err(status, code, message, headers=None):
+    return JSONResponse({"error": {"code": code, "message": message}}, status_code=status, headers=headers)
 
 
 @app.exception_handler(ApiError)
 async def _api_error(_: Request, e: ApiError):
-    return _err(e.status, e.code, e.message)
+    return _err(e.status, e.code, e.message, e.headers)
 
 
 @app.exception_handler(Exception)

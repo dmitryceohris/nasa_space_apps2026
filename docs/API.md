@@ -48,6 +48,7 @@
 | 400 | `bad_param` | неверный или отсутствующий параметр | `mock/error_bad_param.json` |
 | 404 | `not_found` | имя не найдено в SIMBAD | `mock/error_not_found.json` |
 | 409 | `not_ready` | экспорт GIF до готовности результата | `mock/error_not_ready.json` |
+| 429 | `queue_full` | очередь задач переполнена (с заголовком `Retry-After`) | — |
 | 502 | `upstream` | IRSA или SIMBAD недоступны после повторов | `mock/error_upstream.json` |
 | 500 | `internal` | всё остальное, трейсбек пишется в лог | `mock/error_internal.json` |
 
@@ -819,6 +820,15 @@
 | `PREWARM` | `1` | `0` отключает прогрев пяти пресетов при старте |
 | `CENTER_MJD` | сегодня | закрепляет дату пересчёта центра (стабильные ключи кэша для демо) |
 | `SPHEREX_TABLES` | `tables/` | папка с локальными таблицами эпох |
+| `PORT` / `HOST` | `8000` / `127.0.0.1` | порт и адрес в `start.sh` и `start_demo.sh` |
+| `JOB_MAX_ACTIVE` | `16` | лимит одновременно выполняющихся и ожидающих задач (сверх лимита — `429 queue_full` + `Retry-After`) |
+| `JOB_RETRY_AFTER` | `5` | значение заголовка `Retry-After` (сек) при `429` |
+| `JOB_HOLD_SEC` | `2.0` | время удержания статуса ошибки/частичного ответа (сек) для дедупликации параллельных поллеров |
+| `CACHE_EMPTY_TTL` | `300.0` | TTL кэша для пустого покрытия (`frames: []` / `points: []`), сек |
+| `IRSA_EXP_TTL` | `86400` | TTL кэша списков экспозиций `exp_*.json`, сек |
+| `IRSA_BASE_URL` | `https://irsa.ipac.caltech.edu` | базовый URL IRSA (можно переопределить для проверки отказа архива) |
+| `IRSA_RETRIES` / `IRSA_BACKOFF` / `IRSA_TIMEOUT` | `6` / `1.0` / `300.0` | число попыток, шаг экспоненциального backoff (`backoff * 2^i` с) и таймаут IRSA |
+| `SESAME_URLS` / `SESAME_RETRIES` / `SESAME_BACKOFF` | 3 зеркала CDS / `2` / `0.5` | URL зеркал SIMBAD Sesame (через запятую), число попыток и шаг экспоненциального backoff |
 
 ## Демо-кэш
 
