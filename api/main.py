@@ -5,6 +5,8 @@ import threading
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -25,6 +27,18 @@ def _err(status, code, message, headers=None):
 @app.exception_handler(ApiError)
 async def _api_error(_: Request, e: ApiError):
     return _err(e.status, e.code, e.message, e.headers)
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_error(_: Request, e: RequestValidationError):
+    bad = ", ".join(str(x["loc"][-1]) for x in e.errors())
+    return _err(400, "bad_param", f"неверный или отсутствующий параметр: {bad}")
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _http_error(_: Request, e: StarletteHTTPException):
+    code = {404: "not_found", 405: "method_not_allowed"}.get(e.status_code, "http_error")
+    return _err(e.status_code, code, str(e.detail), getattr(e, "headers", None))
 
 
 @app.exception_handler(Exception)

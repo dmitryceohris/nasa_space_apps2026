@@ -198,3 +198,10 @@ def test_equivalent_coordinate_requests_reach_same_job(monkeypatch):
     assert seen[0].ra == pytest.approx(seen[1].ra)
     assert seen[0].dec == pytest.approx(seen[1].dec)
     assert (seen[0].fov, seen[0].det, seen[0].mode) == (seen[1].fov, seen[1].det, seen[1].mode)
+
+
+def test_framework_errors_use_the_same_error_shape():
+    r = c.get("/api/resolve")  # missing required query param
+    assert r.status_code == 400 and r.json()["error"]["code"] == "bad_param"
+    r = c.get("/api/no-such-endpoint")
+    assert r.status_code == 404 and r.json()["error"]["code"] == "not_found"
