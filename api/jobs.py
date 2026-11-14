@@ -28,7 +28,7 @@ from processing.frames import BACKGROUND_METHOD, coadd, difference_details, grid
 from processing.pipeline import CREDITS, build_spectrum, lightcurve_from_spectrum
 
 from . import cache, centroid, irsa, render, resolve
-from .errors import ApiError
+from .errors import ApiError, PUBLIC_INTERNAL_MESSAGE
 from .params import Params
 
 log = logging.getLogger("jobs")
@@ -105,7 +105,7 @@ def _run(j, runner):
     except Exception as e:
         log.exception("job %s failed", j.key)
         with LOCK:
-            j.status, j.message, j.finished = "error", f"внутренняя ошибка: {e}", time.monotonic()
+            j.status, j.message, j.finished = "error", PUBLIC_INTERNAL_MESSAGE, time.monotonic()
 
 
 def _stage(j, stage, msg="", done=0, total=0):

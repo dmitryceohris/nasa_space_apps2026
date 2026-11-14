@@ -12,21 +12,41 @@ from fastapi.responses import JSONResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import cache, irsa, jobs, params, resolve
-from .errors import ApiError
+from .errors import ApiError, PUBLIC_INTERNAL_MESSAGE
+from .limits import RequestLimiter
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 VERSION = "0.1.0"
 app = FastAPI(title="SPHEREx blink API", version=VERSION)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-def _err(status, code, message):
-    return JSONResponse({"error": {"code": code, "message": message}}, status_code=status)
+request_limiter = RequestLimiter(int(os.environ.get("API_RATE_LIMIT_PER_MINUTE", "120")))
+_LIMITED_PATHS = {"/api/view", "/api/spectrum", "/api/lightcurve", "/api/resolve", "/api/export.gif"}
+
+
+def _err(status, code, message, headers=None):
+    return JSONResponse({"error": {"code": code, "message": message}}, status_code=status, headers=headers)
+
+
+@app.middleware("http")
+async def limit_api_requests(request: Request, call_next):
+    if request.method != "OPTIONS" and request.url.path.rstrip("/") in _LIMITED_PATHS:
+        peer = request.client.host if request.client else "unknown"
+        retry = request_limiter.retry_after(peer)
+        if retry is not None:
+            return _err(429, "rate_limited", "Слишком много запросов. Повторите позже.",
+                        {"Retry-After": str(retry)})
+    return await call_next(request)
+
+
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
+                   allow_headers=["*"], expose_headers=["Retry-After"])
 
 
 @app.exception_handler(ApiError)
 async def _api_error(_: Request, e: ApiError):
-    return _err(e.status, e.code, e.message)
+    headers = {"Retry-After": "5"} if e.status == 503 else None
+    return _err(e.status, e.code, PUBLIC_INTERNAL_MESSAGE if e.status == 500 else e.message, headers)
 
 
 @app.exception_handler(RequestValidationError)
@@ -38,13 +58,13 @@ async def _validation_error(_: Request, e: RequestValidationError):
 @app.exception_handler(StarletteHTTPException)
 async def _http_error(_: Request, e: StarletteHTTPException):
     code = {404: "not_found", 405: "method_not_allowed"}.get(e.status_code, "http_error")
-    return _err(e.status_code, code, str(e.detail))
+    return _err(e.status_code, code, PUBLIC_INTERNAL_MESSAGE if e.status_code >= 500 else str(e.detail), e.headers)
 
 
 @app.exception_handler(Exception)
 async def _unhandled(_: Request, e: Exception):
     logging.getLogger("api").exception("unhandled")
-    return _err(500, "internal", str(e))
+    return _err(500, "internal", PUBLIC_INTERNAL_MESSAGE, {"Access-Control-Allow-Origin": "*"})
 
 
 def _p(target, ra, dec, fov, det, mode, max_per_epoch):
