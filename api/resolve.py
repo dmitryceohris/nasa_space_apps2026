@@ -1,4 +1,5 @@
 """Target presets (verbatim from the API spec), SIMBAD lookup via CDS Sesame, proper-motion propagation."""
+from contextlib import contextmanager
 import json
 import logging
 import os
@@ -33,23 +34,44 @@ SESAME = [
 ]
 _mem = {}
 _lock = threading.Lock()
+_inflight: dict[str, threading.Lock] = {}
 _FILE = cache.CACHE / "resolve.json"
+
+
+@contextmanager
+def _key_lock(k: str):
+    with _lock:
+        lk = _inflight.setdefault(k, threading.Lock())
+    with lk:
+        yield
+
+
+def _sesame_urls() -> list[str]:
+    env = os.environ.get("SESAME_URLS", "").strip()
+    return [u.strip() for u in env.split(",") if u.strip()] if env else SESAME
 
 
 def _fetch_sesame(name: str) -> list[str]:
     """Raw Sesame answers, one per mirror that responded. Raises 502 if none did."""
     out = []
-    for base in SESAME:
-        t = time.time()
-        try:
-            r = httpx.get(base + name, timeout=30, follow_redirects=True)
-            log.info("GET %s -> %s %.1fs", base + name, r.status_code, time.time() - t)
-            if r.status_code == 200:
-                out.append(r.text)
-                if "%J" in r.text or "Nothing found" in r.text:  # a definite answer: do not ask the other mirrors
+    retries = int(os.environ.get("SESAME_RETRIES", "2"))
+    backoff = float(os.environ.get("SESAME_BACKOFF", "0.5"))
+    timeout = float(os.environ.get("SESAME_TIMEOUT", "30.0"))
+    for base in _sesame_urls():
+        for i in range(max(1, retries)):
+            t = time.time()
+            try:
+                r = httpx.get(base + name, timeout=timeout, follow_redirects=True)
+                log.info("GET %s -> %s %.1fs", base + name, r.status_code, time.time() - t)
+                if r.status_code == 200:
+                    out.append(r.text)
                     break
-        except httpx.HTTPError as e:
-            log.warning("sesame %s failed: %s", base, e)
+            except httpx.HTTPError as e:
+                log.warning("sesame %s failed: %s", base, e)
+            if i + 1 < retries:
+                time.sleep(backoff * (2 ** i))
+        if out and ("%J" in out[-1] or "Nothing found" in out[-1]):  # a definite answer: do not ask the other mirrors
+            break
     if not out:
         raise ApiError(502, "upstream", "SIMBAD/Sesame недоступны")
     return out
@@ -110,18 +132,22 @@ def resolve(name: str) -> dict:
     if rec:
         return rec
     k = name.strip().lower()
-    with _lock:
-        if not _mem and _FILE.exists():
-            _mem.update(json.loads(_FILE.read_text(encoding="utf-8")))
-        if k in _mem:
-            return _mem[k]
-    rec = _parse(name.strip(), _fetch_sesame(name.strip()))
-    if rec is None:
-        raise ApiError(404, "not_found", f"объект {name!r} не найден в SIMBAD")
-    with _lock:
-        _mem[k] = rec
-        _FILE.write_text(json.dumps(_mem, ensure_ascii=False), encoding="utf-8")
-    return rec
+    with _key_lock(k):
+        with _lock:
+            if not _mem and _FILE.exists():
+                try:
+                    _mem.update(json.loads(_FILE.read_text(encoding="utf-8")))
+                except Exception:
+                    pass
+            if k in _mem:
+                return _mem[k]
+        rec = _parse(name.strip(), _fetch_sesame(name.strip()))
+        if rec is None:
+            raise ApiError(404, "not_found", f"объект {name!r} не найден в SIMBAD")
+        with _lock:
+            _mem[k] = rec
+            cache.atomic_write_text(_FILE, json.dumps(_mem, ensure_ascii=False))
+        return rec
 
 
 def propagate(o: dict, mjd: float):
