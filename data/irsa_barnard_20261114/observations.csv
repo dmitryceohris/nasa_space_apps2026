@@ -1,0 +1,4 @@
+obs_id,time_format,time_scale,time,t_min,t_max,detector,data_release,access_url,is_demo
+2025W35_1A_0432_4,mjd,utc,60914.213196455,,,SPHEREx-D1,spherex_dr1,https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/level2/2025W35_1A/l2b-v27-2026-230/1/level2_2025W35_1A_0432_4D1_spx_l2b-v27-2026-230.fits,false
+2025W40_1A_0471_1,mjd,utc,60949.130945182,,,SPHEREx-D1,spherex_dr1,https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/level2/2025W40_1A/l2b-v27-2026-239/1/level2_2025W40_1A_0471_1D1_spx_l2b-v27-2026-239.fits,false
+2026W11_1A_0539_2,mjd,utc,61110.56724568,,,SPHEREx-D1,spherex_dr1,https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/level2/2026W11_1A/l2b-v27-2026-232/1/level2_2026W11_1A_0539_2D1_spx_l2b-v27-2026-232.fits,false

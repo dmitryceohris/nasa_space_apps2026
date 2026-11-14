@@ -1,0 +1,22 @@
+[project]
+name = "barnard-motion"
+version = "0.1.0"
+description = "Offline Gaia DR3 space-motion tutorial for Barnard's Star"
+requires-python = "==3.12.*"
+dependencies = [
+    "astropy==8.0.2",
+    "ipykernel==7.4.0",
+    "jupyterlab==4.6.6",
+    "matplotlib==3.11.2",
+    "nbconvert==7.17.2",
+    "numpy==2.5.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[dependency-groups]
+dev = [
+    "pytest==9.2.0",
+]
