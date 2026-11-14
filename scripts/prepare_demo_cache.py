@@ -48,7 +48,7 @@ def summarize(path, body):
     if path == "/api/spectrum":
         pts = body.get("points", [])
         usable = sum(1 for p in pts if p.get("flux_ujy") is not None)
-        return f"{len(pts)} points, {usable} with flux, {body.get('n_saturated')} flagged"
+        return f"{len(pts)} points, {usable} with flux, {body.get('n_rejected')} flagged"
     return f"{len(body.get('points', []))} points in {body.get('wave_window_um')}"
 
 
