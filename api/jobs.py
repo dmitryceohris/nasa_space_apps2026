@@ -408,7 +408,12 @@ def _spectrum_job(j, r):
     def progress(stage, done, total, msg):
         _stage(j, stage, msg, done, total)
 
-    res = build_spectrum(center, lambda mjd: _sky(r, mjd), progress=progress)
+    from Exposure.irsa import ArchiveQueryError
+
+    try:
+        res = build_spectrum(center, lambda mjd: _sky(r, mjd), progress=progress)
+    except ArchiveQueryError as error:
+        raise ApiError(502, "upstream", str(error)) from error
     res["query"] = {"ra": ra, "dec": dec, "target": r["label"]}
     res["target_info"] = r.get("motion")
     res["center_mjd"] = r.get("center_mjd")

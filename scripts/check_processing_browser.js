@@ -14,6 +14,8 @@ async page => {
       prediction_status:association==='far_from_prediction'?'in_frame':'outside_field',
       quality:{coverage_fraction:.8,status:'limited',verified:false,reasons:[]}});
     return route.fulfill({json:{status:'ready',query:{ra:150,dec:20},grid:{width_px:20,height_px:20},
+      center_mjd:61358,target_info:{name:'Controlled tracked target',source:'synthetic browser fixture',
+        coordinate_model:'geocenter_geometric_icrs_with_catalogue_proper_motion_and_parallax',assumptions:[]},
       frames:[frame(0),frame(1)],warnings:['Registration unverified; different passbands do not prove variability.'],processing:null}});
   });
   await page.route('**/cache/processing-qa.svg', route => route.fulfill({contentType:'image/svg+xml',
