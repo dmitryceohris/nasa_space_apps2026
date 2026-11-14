@@ -39,11 +39,6 @@ def test_unknown_name_is_404(monkeypatch):
     assert r.status_code == 404 and r.json()["error"]["code"] == "not_found"
 
 
-def test_trail_not_implemented():
-    r = c.get("/api/view?ra=10&dec=10&mode=trail")
-    assert r.status_code == 501
-
-
 def test_export_before_ready_is_409():
     assert c.get("/api/export.gif?ra=11.1&dec=22.2&fov=7").status_code == 409
 

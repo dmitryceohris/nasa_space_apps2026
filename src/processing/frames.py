@@ -134,21 +134,27 @@ def difference(frames: list[Frame]) -> tuple[list[np.ndarray], np.ndarray]:
     return out, template
 
 
-def trail(diff_sigma: list[np.ndarray], clip: float = 8.0) -> np.ndarray:
+TRAIL_OLD = (0.25, 0.55, 1.0)   # синий — самая ранняя эпоха
+TRAIL_NEW = (1.0, 0.85, 0.15)   # жёлтый — самая поздняя
+
+
+def trail(diff_sigma: list[np.ndarray], clip: float = 8.0, floor: float = 2.0) -> np.ndarray:
     """«След» движения на одной картинке (RGB 0..1).
 
-    Положительные остатки каждой эпохи окрашиваются цветом по времени (viridis: старые —
-    фиолетовые, новые — жёлтые) с прозрачностью α от 0.35 до 1.0 и СКЛАДЫВАЮТСЯ.
+    Положительные остатки каждой эпохи окрашиваются цветом по времени (старые — синие,
+    средние — зелёные, новые — жёлтые) с прозрачностью α от 0.55 до 1.0 и СКЛАДЫВАЮТСЯ.
     Обычное наложение слоёв не годится: слой с α=1 полностью закрыл бы все предыдущие.
+    Все цвета палитры яркие: у viridis начало почти чёрное, и старая эпоха терялась на тёмном фоне.
     """
-    from matplotlib import colormaps
+    from matplotlib.colors import LinearSegmentedColormap
 
-    cmap = colormaps["viridis"]
+    cmap = LinearSegmentedColormap.from_list("time", [TRAIL_OLD, (0.2, 0.9, 0.55), TRAIL_NEW])
     n = len(diff_sigma)
     rgb = np.zeros((*diff_sigma[0].shape, 3))
     for i, d in enumerate(diff_sigma):
         t = i / max(n - 1, 1)
-        alpha = 0.35 + 0.65 * t
-        pos = np.clip(np.nan_to_num(d), 0, clip) / clip
+        alpha = 0.55 + 0.45 * t
+        # остатки ниже floor σ — шум: без порога каждая эпоха даёт цветную «рябь» по всему кадру
+        pos = np.clip(np.nan_to_num(d) - floor, 0, clip - floor) / (clip - floor)
         rgb += alpha * pos[..., None] * np.array(cmap(t)[:3])
     return np.clip(rgb, 0, 1)

@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import cache, irsa, jobs, params, resolve
+from . import spectrum as spec
 from .errors import ApiError
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
@@ -73,19 +74,32 @@ def export_gif(target: str | None = None, ra: str | None = None, dec: str | None
     return Response(jobs.gif(_p(target, ra, dec, fov, det, mode, max_per_epoch)), media_type="image/gif")
 
 
-# Not implemented: left empty on purpose (nothing is better than a wrong number). Contract: spec sections 3.5, 3.6.
+def _per_epoch(v):
+    return params._num("per_epoch", v, 1, 10, int, 2)
+
+
+# Spec sections 3.5 and 3.6. Same 202 (progress) / 200 (result) polling as /api/view.
 @app.get("/api/spectrum")
-def spectrum(ra: str | None = None, dec: str | None = None, target: str | None = None):
-    # TODO: photometry at the point over all exposures of all 6 detectors -> {"points":[{wave_um,bw_um,flux_ujy,
-    # err_ujy,mjd,det,flags}], "n_rejected"}. Same 202/200 job mechanism as /api/view.
-    raise ApiError(501, "not_implemented", "спектр ещё не реализован")
+def spectrum(ra: str | None = None, dec: str | None = None, target: str | None = None,
+             per_epoch: str | None = None):
+    """Photometry at the point over all exposures of all 6 detectors (per_epoch per epoch and detector)."""
+    status, payload = jobs.spectrum(_p(target, ra, dec, None, None, None, None), _per_epoch(per_epoch))
+    return JSONResponse(payload, status_code=status)
 
 
 @app.get("/api/lightcurve")
-def lightcurve(ra: str | None = None, dec: str | None = None, wave_min: float | None = None,
-               wave_max: float | None = None):
-    # TODO: flux vs time in a narrow wavelength window -> {"wave_window_um":[lo,hi], "points":[{mjd,flux_ujy,err_ujy}]}
-    raise ApiError(501, "not_implemented", "кривая блеска ещё не реализована")
+def lightcurve(ra: str | None = None, dec: str | None = None, target: str | None = None, det: str | None = None,
+               wave_min: str | None = None, wave_max: str | None = None, per_epoch: str | None = None):
+    """Flux vs time in a narrow wavelength window, computed from the /api/spectrum points (no extra downloads)."""
+    d = params._num("det", det, 1, 6, int, 2)
+    lo = params._num("wave_min", wave_min, 0.5, 5.5, float, None)
+    hi = params._num("wave_max", wave_max, 0.5, 5.5, float, None)
+    if (lo is None) != (hi is None) or (lo is not None and lo >= hi):
+        raise ApiError(400, "bad_param", "wave_min и wave_max нужно передавать вместе, wave_min < wave_max")
+    status, payload = jobs.spectrum(_p(target, ra, dec, None, None, None, None), _per_epoch(per_epoch))
+    if status != 200 or payload.get("status") != "ready":
+        return JSONResponse(payload, status_code=status)
+    return spec.lightcurve(payload, *spec.window(d, lo, hi))
 
 
 @app.on_event("startup")
