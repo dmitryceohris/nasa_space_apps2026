@@ -221,3 +221,17 @@ def test_stationary_star_and_changed_background_through_http(synthetic, monkeypa
     assert len(result['frames']) == 2
     assert all(f['measured_px'] is None for f in result['frames'])
     assert result['processing']['difference']['units'] == 'robust_residual_scale'
+
+
+def test_outside_prediction_is_hidden_through_http(synthetic, monkeypatch):
+    from api import resolve
+    from astropy.coordinates import SkyCoord
+    # A controlled moving-target adapter: query centre is covered, old-date prediction is outside.
+    monkeypatch.setattr(resolve, 'for_params', lambda p: {
+        'center':(CENTER.ra.deg,CENTER.dec.deg), 'label':'controlled moving target',
+        'motion':{'name':'controlled moving target','source':'fixture','pmra_masyr':0,'pmdec_masyr':0}})
+    monkeypatch.setattr(jobs, '_sky', lambda r,mjd: SkyCoord(151,20,unit='deg'))
+    result = _http_result('single')
+    assert len(result['frames']) == 2
+    assert all(frame['predicted_px'] is None and frame['prediction_status']=='outside_field' for frame in result['frames'])
+    assert any('маркер скрыт' in warning for warning in result['warnings'])
