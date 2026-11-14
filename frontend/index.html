@@ -100,6 +100,7 @@ async function pollJson(path, isCurrent, onProgress) {
     if (!isCurrent()) return null;
     const r = await fetch(API + path);
     const d = await r.json();
+    if (!isCurrent()) return null;
     if (!r.ok) throw new Error(d.error ? d.error.message : "HTTP " + r.status);
     if (r.status === 202) { onProgress(d); await sleep(2500); continue; }
     if (d.status === "error") throw new Error(d.message);
@@ -151,6 +152,7 @@ async function getFrames(ra, dec, fov, det, mode, my) {
     if (my !== reqId) return null;                 // user changed something: stop
     const r = await fetch(url);
     const d = await r.json();
+    if (my !== reqId) return null;
     if (!r.ok) throw new Error(d.error ? d.error.message : "HTTP " + r.status);
     if (r.status === 202) {
       $("info").textContent = d.message + (d.total ? ` (${d.done}/${d.total})` : "");
@@ -314,7 +316,7 @@ async function drawPlot() {
     const x = tab === "spec" ? d.wavelength : d.dates;
     if (!x || !x.length) {
       const why = tab === "spec"
-        ? "No reliable points: the source is saturated or flagged in every exposure (common for bright stars)."
+        ? "No reliable points are available for this selection."
         : `No reliable points in the window ${(d.wave_window_um || []).join("–")} µm. Try another detector.`;
       plotMessage(why + ((d.warnings || []).length ? " " + d.warnings.join(" ") : ""));
       return;
@@ -351,6 +353,12 @@ function loadUrl() {
 let reqId = 0;
 async function update() {
   const my = ++reqId;
+  ++plotId;
+  clearInterval(timer); timer = null; $("play").textContent = "Play";
+  frames = []; lastGrid = null;
+  $("frame").removeAttribute("src");
+  ["flagimg", "flagbox", "marker", "measured"].forEach(id => $(id).style.display = "none");
+  plotMessage("Loading the graph for the selected object...");
   syncUrl();
   $("info").textContent = "Loading...";
   try {
