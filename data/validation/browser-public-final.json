@@ -1,0 +1,61 @@
+{
+  "provenance": "real API and real PNGs; server cache allowed",
+  "results": [
+    {
+      "target": "barnard",
+      "before": "Frame 1 / 5  |  2025-08-15 (MJD UTC 60902.8654–60902.8654)  |  2.31 µm  |  1 exposures  |  mode: single  |  candidate only: poor quality (masked_pixels, saturated_core, touches_nodata, touches_edge, elongated)",
+      "after": "Frame 2 / 5  |  2026-03-19 (MJD UTC 61118.3099–61118.3099)  |  1.79 µm  |  1 exposures  |  mode: single  |  candidate only: poor quality (masked_pixels, saturated_core, touches_nodata, elongated)",
+      "loaded": 59,
+      "warnings": "λ в точке цели меняется между эпохами (1.65-2.31 мкм): у объектов с крутым спектром остатки в разностном кадре могут быть не движением В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)"
+    },
+    {
+      "target": "epsindib",
+      "before": "Frame 1 / 7  |  2025-04-29 (MJD UTC 60794.0655–60794.0655)  |  1.65 µm  |  1 exposures  |  mode: single  |  ambiguous: самый большой и центральный объекты различаются",
+      "after": "Frame 2 / 7  |  2025-05-20 (MJD UTC 60815.1319–60815.1319)  |  1.76 µm  |  1 exposures  |  mode: single  |  ambiguous: самый большой и центральный объекты различаются",
+      "loaded": 59,
+      "warnings": "λ в точке цели меняется между эпохами (1.64-1.85 мкм): у объектов с крутым спектром остатки в разностном кадре могут быть не движением"
+    },
+    {
+      "target": "wise0855",
+      "before": "Frame 1 / 4  |  2025-05-05 (MJD UTC 60800.7007–60800.7007)  |  4.97 µm  |  1 exposures  |  mode: single  |  ambiguous: самый большой и центральный объекты различаются",
+      "after": "Frame 2 / 4  |  2025-11-10 (MJD UTC 60989.2975–60989.2975)  |  4.42 µm  |  1 exposures  |  mode: single  |  centroid candidate: fair ±0.08 px (elongated)",
+      "loaded": 59,
+      "warnings": "λ в точке цели меняется между эпохами (4.42-4.97 мкм): у объектов с крутым спектром остатки в разностном кадре могут быть не движением"
+    },
+    {
+      "target": "rwaur",
+      "before": "Frame 1 / 3  |  2025-09-11 (MJD UTC 60929.6781–60929.6781)  |  2.35 µm  |  1 exposures  |  mode: single  |  candidate only: poor quality (masked_pixels, saturated_core, touches_nodata)",
+      "after": "Frame 2 / 3  |  2026-02-20 (MJD UTC 61091.7203–61091.7203)  |  1.94 µm  |  1 exposures  |  mode: single  |  centroid candidate: fair ±0.01 px (masked_pixels, saturated_core)",
+      "loaded": 59,
+      "warnings": "λ в точке цели меняется между эпохами (1.94-2.35 мкм): у объектов с крутым спектром остатки в разностном кадре могут быть не движением В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)"
+    },
+    {
+      "target": "rdra",
+      "before": "Frame 1 / 11  |  2025-04-24 (MJD UTC 60789.8803–60789.8803)  |  1.66 µm  |  1 exposures  |  mode: single  |  candidate only: poor quality (masked_pixels, saturated_core, touches_nodata)",
+      "after": "Frame 2 / 11  |  2025-05-16 (MJD UTC 60811.9565–60811.9565)  |  1.66 µm  |  1 exposures  |  mode: single  |  candidate only: poor quality (masked_pixels, saturated_core, touches_nodata)",
+      "loaded": 59,
+      "warnings": "λ в точке цели меняется между эпохами (1.63-2.40 мкм): у объектов с крутым спектром остатки в разностном кадре могут быть не движением В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)"
+    },
+    {
+      "target": "Proxima Cen",
+      "before": "Frame 1 / 4  |  2025-07-22 (MJD UTC 60878.4934–60878.4934)  |  1.71 µm  |  1 exposures  |  mode: single  |  ambiguous: самый большой и центральный объекты различаются",
+      "after": "Frame 2 / 4  |  2025-08-23 (MJD UTC 60910.222–60910.222)  |  1.71 µm  |  1 exposures  |  mode: single  |  ambiguous: самый большой и центральный объекты различаются",
+      "loaded": 59,
+      "warnings": ""
+    },
+    {
+      "target": "61 Cyg A",
+      "before": "Frame 1 / 5  |  2025-05-25 (MJD UTC 60820.1708–60820.1708)  |  1.71 µm  |  1 exposures  |  mode: single  |  ambiguous: самый большой и центральный объекты различаются",
+      "after": "Frame 2 / 5  |  2025-06-16 (MJD UTC 60842.0471–60842.0471)  |  2.23 µm  |  1 exposures  |  mode: single  |  ambiguous: самый большой и центральный объекты различаются",
+      "loaded": 59,
+      "warnings": "λ в точке цели меняется между эпохами (1.68-2.23 мкм): у объектов с крутым спектром остатки в разностном кадре могут быть не движением"
+    },
+    {
+      "target": "Vega",
+      "before": "Frame 1 / 4  |  2025-08-28 (MJD UTC 60915.5635–60915.5635)  |  1.91 µm  |  1 exposures  |  mode: single  |  candidate only: poor quality (masked_pixels, touches_nodata)",
+      "after": "Frame 2 / 4  |  2026-04-05 (MJD UTC 61135.2197–61135.2197)  |  2.15 µm  |  1 exposures  |  mode: single  |  candidate only: poor quality (masked_pixels, saturated_core, touches_nodata)",
+      "loaded": 59,
+      "warnings": "λ в точке цели меняется между эпохами (1.88-2.15 мкм): у объектов с крутым спектром остатки в разностном кадре могут быть не движением В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)"
+    }
+  ]
+}
