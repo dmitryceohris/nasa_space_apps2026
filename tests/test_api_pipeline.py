@@ -61,15 +61,16 @@ def test_one_object_gives_one_centre_at_the_target(synthetic):
     assert f["predicted_px"] is None  # explicit coordinates: no proper motion, nothing predicted
 
 
-def test_diff_mode_gives_trail_and_signed_frames(synthetic):
+def test_diff_mode_has_signed_frames_and_no_trail(synthetic):
     res, _ = run("diff")
+    assert len(res["frames"]) == 2 and res["trail_url"] is None
+
+
+def test_trail_mode_gives_difference_frames_plus_trail_png(synthetic):
+    res, _ = run("trail")
     assert len(res["frames"]) == 2 and res["trail_url"]
     assert (synthetic / res["trail_url"].removeprefix("/cache/")).exists()
-
-
-def test_trail_mode_shows_coadd_frames_plus_trail(synthetic):
-    res, _ = run("trail")
-    assert len(res["frames"]) == 2 and res["trail_url"] and res["frames"][0]["image_url"].endswith("f0.png")
+    assert (synthetic / res["frames"][0]["image_url"].removeprefix("/cache/")).exists()
 
 
 def test_single_mode_uses_one_exposure_per_epoch(synthetic):

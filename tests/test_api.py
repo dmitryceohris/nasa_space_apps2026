@@ -1,14 +1,12 @@
 """Offline tests: no IRSA/SIMBAD traffic. Run: .venv/bin/python -m pytest -q tests"""
 import os
-import time
 
 os.environ["PREWARM"] = "0"  # before importing the app
 
 import pytest
 from fastapi.testclient import TestClient
 
-from Exposure import DETECTOR_BANDS
-from api import cache, irsa, jobs, render, resolve
+from api import irsa, render, resolve
 from api.main import app
 from api.params import parse
 
@@ -62,39 +60,6 @@ def test_spectrum_needs_target_or_coords():
 def test_lightcurve_bad_window(q):
     r = c.get("/api/lightcurve?ra=10&dec=10&" + q)
     assert r.status_code == 400 and r.json()["error"]["code"] == "bad_param"
-
-
-def test_default_window_is_5_percent_around_band_middle():
-    lo, hi, _ = DETECTOR_BANDS[3]
-    wlo, whi = jobs.default_window(3)
-    assert wlo == pytest.approx((lo + hi) / 2 * 0.95) and whi == pytest.approx((lo + hi) / 2 * 1.05)
-
-
-def test_spectrum_job_202_then_200_and_lightcurve(monkeypatch, tmp_path):
-    """build_spectrum is replaced by a fake: only the job mechanism and the light-curve window are tested."""
-    monkeypatch.setattr(cache, "CACHE", tmp_path)
-
-    def pt(w, mjd):
-        return {"wave_um": w, "bw_um": 0.02, "flux_ujy": 5.0, "err_ujy": 1.0, "mjd": mjd, "det": 3,
-                "obs_id": "a", "ok": True, "flags": []}
-
-    def fake_build(center, coord_at, per_epoch=2, progress=None):
-        progress("download", 1, 2, "fake")
-        time.sleep(0.2)
-        return {"status": "ready", "points": [pt(2.0, 60000.0), pt(2.1, 60100.0), pt(4.9, 60200.0)],
-                "n_points": 3, "n_saturated": 0, "credits": "c", "bands": {}}
-
-    monkeypatch.setattr(jobs, "build_spectrum", fake_build)
-    first = c.get("/api/spectrum?ra=33.3&dec=44.4")
-    assert first.status_code == 202 and first.json()["status"] == "running"
-    for _ in range(100):
-        r = c.get("/api/spectrum?ra=33.3&dec=44.4")
-        if r.status_code == 200:
-            break
-        time.sleep(0.05)
-    assert r.status_code == 200 and r.json()["n_points"] == 3 and "v" not in r.json()
-    lc = c.get("/api/lightcurve?ra=33.3&dec=44.4&wave_min=1.9&wave_max=2.2").json()
-    assert lc["wave_window_um"] == [1.9, 2.2] and [p["mjd"] for p in lc["points"]] == [60000.0, 60100.0]
 
 
 def test_export_before_ready_is_409():

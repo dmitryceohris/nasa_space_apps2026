@@ -17,13 +17,14 @@ import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
-from Exposure import DETECTOR_BANDS, load_exposure
+from Exposure import load_exposure
 from processing import render as prender
 from processing.epochs import select_per_epoch
 from processing.frames import coadd, difference, grid_header_json, make_grid, trail
-from processing.pipeline import CREDITS, build_spectrum, lightcurve_from_spectrum
+from processing.pipeline import CREDITS
 
 from . import cache, centroid, irsa, render, resolve
+from . import spectrum as spec
 from .errors import ApiError
 from .params import Params
 
@@ -47,7 +48,7 @@ class Job:
     result: dict | None = None
 
 
-def _poll(k: str, runner):
+def _get_or_start(k: str, runner):
     """-> (http_status, payload): 200 cached/ready/error, 202 running. Starts runner(job) if nothing runs for k."""
     res = cache.read(k)
     if res:
@@ -97,7 +98,7 @@ def _view_key(p: Params, r: dict) -> str:
 
 def view(p: Params):
     r = resolve.for_params(p)
-    return _poll(_view_key(p, r), lambda j: _pipeline(j, p, r))
+    return _get_or_start(_view_key(p, r), lambda j: _pipeline(j, p, r))
 
 
 def cached_result(p: Params):
@@ -210,7 +211,7 @@ def _pipeline(j, p, r):
     vmin, vmax = prender.shared_limits([f.image for f in frames]) if frames else (0.0, 1.0)
     h = shape[0]
     for i, f in enumerate(frames):
-        signed = p.mode == "diff"
+        signed = p.mode in ("diff", "trail")  # trail: the frames are the differences, plus one trail.png
         arr = diffs[i] if signed else f.image
         if signed:
             prender.save_diff(arr, d / f"f{i}.png")
@@ -233,7 +234,8 @@ def _pipeline(j, p, r):
             # and the central object differ (both are then listed in measured_candidates, nothing is guessed).
             "measured_px": cands[0]["xy"] if len(cands) == 1 else None,
             "measured_candidates": cands, "obs_ids": f.obs_ids})
-    if diffs is not None:
+    if p.mode == "trail" and diffs is not None:
+        # all epochs on one image, colour = time; residuals are ADDED (see src/processing/frames.trail)
         prender.save_rgb(trail(diffs), d / "trail.png", background=template, vmin=vmin, vmax=vmax)
         res["trail_url"] = f"/cache/{j.key}/trail.png"
 
@@ -247,37 +249,10 @@ def _pipeline(j, p, r):
     return res
 
 
-# ---------------------------------------------------------------- spectrum and light curve
-def _spectrum_job(j, r):
-    ra, dec = r["center"]
-    center = SkyCoord(ra * u.deg, dec * u.deg)
-
-    def progress(stage, done, total, msg):
-        _stage(j, stage, msg, done, total)
-
-    res = build_spectrum(center, lambda mjd: _sky(r, mjd), progress=progress)
-    res["query"] = {"ra": ra, "dec": dec, "target": r["label"]}
-    return res
-
-
-def spectrum_view(p: Params):
-    """Only target / ra+dec of p are used."""
+# ---------------------------------------------------------------- spectrum (api/spectrum.py)
+def spectrum(p: Params, per_epoch: int):
+    """Spectrum at a point over all 6 detectors; same 202/200 mechanism as view(). Uses src/processing."""
     r = resolve.for_params(p)
-    return _poll(cache.key_spectrum(*r["center"]), lambda j: _spectrum_job(j, r))
-
-
-def default_window(det: int):
-    """+-5% around the middle of the detector band (spec 3.6)."""
-    lo, hi, _ = DETECTOR_BANDS[det]
-    mid = (lo + hi) / 2
-    return mid * 0.95, mid * 1.05
-
-
-def lightcurve_view(p: Params, wave_min: float, wave_max: float):
-    """Light curve = a window of the cached spectrum; while the spectrum job runs the client gets its 202."""
-    status, payload = spectrum_view(p)
-    if status != 200 or payload.get("status") != "ready":
-        return status, payload
-    res = lightcurve_from_spectrum(payload, wave_min, wave_max)
-    res["query"] = payload.get("query")
-    return 200, res
+    ra, dec = r["center"]
+    k = cache.key(ra, dec, 0, 0, "spectrum", per_epoch)
+    return _get_or_start(k, lambda j: spec.run(j, ra, dec, r, per_epoch, _stage))
