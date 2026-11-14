@@ -6,6 +6,12 @@
       "runtimeExecutable": "uv",
       "runtimeArgs": ["run", "--locked", "uvicorn", "api.main:app", "--port", "8000"],
       "port": 8000
+    },
+    {
+      "name": "spherex-viewer-8010",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "--locked", "uvicorn", "api.main:app", "--port", "8010"],
+      "port": 8010
     }
   ]
 }

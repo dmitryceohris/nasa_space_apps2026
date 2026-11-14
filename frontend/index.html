@@ -7,7 +7,7 @@
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <style>
   body { font-family: sans-serif; background: #111; color: #eee; max-width: 560px; margin: 16px auto; padding: 0 12px; }
-  input, select, button { padding: 8px; margin: 3px 0; font-size: 16px; }
+  input, select, button { padding: 8px; margin: 3px 0; font-size: 16px; max-width: 100%; box-sizing: border-box; }
   .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   button.active { background: #2a6; color: #fff; }
   #wrap { position: relative; margin-top: 8px; }
@@ -90,6 +90,31 @@ async function apiJson(path) {
   if (!r.ok) throw new Error(d.error ? d.error.message : "HTTP " + r.status);
   return d;
 }
+// Long jobs (/api/spectrum, /api/lightcurve) answer 202 with progress until the result is ready:
+// ask the same URL again. Returns null if isCurrent() turns false (the user asked for something else).
+async function pollJson(path, isCurrent, onProgress) {
+  while (true) {
+    if (!isCurrent()) return null;
+    const r = await fetch(API + path);
+    const d = await r.json();
+    if (!isCurrent()) return null;
+    if (!r.ok) throw new Error(d.error ? d.error.message : "HTTP " + r.status);
+    if (r.status === 202) { onProgress(d); await sleep(2500); continue; }
+    if (d.status === "error") throw new Error(d.message);
+    return d;
+  }
+}
+// What the graphs are about: a named object (the API then follows its proper motion), else the coordinates.
+const PER_EPOCH = 3;  // exposures per epoch and detector: one job serves both graphs; more = more light-curve points
+function graphQuery() {
+  const t = $("target").value.trim(), ra = $("ra").value.trim(), dec = $("dec").value.trim();
+  const q = new URLSearchParams({per_epoch: PER_EPOCH});
+  if (ra && dec) { q.set("ra", ra); q.set("dec", dec); }
+  else if (t) q.set("target", t);
+  else if (lastGrid) { const c = center(); q.set("ra", c.ra); q.set("dec", c.dec); }
+  else throw new Error("pick a test object or type a name or RA and Dec");   // nothing chosen yet: no request
+  return q;
+}
 function center() {
   return lastGrid ? {ra: lastGrid.wcs.CRVAL1, dec: lastGrid.wcs.CRVAL2}
                   : {ra: $("ra").value, dec: $("dec").value};
@@ -124,6 +149,7 @@ async function getFrames(ra, dec, fov, det, mode, my) {
     if (my !== reqId) return null;                 // user changed something: stop
     const r = await fetch(url);
     const d = await r.json();
+    if (my !== reqId) return null;
     if (!r.ok) throw new Error(d.error ? d.error.message : "HTTP " + r.status);
     if (r.status === 202) {
       $("info").textContent = d.message + (d.total ? ` (${d.done}/${d.total})` : "");
@@ -136,12 +162,17 @@ async function getFrames(ra, dec, fov, det, mode, my) {
     const g = d.grid; lastGrid = g;
     // API pixels start at 0, so the pixel centre is x + 0.5; convert to fractions 0..1
     const fr = p => p ? [(p[0] + 0.5) / g.width_px, (p[1] + 0.5) / g.height_px] : null;
-    const out = d.frames.map(f => ({
-      date: f.date, wavelength: f.wave_um.toFixed(2), n_exp: f.n_exp,
+    let out = d.frames.map(f => ({
+      date: f.date, wavelength: f.wave_um != null ? f.wave_um.toFixed(2) : "", n_exp: f.n_exp,
       url: API + f.image_url, flagsUrl: API + f.flags_url,
       expected: fr(f.predicted_px), measured: fr(f.measured_px),
       candidates: f.measured_candidates || []
     }));
+    if (mode === "trail" && d.trail_url) {
+      // one picture with every epoch: residuals coloured by time (blue = first, yellow = last)
+      const n = out.length;
+      out = [{date: `${out[0].date} → ${out[n - 1].date}`, url: API + d.trail_url, trail: true, epochs: n}];
+    }
     $("info").textContent = "Loading pictures...";
     await Promise.all(out.map(f => new Promise(res => {   // preload: no flicker while blinking
       const im = new Image(); im.onload = im.onerror = res; im.src = f.url;
@@ -150,15 +181,18 @@ async function getFrames(ra, dec, fov, det, mode, my) {
   }
 }
 
-async function getSpectrum() {
-  if (!USE_MOCK) { const c = center(); return apiJson(`/api/spectrum?ra=${c.ra}&dec=${c.dec}`); }
+async function getSpectrum(isCurrent, onProgress) {
+  if (!USE_MOCK) return pollJson(`/api/spectrum?${graphQuery()}`, isCurrent, onProgress);
   const wavelength = Array.from({length: 102}, (_, k) => 0.75 + k * (4.25 / 101));
   const flux = wavelength.map(w => 10 + 5 * Math.sin(w * 3) + Math.random());
   return {wavelength, flux};
 }
 
-async function getLightCurve() {
-  if (!USE_MOCK) { const c = center(); return apiJson(`/api/lightcurve?ra=${c.ra}&dec=${c.dec}&det=${$("det").value}`); }
+async function getLightCurve(isCurrent, onProgress) {
+  if (!USE_MOCK) {
+    const q = graphQuery(); q.set("det", $("det").value);
+    return pollJson(`/api/lightcurve?${q}`, isCurrent, onProgress);
+  }
   return {dates: ["2025-06", "2025-12", "2026-06", "2026-12"], flux: [10, 14, 9, 13]};
 }
 
@@ -177,6 +211,11 @@ function show(n) {
   i = (n + frames.length) % frames.length;
   const f = frames[i];
   $("frame").src = f.url;
+  if (f.trail) {                       // trail: a single picture, no per-epoch flags or markers
+    $("info").textContent = `All ${f.epochs} epochs on one picture  |  ${f.date}  |  blue = earliest, green = middle, yellow = latest`;
+    ["flagimg", "flagbox", "marker", "measured"].forEach(id => $(id).style.display = "none");
+    return;
+  }
   const wl = f.wavelength ? `  |  ${f.wavelength} µm` : "";
   const ne = f.n_exp ? `  |  ${f.n_exp} exposures` : "";
   let ms = "";
@@ -230,16 +269,33 @@ const layout = (xt, yt) => ({
   xaxis: {title: xt}, yaxis: {title: yt},
   paper_bgcolor: "#111", plot_bgcolor: "#111", font: {color: "#eee"}, margin: {t: 20}
 });
+let plotId = 0;
+function plotMessage(text) { Plotly.purge("plot"); $("plot").textContent = text; }
 async function drawPlot() {
+  const my = ++plotId;                               // a newer graph request cancels this one
+  const isCurrent = () => my === plotId;
+  const onProgress = d => isCurrent() &&
+    plotMessage(`Building the ${tab === "spec" ? "spectrum" : "light curve"}: ${d.message || "working"}` +
+                (d.total ? ` (${d.done}/${d.total})` : "") + ". This takes a few minutes the first time.");
+  plotMessage("Loading the graph...");
   try {
-    if (tab === "spec") {
-      const d = await getSpectrum();
-      Plotly.newPlot("plot", [{x: d.wavelength, y: d.flux, mode: "lines+markers"}], layout("Wavelength (µm)", "Flux"));
-    } else {
-      const d = await getLightCurve();
-      Plotly.newPlot("plot", [{x: d.dates, y: d.flux, mode: "lines+markers"}], layout("Date", "Flux"));
+    const d = tab === "spec" ? await getSpectrum(isCurrent, onProgress) : await getLightCurve(isCurrent, onProgress);
+    if (d === null || !isCurrent()) return;
+    const x = tab === "spec" ? d.wavelength : d.dates;
+    if (!x || !x.length) {
+      const why = tab === "spec"
+        ? "No reliable points are available for this selection."
+        : `No reliable points in the window ${(d.wave_window_um || []).join("–")} µm. Try another detector.`;
+      plotMessage(why + ((d.warnings || []).length ? " " + d.warnings.join(" ") : ""));
+      return;
     }
-  } catch (err) { $("plot").textContent = "Could not load the graph: " + err.message; }
+    const trace = {x, y: d.flux, mode: tab === "spec" ? "markers" : "lines+markers", type: "scatter",
+                   error_y: d.flux_err ? {type: "data", array: d.flux_err, thickness: 1, width: 0} : undefined};
+    $("plot").textContent = "";
+    Plotly.newPlot("plot", [trace], tab === "spec" ? layout("Wavelength (µm)", "Flux (µJy)")
+                                                   : layout("Date", "Flux (µJy)"),
+                   {displayModeBar: false, responsive: true});
+  } catch (err) { if (isCurrent()) plotMessage("Could not load the graph: " + err.message); }
 }
 $("tab-spec").onclick = () => { tab = "spec"; $("tab-spec").classList.add("active"); $("tab-lc").classList.remove("active"); drawPlot(); };
 $("tab-lc").onclick   = () => { tab = "lc";   $("tab-lc").classList.add("active"); $("tab-spec").classList.remove("active"); drawPlot(); };
@@ -265,6 +321,12 @@ function loadUrl() {
 let reqId = 0;
 async function update() {
   const my = ++reqId;
+  ++plotId;
+  clearInterval(timer); timer = null; $("play").textContent = "Play";
+  frames = []; lastGrid = null;
+  $("frame").removeAttribute("src");
+  ["flagimg", "flagbox", "marker", "measured"].forEach(id => $(id).style.display = "none");
+  plotMessage("Loading the graph for the selected object...");
   syncUrl();
   $("info").textContent = "Loading...";
   try {
