@@ -74,3 +74,9 @@ def test_barnard_proper_motion():  # SIMBAD-style record; shift over ~25 yr must
          "parallax_mas": 546.9759, "ref_epoch": 2000.0}
     ra, dec = resolve.propagate(o, 60903.0)
     assert 255 < (dec - o["dec"]) * 3600 < 275  # 10.36 arcsec/yr north for ~25.6 yr
+
+
+def test_root_serves_team_frontend_and_dev_page():
+    r = c.get("/")
+    assert r.status_code == 200 and "SPHEREx Sky Viewer" in r.text and "pollJson" in r.text
+    assert c.get("/dev/").status_code == 200

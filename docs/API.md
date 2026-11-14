@@ -458,7 +458,8 @@
 ## Статика
 
 - `/cache/<key>/f<i>.png` и `/cache/<key>/f<i>_flags.png`: картинки из `image_url` и `flags_url`.
-- `/` : фронтенд. Понимает параметры в адресной строке: `/?target=barnard&fov=3&det=3&mode=coadd`.
+- `/` : фронтенд команды (`frontend/index.html`). Понимает параметры в адресной строке: `/?target=barnard&fov=3&det=3&mode=coadd`.
+- `/dev/` : тестовая страница API (`static/index.html`).
 
 ## Переменные окружения
 
