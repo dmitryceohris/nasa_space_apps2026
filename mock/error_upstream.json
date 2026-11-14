@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "upstream",
+    "message": "IRSA недоступен (последний код 503)"
+  }
+}

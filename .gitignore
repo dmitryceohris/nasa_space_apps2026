@@ -4,4 +4,7 @@ __pycache__/
 .ipynb_checkpoints/
 .DS_Store
 tmp/
+
+# SPHEREx blink API runtime
 cache/
+server.log
