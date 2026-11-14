@@ -1,0 +1,60 @@
+#
+#   VizieR Astronomical Server vizier.cfa.harvard.edu
+#    Date: 2026-11-14T15:51:46 [V7.6.1]
+#   In case of problem, please report to:	cds-question@unistra.fr
+#
+#
+#Coosys	J2000:	eq_FK5 J2000
+#INFO	service_protocol=ASU	  IVOID of the protocol through which the data was retrieved
+#INFO	request_date=2026-11-14T15:51:46	  Query execution date
+#INFO	request=https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=J/ApJS/253/7/plx&PName=0855-0714&-out.all&-out.max=10	  Full request URL
+#INFO	contact=cds-question@unistra.fr	  Email or URL to contact publisher
+#INFO	server_software=VizieR/7.6.1	  Software version
+#INFO	publisher=CDS	  Data centre that produced the VOTable
+
+#RESOURCE=yCat_22530007
+#Name: J/ApJS/253/7
+#Title: A full-sky census of brown dwarfs within 20pc (Kirkpatrick+, 2021)
+#INFO	ivoid=ivo://cds.vizier/j/apjs/253/7	    IVOID of underlying data collection
+#INFO	data_ivoid=ivo://cds.vizier/j/apjs/253/7	    IVOID of underlying data collection
+#INFO	creator=Kirkpatrick J.D.	    First author or institution
+#INFO	cites=bibcode:2021ApJS..253....7K	    Article or Data origin sources
+#INFO	journal=ApJS	    Journal name
+#INFO	original_date=2021	    Year of the article publication
+#INFO	reference_url=https://cdsarc.cds.unistra.fr/viz-bin/cat/J/ApJS/253/7	    Dataset landing page
+#INFO	citation=doi:10.26093/cds/vizier/bb-7x-7	    Dataset identifier that can be used for citation
+#INFO	publication_date=2026-08-03	    Date of first publication in the data centre
+#INFO	rights_uri=https://cds.unistra.fr/vizier-org/licences_vizier.html	    Licence URI
+#Coosys	H:	ICRS
+#Table	J_ApJS_253_7_plx:
+#Name: J/ApJS/253/7/plx
+#Title: Parallax and motion fits for objects with high-quality (Table 5), low-quality (Table 6) and poor-quality (Table 7) parallaxes
+#Column	recno	(I8)	Record number assigned by the VizieR team. Should Not be used for identification.	[ucd=meta.record]
+#Column	FName	(A26)	Full name, position-based identifier	[ucd=meta.id;meta.main]
+#Column	RA_ICRS	(F10.6)	Right Ascension (ICRS) at Ep=MJD	[ucd=pos.eq.ra;meta.main]
+#Column	e_RA_ICRS	(F5.1)	[1.6/175] Positional uncertainty in RA	[ucd=stat.error;pos.eq.ra]
+#Column	DE_ICRS	(F10.6)	[-82.2/84.8] Declination (ICRS) at Ep=MJD	[ucd=pos.eq.dec;meta.main]
+#Column	e_DE_ICRS	(F5.1)	[1.6/141] Positional uncertainty in DE	[ucd=stat.error;pos.eq.dec]
+#Column	MJD	(F8.2)	[57064.5/58254.2] Mean Epoch, t0, Modified Julian Date (JD-2400000.5)	[ucd=time.epoch]
+#Column	q_plx	(A1)	h=high-quality (Table 5), l=low-quality (Table 6) and p=poor-quality (or unmeasurable) for parallaxes that need improvement (Table 7)	[ucd=meta.code.qual]
+#Column	plx	(F5.1)	[-12.4/439]? Absolute parallax	[ucd=pos.parallax.trig]
+#Column	e_plx	(F4.1)	[1.7/73]? Uncertainty in plx	[ucd=stat.error;pos.parallax]
+#Column	pmRA	(F7.1)	[-8123.7/1289.1] Absolute proper motion in RA	[ucd=pos.pm;pos.eq.ra]
+#Column	e_pmRA	(F4.1)	[0.4/59] Uncertainty in pmRA	[ucd=stat.error;pos.pm;pos.eq.ra]
+#Column	pmDE	(F7.1)	[-3107.5/1311.5] Absolute proper motion in DE	[ucd=pos.pm;pos.eq.dec]
+#Column	e_pmDE	(F4.1)	[0.6/45] Uncertainty in pmDE	[ucd=stat.error;pos.pm;pos.eq.dec]
+#Column	chisq	(F7.2)	[9.9/4401] {chi}^2^ of fit	[ucd=stat.fit.chi2]
+#Column	dof	(I3)	[17/133] Degrees of freedom	[ucd=stat.fit.dof]
+#Column	chisq/dof	(F5.2)	[0.2/77.2] Reduced {chi}^2^ of fit	[ucd=meta.note]
+#Column	NSp	(I2)	[2/39] Number of Spitzer astrometric epochs	[ucd=meta.number]
+#Column	NW1	(I2)	[0/29] Number of unWISE W1 astrometric epochs	[ucd=meta.number]
+#Column	NW2	(I2)	[0/29] Number of unWISE W2 astrometric epochs	[ucd=meta.number]
+#Column	NGDR2	(I3)	[3/344] Number of Gaia DR2 five-parameter re-registration stars	[ucd=meta.number]
+#Column	PName	(A9)	Short name position code for object (HHMM+DDMM; J2000) as in other tables; column added by CDS	[ucd=meta.id]
+#Column	_RA.icrs	(F10.6)	Right ascension (ICRS) at Epoch=J2000, proper motions taken into account	[ucd=pos.eq.ra]
+#Column	_DE.icrs	(F10.6)	Declination (ICRS) at Epoch=J2000, proper motions taken into account	[ucd=pos.eq.dec]
+recno	FName	RA_ICRS	e_RA_ICRS	DE_ICRS	e_DE_ICRS	MJD	q_plx	plx	e_plx	pmRA	e_pmRA	pmDE	e_pmDE	chisq	dof	chisq/dof	NSp	NW1	NW2	NGDR2	PName	_RA.icrs	_DE.icrs
+ 	 	deg	mas	deg	mas	d	 	mas	mas	mas/yr	mas/yr	mas/yr	mas/yr	 	 	 	 	 	 	 	 	deg	deg
+--------	--------------------------	----------	-----	----------	-----	--------	-	-----	----	-------	----	-------	----	-------	---	-----	--	--	--	---	---------	----------	----------
+     111	WISE   J085510.83-071442.5	133.780984	  2.3	-07.243932	  2.3	57633.39	h	439.0	 2.4	-8123.7	 1.3	  673.2	 1.3	  19.56	 33	 0.59	19	 0	 0	 46	0855-0714	133.818908	-07.247048
+
