@@ -1,7 +1,7 @@
 {
-  "checked_at": "2026-11-14T12:39:50.138627+00:00",
+  "checked_at": "2026-11-14T15:14:21.379908+00:00",
   "input": "barnard",
-  "provenance": "real HTTP request; temporary public tunnel to Linux container; populated persistent volume; not a permanent hosting deployment",
+  "provenance": "real HTTP request; temporary public tunnel; final container code aa7ce46; persistent populated cache",
   "responses": {
     "resolve": {
       "name": "Barnard's Star",
@@ -645,7 +645,7 @@
     "source_id": "4472832130942575872",
     "epochs": 5,
     "limitation": "Полное решение Gaia при J2016.0; RV взята из Gaia DR3; для последующего точного переноса требуется учитывать перспективное ускорение.",
-    "checked_at": "2026-11-14T12:39:50.138627+00:00",
+    "checked_at": "2026-11-14T15:14:21.379908+00:00",
     "fov_arcmin": 6,
     "det": 3,
     "ref_epoch": 2016.0,

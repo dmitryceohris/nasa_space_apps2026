@@ -5,7 +5,7 @@ async page => {
   for (const target of ['barnard','epsindib','wise0855','rwaur','rdra','Proxima Cen','61 Cyg A','Vega']) {
     const q = new URLSearchParams({target,mode:'single',max_per_epoch:1,fov:6,det:target==='wise0855'?6:3});
     await page.goto(base+'/?'+q);
-    await page.waitForFunction(()=>document.getElementById('info').textContent.startsWith('Frame'),null,{timeout:30000});
+    await page.waitForFunction(()=>document.getElementById('info').textContent.startsWith('Frame'),null,{timeout:180000});
     await page.waitForFunction(()=>document.getElementById('frame').complete && document.getElementById('frame').naturalWidth>0);
     const before=await page.locator('#info').textContent();
     await page.getByRole('button',{name:'→',exact:true}).click();

@@ -1,7 +1,7 @@
 {
-  "checked_at": "2026-11-14T12:39:52.959602+00:00",
+  "checked_at": "2026-11-14T15:15:07.024726+00:00",
   "input": "wise0855",
-  "provenance": "real HTTP request; temporary public tunnel to Linux container; populated persistent volume; not a permanent hosting deployment",
+  "provenance": "real HTTP request; temporary public tunnel; final container code aa7ce46; persistent populated cache",
   "responses": {
     "resolve": {
       "name": "WISE 0855-0714",
@@ -566,7 +566,7 @@
     "source_id": "0855-0714",
     "epochs": 4,
     "limitation": "Эпоха MJD 57633.39; шкала времени в таблице не указана. Все пять параметров и ошибки из одной строки Table 5; 19 эпох Spitzer, 46 опорных звезд Gaia DR2. q_plx=h. Корреляции и RV в выбранной таблице не опубликованы. Координаты округлены источником до 0.000001 градуса.",
-    "checked_at": "2026-11-14T12:39:52.959602+00:00",
+    "checked_at": "2026-11-14T15:15:07.024726+00:00",
     "fov_arcmin": 6,
     "det": 6,
     "ref_epoch": 57633.39,

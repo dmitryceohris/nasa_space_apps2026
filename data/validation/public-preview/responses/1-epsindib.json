@@ -1,7 +1,7 @@
 {
-  "checked_at": "2026-11-14T12:39:51.743317+00:00",
+  "checked_at": "2026-11-14T15:14:22.438310+00:00",
   "input": "epsindib",
-  "provenance": "real HTTP request; temporary public tunnel to Linux container; populated persistent volume; not a permanent hosting deployment",
+  "provenance": "real HTTP request; temporary public tunnel; final container code aa7ce46; persistent populated cache",
   "responses": {
     "resolve": {
       "name": "Epsilon Indi B",
@@ -892,7 +892,7 @@
     "source_id": "6412596012146801152",
     "epochs": 7,
     "limitation": "RUWE=4.2955413; Gaia соответствует Ba по Baig et al. (2024), возможен вклад Bb в фотоцентр. Не барицентр Ba/Bb. Системное решение Chen et al. (2022) дано отдельно в MD и с этой строкой не смешивается.",
-    "checked_at": "2026-11-14T12:39:51.743317+00:00",
+    "checked_at": "2026-11-14T15:14:22.438310+00:00",
     "fov_arcmin": 6,
     "det": 3,
     "ref_epoch": 2016.0,
