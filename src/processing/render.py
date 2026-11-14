@@ -69,8 +69,10 @@ def save_rgb(rgb01: np.ndarray, path: Path, background: np.ndarray | None = None
     base = np.zeros_like(rgb01)
     if background is not None:
         base = 0.35 * _asinh(background, vmin, vmax)[..., None] * np.ones(3)
-    out = np.clip(base + rgb01, 0, 1)
-    _save((out * 255).astype(np.uint8), path)
+    out = (np.clip(base + rgb01, 0, 1) * 255).astype(np.uint8)
+    if background is not None:  # no data in any epoch: the same colour as in the coadd frames, not black sky
+        out[~np.isfinite(background)] = NODATA_RGB
+    _save(out, path)
 
 
 def save_mask(mask: np.ndarray, path: Path, color=(255, 80, 0), alpha: int = 140) -> None:

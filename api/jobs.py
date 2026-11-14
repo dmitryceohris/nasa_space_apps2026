@@ -47,12 +47,11 @@ warnings.filterwarnings("ignore")
 class Job:
     key: str
     id: str
-    status: str = "running"  # running | ready (empty result, not cached) | error
+    status: str = "running"  # running | error (every finished result goes to the cache, empty ones with a short TTL)
     stage: str = "query"  # query -> download -> process -> render
     done: int = 0
     total: int = 0
     message: str = ""
-    result: dict | None = None
     created: float = field(default_factory=time.monotonic)
     started: bool = False
     finished: float | None = None
@@ -83,9 +82,6 @@ def _poll(k: str, runner):
         if j.status == "error":  # drop it so the next request retries
             JOBS.pop(k)
             return 200, {"status": "error", "message": j.message}
-        if j.status == "ready":
-            JOBS.pop(k)
-            return 200, j.result
         if now - j.created > float(os.environ.get("MAX_JOB_SECONDS", "1800")):
             raise ApiError(503, "timeout", "Задача превысила время ожидания; загрузки ещё завершаются. Повторите запрос позже")
         return 202, {"status": "running", "job_id": j.id, "stage": j.stage if j.started else "queued", "done": j.done, "total": j.total,
@@ -310,7 +306,13 @@ def _pipeline(j, p, r):
         m = centroid.measure(arr, signed, saturated=f.contam)
         # A centre is the target's only if it agrees with the prediction: the frame may hold just another star
         # (WISE 0855 at 4.42 um: the only object, 17 px from the target, was returned as measured_px before).
-        assoc, offset = ("no_prediction" if pred_fits is None else "no_measurement"), None
+        if not r["motion"]:
+            assoc = "no_prediction"
+        elif pred_fits is None:  # the model puts the target outside this frame: no object here is the target
+            assoc = "prediction_outside_field"
+        else:
+            assoc = "no_measurement"
+        offset = None
         if m["xy"] is not None and pred_fits is not None:
             offset = float(np.hypot(m["xy"][0] - pred_fits[0], m["xy"][1] - pred_fits[1]))
             assoc = "far_from_prediction" if offset > ASSOC_PX else "consistent_with_prediction"
@@ -341,7 +343,8 @@ def _pipeline(j, p, r):
             # when the largest and the central object differ (both are listed, nothing is guessed). In diff mode
             # only the "+" residual (where the object is in this frame) gives the position.
             "measured_px": prender.fits_to_png_xy(m["xy"][0], m["xy"][1], h)
-            if m["status"] == "ok" and m["quality"] != "poor" and assoc != "far_from_prediction" else None,
+            if m["status"] == "ok" and m["quality"] != "poor"
+            and assoc not in ("far_from_prediction", "prediction_outside_field") else None,
             "measured_candidates": cands,
             "measurement": {"status": m["status"], "reason": m["reason"], "quality": m["quality"],
                             "flags": m["flags"], "n_rejected_hot": m["n_rejected_hot"],

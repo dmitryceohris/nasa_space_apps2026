@@ -118,11 +118,11 @@ async function pollJson(path, isCurrent, onProgress) {
   }
 }
 // What the graphs are about: a named object (the API then follows its proper motion), else the coordinates.
-const PER_EPOCH = 3;  // exposures per epoch and detector: one job serves both graphs; more = more light-curve points
+// One /api/spectrum job serves both graphs; the server chooses 2 exposures per epoch and detector.
 function graphQuery() {
   const t = $("target").value.trim(), ra = $("ra").value.trim(), dec = $("dec").value.trim();
   if (Boolean(ra) !== Boolean(dec)) throw new Error("Please enter both RA and Dec coordinates.");
-  const q = new URLSearchParams({per_epoch: PER_EPOCH});
+  const q = new URLSearchParams();
   if (ra && dec) { q.set("ra", ra); q.set("dec", dec); }
   else if (t) q.set("target", t);
   else if (lastGrid) { const c = center(); q.set("ra", c.ra); q.set("dec", c.dec); }

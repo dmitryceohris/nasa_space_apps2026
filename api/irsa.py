@@ -42,6 +42,8 @@ def _send(method, url, retries=3, **kw):
         log.info("%s %s -> %s %.1fs", method, url, code, time.time() - t)
         if r is not None and code == 200:
             return r
+        if 400 <= code < 500 and code not in (408, 429):  # the archive answered: retrying will not help
+            raise ApiError(502, "upstream", f"IRSA отклонил запрос (код {code})")
         if i + 1 < retries:
             time.sleep(5 * (i + 1))
     raise ApiError(502, "upstream", f"IRSA недоступен (последний код {code})")
