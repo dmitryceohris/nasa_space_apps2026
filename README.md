@@ -60,3 +60,7 @@ Python и зависимости зафиксированы в `.python-version`
 ## Как поделиться
 
 Можно отправить [ссылку на репозиторий](https://github.com/dmitryceohris/nasa_space_apps2026) или [скачать весь набор ZIP-архивом](https://github.com/dmitryceohris/nasa_space_apps2026/archive/refs/heads/main.zip). Для просмотра документов, таблиц и графика запуск Python не требуется.
+
+Проверка просмотра пяти целей NASA и трёх дополнительных звёзд: [TARGET_VALIDATION.md](docs/TARGET_VALIDATION.md).
+
+Запуск на внешнем сервере, контейнер и постоянный кэш: [DEPLOYMENT.md](docs/DEPLOYMENT.md).

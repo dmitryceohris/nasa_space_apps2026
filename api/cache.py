@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import time
 from pathlib import Path
 
 CACHE = Path(os.environ.get("CACHE_DIR", Path(__file__).resolve().parent.parent / "cache"))
@@ -13,7 +14,7 @@ def key(ra, dec, fov, det, mode, max_per_epoch) -> str:
     return hashlib.sha1(s.encode()).hexdigest()[:16]
 
 
-VERSION = 5  # 5: measurement/processing blocks, leave-one-out diff; bump when the result format changes: older cached results are then recomputed (FITS stay cached)
+VERSION = 8  # Target/time/coverage metadata and photometry quality; FITS remain reusable.
 
 
 def key_spectrum(ra, dec) -> str:
@@ -22,10 +23,17 @@ def key_spectrum(ra, dec) -> str:
 
 def read(k: str):
     p = CACHE / k / "result.json"
-    if not p.exists():
+    try:
+        res = json.loads(p.read_text(encoding="utf-8"))
+        modified = p.stat().st_mtime
+    except (OSError, ValueError):
         return None
-    res = json.loads(p.read_text(encoding="utf-8"))
-    return res if res.pop("v", None) == VERSION else None  # "v" is internal, never sent to clients
+    if not isinstance(res, dict) or res.pop("v", None) != VERSION:
+        return None
+    empty = ("frames" in res and not res["frames"]) or ("points" in res and not res["points"])
+    setting = "EMPTY_CACHE_TTL" if empty else "PARTIAL_CACHE_TTL" if res.get("data_status") == "partial" else "RESULT_CACHE_TTL"
+    ttl = float(os.environ.get(setting, "60" if setting != "RESULT_CACHE_TTL" else "3600"))
+    return res if time.time() - modified < ttl else None
 
 
 def write(k: str, obj: dict):
@@ -33,5 +41,5 @@ def write(k: str, obj: dict):
     d = CACHE / k
     d.mkdir(exist_ok=True)
     tmp = d / "result.json.tmp"
-    tmp.write_text(json.dumps({**obj, "v": VERSION}, ensure_ascii=False), encoding="utf-8")
+    tmp.write_text(json.dumps({**obj, "v": VERSION}, ensure_ascii=False, allow_nan=False), encoding="utf-8")
     tmp.replace(d / "result.json")

@@ -1,0 +1,15 @@
+services:
+  viewer:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      PREWARM: "0"
+      SPHEREX_SOURCE: archive
+      MAX_PENDING_JOBS: "16"
+      MAX_JOB_SECONDS: "1800"
+    volumes:
+      - spherex-cache:/cache
+    restart: unless-stopped
+volumes:
+  spherex-cache:

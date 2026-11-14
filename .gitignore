@@ -8,3 +8,5 @@ tmp/
 # SPHEREx blink API runtime
 cache/
 server.log
+
+.playwright-cli/

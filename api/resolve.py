@@ -1,10 +1,12 @@
-"""Target presets (verbatim from the API spec), SIMBAD lookup via CDS Sesame, proper-motion propagation."""
+"""Catalogue-first target identity, Sesame fallback and the common astrometric adapter."""
 import json
 import logging
+import math
 import os
 import re
 import threading
 import time
+from urllib.parse import quote
 
 import httpx
 from astropy import units as u
@@ -42,10 +44,11 @@ def _fetch_sesame(name: str) -> list[str]:
     for base in SESAME:
         t = time.time()
         try:
-            r = httpx.get(base + name, timeout=30, follow_redirects=True)
-            log.info("GET %s -> %s %.1fs", base + name, r.status_code, time.time() - t)
+            r = httpx.get(base + quote(name, safe=""), timeout=30, follow_redirects=True)
+            log.info("GET %s -> %s %.1fs", base + quote(name, safe=""), r.status_code, time.time() - t)
             if r.status_code == 200:
-                out.append(r.text)
+                if "%J" in r.text or "Nothing found" in r.text:
+                    out.append(r.text)
                 if "%J" in r.text or "Nothing found" in r.text:  # a definite answer: do not ask the other mirrors
                     break
         except httpx.HTTPError as e:
@@ -60,6 +63,8 @@ def _simbad_section(text: str) -> list[str]:
     keep, on = [], False
     for line in text.splitlines():
         if line.startswith("#="):
+            if on and keep:
+                break
             on = "=Sc=Simbad" in line
         elif on:
             keep.append(line)
@@ -67,40 +72,69 @@ def _simbad_section(text: str) -> list[str]:
 
 
 def _parse(name: str, texts: list[str]) -> dict | None:
+    number = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
     for text in texts:
         lines = _simbad_section(text)
-        j = next((re.match(r"%J\s+([\d.+-]+)\s+([\d.+-]+)", l) for l in lines if l.startswith("%J ")), None)
+        j = next((re.match(rf"%J\s+({number})\s+({number})(?:\s|$)", l) for l in lines if l.startswith("%J ")), None)
         if not j:
+            if any(line.startswith("%J ") for line in lines):
+                raise ApiError(502, "upstream", "Не удалось разобрать координаты в ответе Sesame")
             continue
-        pm = next((re.match(r"%P\s+([\d.+-]+)\s+([\d.+-]+)", l) for l in lines if l.startswith("%P ")), None)
-        x = next((re.match(r"%X\s+([\d.+-]+)", l) for l in lines if l.startswith("%X ")), None)
+        if not (0 <= float(j[1]) < 360 and -90 <= float(j[2]) <= 90):
+            raise ApiError(502, "upstream", "Sesame вернул недопустимые координаты")
+        pm = next((re.match(rf"%P\s+({number})\s+({number})(?:\s|$)", l) for l in lines if l.startswith("%P ")), None)
+        x = next((re.match(rf"%X\s+({number})(?:\s|$)", l) for l in lines if l.startswith("%X ")), None)
+        rv = next((re.match(rf"%V\s+v\s+({number})(?:\s|$)", l) for l in lines if l.startswith("%V v ")), None)
+        if any(not math.isfinite(float(value)) for match in (pm, x, rv) if match for value in match.groups()):
+            raise ApiError(502, "upstream", "Sesame вернул нечисловые параметры движения")
         return {"name": name, "ra": float(j[1]), "dec": float(j[2]),
                 "pmra_masyr": float(pm[1]) if pm else None, "pmdec_masyr": float(pm[2]) if pm else None,
-                "parallax_mas": float(x[1]) if x else None, "ref_epoch": 2000.0,
-                "source": "SIMBAD (via CDS Sesame)"}
+                "parallax_mas": float(x[1]) if x else None, "ref_epoch": None,
+                "source": "SIMBAD (via CDS Sesame)", "resolver_version": 3, "ref_epoch_format": None,
+                "ref_epoch_scale": None, "source_id": next((l.split(maxsplit=1)[1].strip() for l in lines if l.startswith("%I") and len(l.split(maxsplit=1)) == 2), None),
+                "source_url": "https://cds.unistra.fr/cgi-bin/nph-sesame/-oI/SNV?" + quote(name, safe=""),
+                "rv_kms": float(rv[1]) if rv else None, "errors": None, "coordinate_model": "fixed_catalogue",
+                "assumptions": ["reference_epoch_unverified", "proper_motion_not_applied"],
+                "limitations": "Sesame J2000 position; reference epoch and time scale are not verified."}
     return None
 
 
-_team = {}  # OBJECT_PARAMETERS.csv: mtime and parsed targets
+_team = {}
+PUBLIC_IDS = {"barnard": "barnard", "epsilon_indi_b": "epsindib", "wise_0855": "wise0855",
+              "rw_aur": "rwaur", "r_dra": "rdra"}
+
+
+def _catalog():
+    import sky_motion
+    stamp = sky_motion.DEFAULT_CATALOG.stat().st_mtime_ns
+    if _team.get("stamp") != stamp:
+        _team.update(stamp=stamp, targets=sky_motion.load_targets())
+    return _team["targets"]
 
 
 def _preset_record(query: str) -> dict | None:
-    """The five challenge targets come from the team's OBJECT_PARAMETERS.csv (Gaia DR3 / Kirkpatrick+2021).
-    That table already settles what SIMBAD names get wrong: WISE 0855 (the name is not a SIMBAD identifier),
-    RW Aur A/B, eps Ind Ba. Matching by id or name is done by src/processing/targets.find_preset."""
-    from processing.targets import DEFAULT_CATALOG, find_preset, load_targets
-
-    if not DEFAULT_CATALOG.exists():
+    from processing.targets import find_preset, load_targets
+    norm = lambda value: "".join(c for c in value.lower() if c.isalnum())
+    alias = next((p["id"] for p in PRESETS if norm(p["name"]) == norm(query)), query)
+    match = find_preset(PUBLIC_IDS.get(alias, alias), load_targets())
+    if match is None:
         return None
-    m = DEFAULT_CATALOG.stat().st_mtime
-    if _team.get("m") != m:
-        _team.update(m=m, targets=load_targets())
-    t = find_preset(query, _team["targets"])
-    if t is None:
-        return None
-    return {"name": t.name, "id": t.id, "ra": t.ra, "dec": t.dec, "pmra_masyr": t.pmra, "pmdec_masyr": t.pmdec,
-            "parallax_mas": t.parallax or None, "rv_kms": t.rv or None, "ref_epoch": float(t.ref_epoch.jyear),
-            "source": t.source}
+    t = _catalog()[match.name]
+    row = t.row
+    def number(key):
+        return float(row[key]) if row.get(key, "").strip() else None
+    return {"name": t.name, "id": match.id, "ra": number("ra_deg"), "dec": number("dec_deg"),
+            "pmra_masyr": number("pmra_mas_yr"), "pmdec_masyr": number("pmdec_mas_yr"),
+            "parallax_mas": number("parallax_mas"), "rv_kms": number("radial_velocity_km_s"),
+            "ref_epoch": number("ref_epoch"), "ref_epoch_format": row["ref_epoch_format"],
+            "ref_epoch_scale": row["ref_epoch_scale"].lower() or None,
+            "source": row["catalog"], "source_id": row["source_id"], "source_url": row["source_url"],
+            "canonical_id": row["canonical_id"], "component": row["component"],
+            "coordinate_frame": row["coordinate_frame"], "ra_error_basis": row["ra_error_basis"],
+            "coordinate_model": "geocenter_geometric", "assumptions": list(t.assumptions),
+            "limitations": row["notes"], "errors": {k: number(k) for k in
+                ("ra_error_mas", "dec_error_mas", "pmra_error_mas_yr", "pmdec_error_mas_yr",
+                 "parallax_error_mas", "radial_velocity_error_km_s")}}
 
 
 def resolve(name: str) -> dict:
@@ -113,7 +147,7 @@ def resolve(name: str) -> dict:
     with _lock:
         if not _mem and _FILE.exists():
             _mem.update(json.loads(_FILE.read_text(encoding="utf-8")))
-        if k in _mem:
+        if k in _mem and _mem[k].get("resolver_version") == 3:
             return _mem[k]
     rec = _parse(name.strip(), _fetch_sesame(name.strip()))
     if rec is None:
@@ -125,12 +159,16 @@ def resolve(name: str) -> dict:
 
 
 def propagate(o: dict, mjd: float):
-    """Position at `mjd` from J2000 position + proper motion (+ parallax distance). No motion known: unchanged."""
-    if o.get("pmra_masyr") is None or o.get("pmdec_masyr") is None:
+    """MJD UTC -> common geocentric prediction, or space motion from a known reference epoch; otherwise fixed."""
+    if o.get("coordinate_model") == "geocenter_geometric":
+        import sky_motion
+        pos = sky_motion.predict_position(_catalog()[o["name"]], Time(mjd, format="mjd", scale="utc"))
+        return float(pos.geocentric.ra.deg), float(pos.geocentric.dec.deg)
+    if o.get("ref_epoch") is None or o.get("pmra_masyr") is None or o.get("pmdec_masyr") is None:
         return o["ra"], o["dec"]
     kw = dict(ra=o["ra"] * u.deg, dec=o["dec"] * u.deg,
               pm_ra_cosdec=o["pmra_masyr"] * u.mas / u.yr, pm_dec=o["pmdec_masyr"] * u.mas / u.yr,
-              obstime=Time(o["ref_epoch"], format="jyear"))
+              obstime=Time(o["ref_epoch"], format=o.get("ref_epoch_format", "jyear"), scale=o.get("ref_epoch_scale") or "tt"))
     plx = o.get("parallax_mas")
     if plx and plx > 0:
         kw["distance"] = (1000.0 / plx) * u.pc
@@ -151,4 +189,5 @@ def for_params(p: Params) -> dict:
     if p.ra is not None:  # explicit coordinates: no proper motion is known, so no predicted position either
         return {"center": (p.ra, p.dec), "motion": None, "label": p.target}
     o = resolve(p.target)
-    return {"center": propagate(o, center_mjd()), "motion": o, "label": o["name"]}
+    mjd = center_mjd()
+    return {"center": propagate(o, mjd), "motion": o, "label": o["name"], "center_mjd": mjd}

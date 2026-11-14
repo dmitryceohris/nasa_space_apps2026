@@ -27,18 +27,28 @@ def _find_hdu(hdul: fits.HDUList, *names: str):
     return None
 
 
-def _read_mjd(headers, mjd_hint: float | None) -> float:
-    for h in headers:
-        for k in _MJD_KEYS:
-            if k in h:
-                return float(h[k])
-    for h in headers:
-        for k in _DATE_KEYS:
-            if k in h:
-                return float(Time(h[k], scale="utc").mjd)
+def _read_time_info(headers, mjd_hint: float | None):
+    # Midpoint timestamps take priority even if they occur in the primary header.
+    for keys, fmt in ((_MJD_KEYS[:1], "mjd"), (_DATE_KEYS[:1], None),
+                      (_MJD_KEYS[1:], "mjd"), (_DATE_KEYS[1:], None)):
+        for key in keys:
+            for h in headers:
+                if key in h:
+                    declared_scale = next((str(header["TIMESYS"]).strip().lower()
+                                           for header in [h] + [other for other in headers if other is not h]
+                                           if str(header.get("TIMESYS", "")).strip()), None)
+                    assumptions = [] if declared_scale else ["timesys_assumed_utc"]
+                    if "BEG" in key or "OBS" in key or key == "MJD":
+                        assumptions.append("timestamp_not_verified_midpoint")
+                    value = float(h[key]) if fmt else h[key]
+                    return float(Time(value, format=fmt, scale=declared_scale or "utc").utc.mjd), key, assumptions
     if mjd_hint is not None:  # время из ответа архива (t_min/t_max)
-        return float(mjd_hint)
+        return float(mjd_hint), "archive_hint", ["archive_time_may_be_lower_bound"]
     raise ValueError("Не найдено время наблюдения ни в заголовке, ни в mjd_hint")
+
+
+def _read_mjd(headers, mjd_hint: float | None) -> float:
+    return _read_time_info(headers, mjd_hint)[0]
 
 
 def _read_detector(headers, source: str) -> int:
@@ -87,11 +97,12 @@ def exposure_from_hdul(hdul: fits.HDUList, source: str = "", *,
         finally:
             log.setLevel(old_level)
 
+    mjd, time_source, time_assumptions = _read_time_info(headers, mjd_hint)
     return Exposure(
         image=image, variance=variance, flags=flags, zodi=zodi,
         wcs=wcs, wave_wcs=wave_wcs,
         detector=_read_detector(headers, source),
-        mjd=_read_mjd(headers, mjd_hint),
+        mjd=mjd, time_source=time_source, time_assumptions=time_assumptions,
         obs_id=str(hdr.get("OBSID", hdul[0].header.get("OBSID", obs_id_hint))),
         flag_bits=parse_flag_bits(flags_hdu.header) if flags_hdu is not None else {},
         source=source, header=hdr,

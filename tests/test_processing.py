@@ -134,3 +134,54 @@ def test_targets_and_motion():
     w = t["wise0855"]
     assert w.ref_epoch.mjd == pytest.approx(57633.39)
     assert find_preset("Barnard's Star", t) is b and find_preset("WISE 0855-0714", t) is w
+
+
+def test_photometry_near_edge_cannot_claim_complete_background():
+    e = fake_exposure(None, 61000)
+    position = e.wcs.pixel_to_world(4, 20)
+    p = forced_photometry(e, position)
+    assert p is not None and not p['ok']
+    assert p['coverage']['aperture_complete']
+    assert not p['coverage']['background_annulus_complete']
+    assert 'background_annulus_outside_cutout' in p['quality_reasons']
+
+
+def test_contaminated_aperture_is_excluded_from_reliable_points():
+    e = fake_exposure(CENTER, 61000)
+    e.flags[20, 20] |= 1 << e.flag_bits['GHOST']
+    p = forced_photometry(e, CENTER)
+    assert p is not None and not p['ok']
+    assert 'contaminated_aperture' in p['quality_reasons']
+    assert p['wavelength_source'] == 'approximate_detector_position'
+
+
+def test_spectrum_cutout_includes_motion_and_background_ring(monkeypatch):
+    from astropy.table import Table
+    from processing import pipeline
+    moved = offset(CENTER, 100, 0)
+    exp = fake_exposure(moved, 61000, n=101)
+    monkeypatch.setattr(pipeline, 'query_spherex', lambda *args: Table({'detector':[3], 'mjd':[61000.0]}))
+    sizes = []
+    def download(rows, center, size, **kwargs):
+        sizes.append(size)
+        return [exp]
+    monkeypatch.setattr(pipeline, 'download_rows', download)
+    result = pipeline.build_spectrum(CENTER, lambda mjd: moved)
+    assert sizes[0] * 3600 / 2 > 100 + 7 * PIX
+    assert result['max_prediction_offset_arcsec'] == pytest.approx(100)
+    assert result['points'][0]['coverage']['background_annulus_complete']
+    assert 'приблизительна' in ' '.join(result['warnings'])
+
+
+def test_invalid_spectral_calibration_never_emits_json_nan(monkeypatch):
+    import json
+    e = fake_exposure(CENTER, 61000)
+    monkeypatch.setattr(e, 'wavelength_at', lambda x,y: (np.nan,np.nan))
+    point = forced_photometry(e, CENTER)
+    assert point['wave_um'] is None and point['bw_um'] is None and not point['ok']
+    assert 'invalid_wavelength' in point['quality_reasons']
+    grid, shape = make_grid(CENTER, 3)
+    frame = coadd([e], grid, shape, CENTER)
+    assert frame.wavelength_samples[0]['wave_um'] is None
+    json.dumps(point, allow_nan=False)
+    json.dumps(frame.wavelength_samples, allow_nan=False)

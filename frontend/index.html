@@ -55,7 +55,12 @@
   <div id="marker"></div>
   <div id="measured"></div>
 </div>
-<div id="info"></div>
+<div id="info" role="status"></div>
+<div id="warnings" role="status"></div>
+<div id="field-center"></div>
+<div id="target-info"></div>
+<div id="frame-quality"></div>
+<div id="demo-note" hidden>Synthetic demonstration data — not SPHEREx observations.</div>
 <details id="method" hidden><summary>How positions are measured</summary><div id="method-body"></div></details>
 
 <!-- PLAYER -->
@@ -68,7 +73,7 @@
 <div class="row">
   <label><input type="checkbox" id="flags"> Show flags</label>
   <label><input type="checkbox" id="mk"> Show expected position</label>
-  <label><input type="checkbox" id="ms"> Show measured position</label>
+  <label><input type="checkbox" id="ms"> Show centroid / candidates</label>
 </div>
 
 <!-- GRAPHS -->
@@ -84,6 +89,7 @@ const P = new URLSearchParams(location.search);
 const API = P.get("api") || "";
 // Double-click the file (no ?api=) -> fake data. Any server address -> real data.
 const USE_MOCK = P.get("mock") === "1" || (location.protocol === "file:" && !P.get("api"));
+document.getElementById("demo-note").hidden = !USE_MOCK;
 let lastGrid = null;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -143,6 +149,7 @@ async function getFrames(ra, dec, fov, det, mode, my) {
     }));
   }
   const q = new URLSearchParams({fov, det, mode});
+  if (P.has("max_per_epoch")) q.set("max_per_epoch", P.get("max_per_epoch"));
   const target = $("target").value.trim();
   if (ra !== "" && dec !== "") { q.set("ra", ra); q.set("dec", dec); }
   else if (target) q.set("target", target);
@@ -161,16 +168,24 @@ async function getFrames(ra, dec, fov, det, mode, my) {
       continue;
     }
     if (d.status === "error") throw new Error(d.message);
+    $("warnings").textContent = (d.warnings || []).join(" ");
+    $("field-center").textContent = `Field centre: RA ${d.query.ra.toFixed(6)}°, Dec ${d.query.dec.toFixed(6)}°.` +
+      (d.center_mjd != null ? ` Query reference date: MJD UTC ${d.center_mjd.toFixed(5)}.` : " Fixed sky coordinates.");
+    const t = d.target_info;
+    $("target-info").textContent = t ? `${t.name}: ${t.source}; reference epoch: ${t.ref_epoch ?? "unknown"} ${t.ref_epoch_format || ""} ${t.ref_epoch_scale || "(scale unknown)"}. Model: ${t.coordinate_model}. ${t.limitations || ""} Assumptions: ${(t.assumptions || []).join(", ")}`
+      : `Fixed field: RA ${d.query.ra.toFixed(6)}°, Dec ${d.query.dec.toFixed(6)}°. No catalogue tracking.`;
     if (!d.frames.length) throw new Error((d.warnings || []).join(" ") || "No frames for this area");
 
     const g = d.grid; lastGrid = g;
     // API pixels start at 0, so the pixel centre is x + 0.5; convert to fractions 0..1
     const fr = p => p ? [(p[0] + 0.5) / g.width_px, (p[1] + 0.5) / g.height_px] : null;
     let out = d.frames.map(f => ({
-      date: f.date, wavelength: f.wave_um != null ? f.wave_um.toFixed(2) : "", n_exp: f.n_exp,
-      url: API + f.image_url, flagsUrl: API + f.flags_url,
+      date: f.mjd_span ? `${f.date} (MJD UTC ${f.mjd_span.join("–")})` : f.date, wavelength: f.wave_um != null ? f.wave_um.toFixed(2) : "", n_exp: f.n_exp,
+      url: API + f.image_url, flagsUrl: f.flags_url ? API + f.flags_url : null,
       expected: fr(f.predicted_px), measured: fr(f.measured_px),
-      candidates: f.measured_candidates || [], measurement: f.measurement || null
+      candidates: (f.measured_candidates || []).map(c => ({...c, xy: fr(c.xy)})), measurement: f.measurement || null,
+      quality: f.quality, predictionStatus: f.prediction_status,
+      timeSources: f.time_sources || [], wavelengthSamples: f.wavelength_samples || []
     }));
     showMethod(d.processing);
     if (mode === "trail" && d.trail_url) {
@@ -179,9 +194,10 @@ async function getFrames(ra, dec, fov, det, mode, my) {
       out = [{date: `${out[0].date} → ${out[n - 1].date}`, url: API + d.trail_url, trail: true, epochs: n}];
     }
     $("info").textContent = "Loading pictures...";
-    await Promise.all(out.map(f => new Promise(res => {   // preload: no flicker while blinking
-      const im = new Image(); im.onload = im.onerror = res; im.src = f.url;
+    await Promise.all(out.map(f => new Promise((res, reject) => {   // preload: no flicker while blinking
+      const im = new Image(); im.onload = res; im.onerror = () => reject(new Error("An image could not be loaded. Please retry.")); im.src = f.url;
     })));
+    if (my !== reqId) return null;
     return out;
   }
 }
@@ -229,10 +245,11 @@ function measuredText(f) {
       return f.candidates.length ? `  |  ${f.candidates.length} candidates, no single centre` : "  |  no source found";
     return "";
   }
+  if (m.quality === "poor") return `  |  candidate only: poor quality (${(m.flags || []).join(", ")})`;
   if (m.status === "ok") {
     const err = m.err_px ? ` ±${Math.max(...m.err_px).toFixed(2)} px` : "";
     const fl = m.flags && m.flags.length ? ` (${m.flags.join(", ")})` : "";
-    return `  |  measured: ${m.quality}${err}${fl}`;
+    return `  |  centroid candidate: ${m.quality}${err}${fl}`;
   }
   return `  |  ${m.status === "ambiguous" ? "ambiguous" : "not measured"}: ${m.reason}`;
 }
@@ -244,8 +261,18 @@ function put(el, p, on) {
 }
 function show(n) {
   if (!frames.length) return;
+  document.querySelectorAll(".candidate").forEach(el => el.remove());
   i = (n + frames.length) % frames.length;
   const f = frames[i];
+  const quality = f.quality;
+  const details = ["Source: NASA SPHEREx via NASA/IPAC IRSA."];
+  const reasonText = {incomplete_pixel_coverage:"some pixels have no usable data",contaminated_pixels:"saturated or contaminated pixels",approximate_wavelength:"wavelength is approximate",invalid_wavelength:"spectral calibration is unavailable here",time_assumptions:"observation time includes assumptions"};
+  if (quality) details.push(`Useful pixel coverage: ${(quality.coverage_fraction * 100).toFixed(1)}%. Quality: ${quality.status}; scientific verification: ${quality.verified ? "verified" : "pending"}. ${(quality.reasons || []).map(r=>reasonText[r] || r).join("; ")}`);
+  if (f.predictionStatus === "no_model") details.push("No motion prediction for this fixed field.");
+  if (f.predictionStatus === "outside_field") details.push("Predicted position is outside this frame; marker hidden.");
+  if (f.timeSources?.length) details.push("Time source: " + [...new Set(f.timeSources.map(t => t.source))].join(", ") + ". " + [...new Set(f.timeSources.flatMap(t => t.assumptions || []))].join(", "));
+  if (f.wavelengthSamples?.some(s => s.source !== "spectral_wcs")) details.push("Wavelength is approximate; the spectral WCS is unavailable.");
+  $("frame-quality").textContent = USE_MOCK ? "Synthetic demonstration data." : details.join(" ");
   $("frame").src = f.url;
   if (f.trail) {                       // trail: a single picture, no per-epoch flags or markers
     $("info").textContent = `All ${f.epochs} epochs on one picture  |  ${f.date}  |  blue = earliest, green = middle, yellow = latest`;
@@ -264,9 +291,14 @@ function show(n) {
     $("flagbox").style.display = "none";
   } else {                               // fake red box for the demo
     $("flagimg").style.display = "none";
-    $("flagbox").style.display = flagsOn ? "block" : "none";
+    $("flagbox").style.display = USE_MOCK && flagsOn ? "block" : "none";
   }
   put($("marker"), f.expected, $("mk").checked);     // green: where the object should be
+  if ($("ms").checked && !f.measured) for (const c of f.candidates || []) {
+    const el = document.createElement("div"); el.className = "candidate";
+    el.style.cssText = "position:absolute;width:18px;height:18px;border:2px dotted orange;transform:translate(-50%,-50%);pointer-events:none";
+    $("wrap").appendChild(el); put(el, c.xy, true);
+  }
   put($("measured"), f.measured, $("ms").checked);   // yellow dashed: where it was measured
 }
 function toggle() {
@@ -303,7 +335,7 @@ const layout = (xt, yt) => ({
   paper_bgcolor: "#111", plot_bgcolor: "#111", font: {color: "#eee"}, margin: {t: 20}
 });
 let plotId = 0;
-function plotMessage(text) { Plotly.purge("plot"); $("plot").textContent = text; }
+function plotMessage(text) { if (window.Plotly) Plotly.purge("plot"); $("plot").textContent = text; }
 async function drawPlot() {
   const my = ++plotId;                               // a newer graph request cancels this one
   const isCurrent = () => my === plotId;
@@ -353,13 +385,22 @@ function loadUrl() {
 // ================= MAIN UPDATE =================
 let reqId = 0;
 async function update() {
+  document.querySelectorAll(".candidate").forEach(el => el.remove());
   const my = ++reqId;
   ++plotId;
   clearInterval(timer); timer = null; $("play").textContent = "Play";
   frames = []; lastGrid = null;
   $("frame").removeAttribute("src");
   ["flagimg", "flagbox", "marker", "measured"].forEach(id => $(id).style.display = "none");
-  plotMessage("Loading the graph for the selected object...");
+  plotMessage("Select Spectrum or Light curve to load a graph.");
+  $("warnings").textContent = ""; $("target-info").textContent = "";
+  $("field-center").textContent = "";
+  $("frame-quality").textContent = "";
+  $("method").hidden = true;
+  if (!$("target").value.trim() && !$("ra").value.trim() && !$("dec").value.trim() && !USE_MOCK) {
+    $("info").textContent = "Enter RA and Dec, an object name, or choose a test object.";
+    return;
+  }
   syncUrl();
   const ra = $("ra").value.trim(), dec = $("dec").value.trim();
   if (Boolean(ra) !== Boolean(dec)) {
@@ -375,7 +416,7 @@ async function update() {
   } catch (err) {
     if (my === reqId) $("info").textContent = "Could not load frames: " + err.message;
   }
-  if (my === reqId) drawPlot();
+
 }
 ["ra", "dec", "fov", "det"].forEach(id => $(id).onchange = update);
 $("target").onchange = () => { $("ra").value = ""; $("dec").value = ""; update(); };

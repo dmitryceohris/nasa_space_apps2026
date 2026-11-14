@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 from astropy.coordinates import SkyCoord
 
-from Exposure import DETECTOR_BANDS, Exposure, download_rows, query_spherex
+from Exposure import DETECTOR_BANDS, PIXEL_SCALE_ARCSEC, Exposure, download_rows, query_spherex
 
 from . import render
 from .epochs import epoch_limits, group_epochs, select_per_epoch
@@ -127,12 +127,34 @@ def build_spectrum(center: SkyCoord, coord_at: Callable[[float], SkyCoord], per_
         sub = tbl[tbl["detector"] == det]
         for g in select_per_epoch(np.asarray(sub["mjd"], float), per_epoch):
             rows += [sub[i] for i in g]
-    exps = download_rows(rows, center, 0.035,
+    max_offset = max((float(center.separation(coord_at(float(row["mjd"]))).arcsec) for row in rows), default=0.0)
+    # Include the complete background annulus at the propagated location on every selected date.
+    size_deg = max(0.035, 2 * (max_offset + PHOTOMETRY_METHOD["params"]["r_out_px"] * PIXEL_SCALE_ARCSEC) * 1.1 / 3600)
+    exps = download_rows(rows, center, size_deg,
                          progress=lambda d, t: progress("download", d, t, f"Скачано {d} из {t} снимков"))
     pts = spectrum(exps, coord_at)
     good = _good(pts)
-    return {"status": "ready", "points": pts, "n_points": len(pts),
-            "n_saturated": sum(1 for p in pts if not p["ok"]), "credits": CREDITS, "method": PHOTOMETRY_METHOD,
+    warnings = []
+    if len(exps) < len(rows):
+        warnings.append(f"Не удалось загрузить {len(rows) - len(exps)} из {len(rows)} экспозиций")
+    if len(pts) < len(exps):
+        warnings.append(f"Для {len(exps) - len(pts)} экспозиций нет пригодного покрытия апертуры/фонового кольца")
+    if any(p["wavelength_source"] != "spectral_wcs" for p in pts):
+        warnings.append("Длина волны части точек приблизительна: спектральный WCS недоступен")
+    if not rows:
+        warnings.append("По этим параметрам нет доступных кадров в ответе архива")
+    elif not exps:
+        warnings.append("Все загрузки выбранных экспозиций не удались")
+    elif not good:
+        warnings.append("Надёжных измерений для графика нет; проверьте покрытие, маски и флаги качества")
+    state = ("no_archive_results" if not rows else "download_failed" if not exps else
+             "unusable_data" if not good else "partial" if len(exps) < len(rows) else "available")
+    return {"status": "ready", "points": pts, "n_points": len(pts), "warnings": warnings,
+            "data_status": state, "exposure_counts": {"selected": len(rows), "downloaded": len(exps),
+                                                        "with_measurements": len(pts), "reliable": len(good)},
+            "cutout_size_deg": size_deg, "max_prediction_offset_arcsec": max_offset,
+            "n_saturated": sum(1 for p in pts if {"OVERFLOW", "NONLINEAR"} & set(p["flags"])),
+            "n_flagged": sum(1 for p in pts if not p["ok"]), "credits": CREDITS, "method": PHOTOMETRY_METHOD,
             "bands": {str(k): [v[0], v[1]] for k, v in DETECTOR_BANDS.items()},
             # плоские массивы только надёжных точек (ok): их напрямую рисует frontend/index.html
             "wavelength": [p["wave_um"] for p in good], "flux": [p["flux_ujy"] for p in good],

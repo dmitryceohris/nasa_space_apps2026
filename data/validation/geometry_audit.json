@@ -1,0 +1,782 @@
+{
+  "scope": "geometric FITS/WCS audit; no empirical registration or source detection",
+  "frames": [
+    {
+      "target": "barnard",
+      "date": "2025-08-15",
+      "obs_ids": [
+        "2025W33_2C_0321_1"
+      ],
+      "grid_margin_px": 26.955893543684546,
+      "marker_error_px": 0.0001064563154535847,
+      "native": [
+        {
+          "obs_id": "2025W33_2C_0321_1",
+          "margin_px": 41.620158252279104,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "barnard",
+      "date": "2026-03-19",
+      "obs_ids": [
+        "2026W12_1A_0598_1"
+      ],
+      "grid_margin_px": 27.92422204707382,
+      "marker_error_px": 0.00022204707381945354,
+      "native": [
+        {
+          "obs_id": "2026W12_1A_0598_1",
+          "margin_px": 41.93802832798711,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "barnard",
+      "date": "2026-04-10",
+      "obs_ids": [
+        "2026W15_2A_0137_1"
+      ],
+      "grid_margin_px": 28.040032253536065,
+      "marker_error_px": 0.00012069360742117397,
+      "native": [
+        {
+          "obs_id": "2026W15_2A_0137_1",
+          "margin_px": 42.76060432527172,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "barnard",
+      "date": "2026-05-04",
+      "obs_ids": [
+        "2026W19_1A_0046_1"
+      ],
+      "grid_margin_px": 28.16616771230741,
+      "marker_error_px": 0.00038159338232190976,
+      "native": [
+        {
+          "obs_id": "2026W19_1A_0046_1",
+          "margin_px": 43.049135030615716,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "barnard",
+      "date": "2026-08-16",
+      "obs_ids": [
+        "2026W33_2A_0594_4"
+      ],
+      "grid_margin_px": 28.64503245823515,
+      "marker_error_px": 0.0003383428926682086,
+      "native": [
+        {
+          "obs_id": "2026W33_2A_0594_4",
+          "margin_px": 43.09309089468125,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "epsindib",
+      "date": "2025-04-29",
+      "obs_ids": [
+        "2025W18_1B_0081_2"
+      ],
+      "grid_margin_px": 28.079628887031628,
+      "marker_error_px": 0.0003711129683701131,
+      "native": [
+        {
+          "obs_id": "2025W18_1B_0081_2",
+          "margin_px": 42.60779565730841,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "epsindib",
+      "date": "2025-05-20",
+      "obs_ids": [
+        "2025W21_1B_0227_1"
+      ],
+      "grid_margin_px": 28.119761710886333,
+      "marker_error_px": 0.00032173249859113184,
+      "native": [
+        {
+          "obs_id": "2025W21_1B_0227_1",
+          "margin_px": 42.254368045203115,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "epsindib",
+      "date": "2025-06-10",
+      "obs_ids": [
+        "2025W24_1A_0245_2"
+      ],
+      "grid_margin_px": 28.154639903504616,
+      "marker_error_px": 0.00036009649538470967,
+      "native": [
+        {
+          "obs_id": "2025W24_1A_0245_2",
+          "margin_px": 43.033742439898866,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "epsindib",
+      "date": "2025-09-28",
+      "obs_ids": [
+        "2025W39_2A_0693_3"
+      ],
+      "grid_margin_px": 28.2870124900194,
+      "marker_error_px": 0.0004589028664270245,
+      "native": [
+        {
+          "obs_id": "2025W39_2A_0693_3",
+          "margin_px": 42.9344947731139,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "epsindib",
+      "date": "2025-11-01",
+      "obs_ids": [
+        "2025W44_2B_0494_1"
+      ],
+      "grid_margin_px": 28.332643155985764,
+      "marker_error_px": 0.00044409052723182185,
+      "native": [
+        {
+          "obs_id": "2025W44_2B_0494_1",
+          "margin_px": 42.74636145376963,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "epsindib",
+      "date": "2026-04-29",
+      "obs_ids": [
+        "2026W18_1A_0444_1"
+      ],
+      "grid_margin_px": 28.72686925512078,
+      "marker_error_px": 0.00022274686984147252,
+      "native": [
+        {
+          "obs_id": "2026W18_1A_0444_1",
+          "margin_px": 42.86470430662905,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "epsindib",
+      "date": "2026-09-22",
+      "obs_ids": [
+        "2026W39_1A_0276_1"
+      ],
+      "grid_margin_px": 28.926251274881384,
+      "marker_error_px": 0.0002512748813856547,
+      "native": [
+        {
+          "obs_id": "2026W39_1A_0276_1",
+          "margin_px": 36.28326991401063,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "wise0855",
+      "date": "2025-05-05",
+      "obs_ids": [
+        "2025W19_1B_0116_1"
+      ],
+      "grid_margin_px": 27.12070637892878,
+      "marker_error_px": 0.00029362107121855274,
+      "native": [
+        {
+          "obs_id": "2025W19_1B_0116_1",
+          "margin_px": 41.77652732193613,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "wise0855",
+      "date": "2025-11-10",
+      "obs_ids": [
+        "2025W46_1A_0075_4"
+      ],
+      "grid_margin_px": 27.666104444619208,
+      "marker_error_px": 0.00010444461920755543,
+      "native": [
+        {
+          "obs_id": "2025W46_1A_0075_4",
+          "margin_px": 42.4679073596489,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "wise0855",
+      "date": "2025-12-12",
+      "obs_ids": [
+        "2025W50_2A_0232_1"
+      ],
+      "grid_margin_px": 27.796658309852212,
+      "marker_error_px": 0.00045498733307525185,
+      "native": [
+        {
+          "obs_id": "2025W50_2A_0232_1",
+          "margin_px": 42.72450837702348,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "wise0855",
+      "date": "2026-04-21",
+      "obs_ids": [
+        "2026W17_1B_0227_2"
+      ],
+      "grid_margin_px": 28.386875326849633,
+      "marker_error_px": 0.0003744917127690428,
+      "native": [
+        {
+          "obs_id": "2026W17_1B_0227_2",
+          "margin_px": 42.22490927746061,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rwaur",
+      "date": "2025-09-11",
+      "obs_ids": [
+        "2025W37_2A_0051_1"
+      ],
+      "grid_margin_px": 28.995370353742523,
+      "marker_error_px": 0.0004422887828319233,
+      "native": [
+        {
+          "obs_id": "2025W37_2A_0051_1",
+          "margin_px": 43.013492901388304,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rwaur",
+      "date": "2026-02-20",
+      "obs_ids": [
+        "2026W08_2A_0233_1"
+      ],
+      "grid_margin_px": 28.997267104714158,
+      "marker_error_px": 0.00026710471415825054,
+      "native": [
+        {
+          "obs_id": "2026W08_2A_0233_1",
+          "margin_px": 43.057367546218295,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rwaur",
+      "date": "2026-09-13",
+      "obs_ids": [
+        "2026W37_2A_0581_1"
+      ],
+      "grid_margin_px": 28.999378737669787,
+      "marker_error_px": 0.0003787376697879097,
+      "native": [
+        {
+          "obs_id": "2026W37_2A_0581_1",
+          "margin_px": 43.184770589353825,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rdra",
+      "date": "2025-04-24",
+      "obs_ids": [
+        "2025W17_4B_0021_1"
+      ],
+      "grid_margin_px": 28.994598261502055,
+      "marker_error_px": 0.0004017384979455585,
+      "native": [
+        {
+          "obs_id": "2025W17_4B_0021_1",
+          "margin_px": 43.11395153406213,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rdra",
+      "date": "2025-05-16",
+      "obs_ids": [
+        "2025W20_2D_0243_1"
+      ],
+      "grid_margin_px": 28.994869214186892,
+      "marker_error_px": 0.00013078581310921322,
+      "native": [
+        {
+          "obs_id": "2025W20_2D_0243_1",
+          "margin_px": 43.26753897361517,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rdra",
+      "date": "2025-06-06",
+      "obs_ids": [
+        "2025W23_2B_0129_2"
+      ],
+      "grid_margin_px": 28.995123068560254,
+      "marker_error_px": 0.00012306856025290358,
+      "native": [
+        {
+          "obs_id": "2025W23_2B_0129_2",
+          "margin_px": 43.31325114435369,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rdra",
+      "date": "2025-12-26",
+      "obs_ids": [
+        "2025W52_2A_0161_2"
+      ],
+      "grid_margin_px": 28.996887922525087,
+      "marker_error_px": 0.00012495431521486466,
+      "native": [
+        {
+          "obs_id": "2025W52_2A_0161_2",
+          "margin_px": 43.049120904022665,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rdra",
+      "date": "2026-02-08",
+      "obs_ids": [
+        "2026W06_2A_0609_1"
+      ],
+      "grid_margin_px": 28.99719089500088,
+      "marker_error_px": 0.0003575719802526578,
+      "native": [
+        {
+          "obs_id": "2026W06_2A_0609_1",
+          "margin_px": 43.22772683916795,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rdra",
+      "date": "2026-03-01",
+      "obs_ids": [
+        "2026W09_2A_0550_1"
+      ],
+      "grid_margin_px": 28.997370348991574,
+      "marker_error_px": 0.000487531147008724,
+      "native": [
+        {
+          "obs_id": "2026W09_2A_0550_1",
+          "margin_px": 43.383513833075476,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rdra",
+      "date": "2026-03-21",
+      "obs_ids": [
+        "2026W12_2A_0398_2"
+      ],
+      "grid_margin_px": 28.997568394889452,
+      "marker_error_px": 0.00043160511054907147,
+      "native": [
+        {
+          "obs_id": "2026W12_2A_0398_2",
+          "margin_px": 43.20348899971899,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rdra",
+      "date": "2026-04-11",
+      "obs_ids": [
+        "2026W15_2A_0483_1"
+      ],
+      "grid_margin_px": 28.997795350072764,
+      "marker_error_px": 0.00026774836995357987,
+      "native": [
+        {
+          "obs_id": "2026W15_2A_0483_1",
+          "margin_px": 43.287765769271495,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rdra",
+      "date": "2026-05-02",
+      "obs_ids": [
+        "2026W18_2A_0354_3"
+      ],
+      "grid_margin_px": 28.998038868478076,
+      "marker_error_px": 0.00016598702209691396,
+      "native": [
+        {
+          "obs_id": "2026W18_2A_0354_3",
+          "margin_px": 37.531882889668324,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rdra",
+      "date": "2026-05-22",
+      "obs_ids": [
+        "2026W21_2A_0104_1"
+      ],
+      "grid_margin_px": 28.998288008180438,
+      "marker_error_px": 0.00028800818043706045,
+      "native": [
+        {
+          "obs_id": "2026W21_2A_0104_1",
+          "margin_px": 43.145103204542465,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "rdra",
+      "date": "2026-06-12",
+      "obs_ids": [
+        "2026W24_2B_0242_1"
+      ],
+      "grid_margin_px": 28.998561366669097,
+      "marker_error_px": 0.00043863333090143897,
+      "native": [
+        {
+          "obs_id": "2026W24_2B_0242_1",
+          "margin_px": 43.23522991401808,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "Proxima Cen",
+      "date": "2025-07-22",
+      "obs_ids": [
+        "2025W30_1B_0271_1"
+      ],
+      "grid_margin_px": 28.999999999997947,
+      "marker_error_px": 2.0534685063466895e-12,
+      "native": [
+        {
+          "obs_id": "2025W30_1B_0271_1",
+          "margin_px": 43.00020549020259,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "Proxima Cen",
+      "date": "2025-08-23",
+      "obs_ids": [
+        "2025W34_2B_0324_1"
+      ],
+      "grid_margin_px": 28.999999999997947,
+      "marker_error_px": 2.0534685063466895e-12,
+      "native": [
+        {
+          "obs_id": "2025W34_2B_0324_1",
+          "margin_px": 43.330396922423475,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "Proxima Cen",
+      "date": "2026-02-15",
+      "obs_ids": [
+        "2026W07_2A_0639_2"
+      ],
+      "grid_margin_px": 28.999999999997947,
+      "marker_error_px": 2.0534685063466895e-12,
+      "native": [
+        {
+          "obs_id": "2026W07_2A_0639_2",
+          "margin_px": 43.30508428896345,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "Proxima Cen",
+      "date": "2026-07-20",
+      "obs_ids": [
+        "2026W30_1B_0070_1"
+      ],
+      "grid_margin_px": 28.999999999997947,
+      "marker_error_px": 2.0534685063466895e-12,
+      "native": [
+        {
+          "obs_id": "2026W30_1B_0070_1",
+          "margin_px": 43.37187538610401,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "61 Cyg A",
+      "date": "2025-05-25",
+      "obs_ids": [
+        "2025W21_2C_0442_1"
+      ],
+      "grid_margin_px": 28.999999999997947,
+      "marker_error_px": 2.0534685063466895e-12,
+      "native": [
+        {
+          "obs_id": "2025W21_2C_0442_1",
+          "margin_px": 43.037034754772556,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "61 Cyg A",
+      "date": "2025-06-16",
+      "obs_ids": [
+        "2025W25_1B_0010_1"
+      ],
+      "grid_margin_px": 28.999999999997947,
+      "marker_error_px": 2.0534685063466895e-12,
+      "native": [
+        {
+          "obs_id": "2025W25_1B_0010_1",
+          "margin_px": 43.421581088036035,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "61 Cyg A",
+      "date": "2025-10-24",
+      "obs_ids": [
+        "2025W43_2A_0295_1"
+      ],
+      "grid_margin_px": 28.999999999997947,
+      "marker_error_px": 2.0534685063466895e-12,
+      "native": [
+        {
+          "obs_id": "2025W43_2A_0295_1",
+          "margin_px": 43.15331542545565,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "61 Cyg A",
+      "date": "2026-05-25",
+      "obs_ids": [
+        "2026W22_1A_0106_1"
+      ],
+      "grid_margin_px": 28.999999999997947,
+      "marker_error_px": 2.0534685063466895e-12,
+      "native": [
+        {
+          "obs_id": "2026W22_1A_0106_1",
+          "margin_px": 43.29743717624574,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "61 Cyg A",
+      "date": "2026-07-05",
+      "obs_ids": [
+        "2026W27_2A_0574_1"
+      ],
+      "grid_margin_px": 28.999999999997947,
+      "marker_error_px": 2.0534685063466895e-12,
+      "native": [
+        {
+          "obs_id": "2026W27_2A_0574_1",
+          "margin_px": 43.3627292019571,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "Vega",
+      "date": "2025-08-28",
+      "obs_ids": [
+        "2025W35_2A_0014_1"
+      ],
+      "grid_margin_px": 28.999999999997947,
+      "marker_error_px": 2.0534685063466895e-12,
+      "native": [
+        {
+          "obs_id": "2025W35_2A_0014_1",
+          "margin_px": 43.002743922355286,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "Vega",
+      "date": "2026-04-05",
+      "obs_ids": [
+        "2026W14_2A_0517_1"
+      ],
+      "grid_margin_px": 28.999999999997947,
+      "marker_error_px": 2.0534685063466895e-12,
+      "native": [
+        {
+          "obs_id": "2026W14_2A_0517_1",
+          "margin_px": 43.06380791192572,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "Vega",
+      "date": "2026-05-04",
+      "obs_ids": [
+        "2026W19_1A_0141_1"
+      ],
+      "grid_margin_px": 28.999999999997947,
+      "marker_error_px": 2.0534685063466895e-12,
+      "native": [
+        {
+          "obs_id": "2026W19_1A_0141_1",
+          "margin_px": 43.18112698856288,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    },
+    {
+      "target": "Vega",
+      "date": "2026-08-30",
+      "obs_ids": [
+        "2026W35_2A_0569_1"
+      ],
+      "grid_margin_px": 28.999999999997947,
+      "marker_error_px": 2.0534685063466895e-12,
+      "native": [
+        {
+          "obs_id": "2026W35_2A_0569_1",
+          "margin_px": 43.05496314636148,
+          "background_radius_7px_fits": true,
+          "time_source": "MJD-AVG",
+          "timesys": "UTC"
+        }
+      ]
+    }
+  ],
+  "marker_axes_pass": true,
+  "all_grid_margins_include_7px": true,
+  "all_native_margins_include_7px": true
+}

@@ -1,0 +1,14 @@
+.git
+.venv
+.claude
+.playwright-cli
+.pytest_cache
+**/__pycache__
+cache
+tmp
+output
+mock
+data/validation
+.env
+.env.*
+server.log

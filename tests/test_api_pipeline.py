@@ -103,3 +103,121 @@ def test_diff_needs_two_epochs(synthetic, monkeypatch):
     monkeypatch.setattr(irsa, "exposures", lambda ra, dec, det: meta)
     res, _ = run("diff")
     assert res["frames"] == [] and any("минимум 2 эпохи" in w for w in res["warnings"])
+
+
+def test_data_states_distinguish_empty_failed_and_unusable(synthetic, monkeypatch):
+    monkeypatch.setattr(irsa, 'exposures', lambda *args: [])
+    empty, _ = run('coadd')
+    assert empty['data_status'] == 'no_archive_results'
+    assert 'никогда' not in ' '.join(empty['warnings'])
+    monkeypatch.setattr(irsa, 'exposures', lambda *args: [{'uri': 'broken', 'mjd': 60000}])
+    def fail(*args):
+        raise OSError('controlled download failure')
+    monkeypatch.setattr(irsa, 'cutout', fail)
+    failed, _ = run('coadd')
+    assert failed['data_status'] == 'download_failed'
+    monkeypatch.setattr(irsa, 'cutout', lambda *args: 'broken')
+    unusable, _ = run('coadd')
+    assert unusable['data_status'] == 'unusable_data'
+
+
+def test_available_data_reports_counts(synthetic):
+    result, _ = run('single')
+    assert result['data_status'] == 'available'
+    assert result['exposure_counts'] == {'selected': 2, 'failed': 0, 'used': 2, 'rejected': 0}
+    assert all(f['quality']['coverage_fraction'] > 0 for f in result['frames'])
+    assert all(f['quality']['verified'] is False for f in result['frames'])
+
+
+def test_poor_centroid_is_only_a_candidate(synthetic, monkeypatch):
+    original = jobs.centroid.measure
+    def poor(*args, **kwargs):
+        result = original(*args, **kwargs)
+        result['quality'] = 'poor'
+        return result
+    monkeypatch.setattr(jobs.centroid, 'measure', poor)
+    result, _ = run('single')
+    assert all(frame['measured_px'] is None for frame in result['frames'])
+    assert all(frame['measured_candidates'] for frame in result['frames'])
+
+
+@pytest.mark.parametrize('mode', ['single', 'coadd', 'diff', 'trail'])
+def test_real_http_path_uses_processing_and_preserves_quality(synthetic, mode, monkeypatch):
+    import time
+    from fastapi.testclient import TestClient
+    from api.main import app
+    mount = next(route.app for route in app.routes if getattr(route, 'name', '') == 'cache')
+    monkeypatch.setattr(mount, 'all_directories', [str(synthetic)])
+    with TestClient(app) as client:
+        query = {'ra': CENTER.ra.deg, 'dec': CENTER.dec.deg, 'fov': 3, 'det': 3, 'mode': mode}
+        for _ in range(200):
+            response = client.get('/api/view', params=query)
+            if response.status_code != 202:
+                break
+            time.sleep(0.01)
+        assert response.status_code == 200
+        result = response.json()
+        assert result['status'] == 'ready' and len(result['frames']) == 2
+        assert result['target_info'] is None
+        assert result['frames'][0]['quality']['verified'] is False
+        assert result['frames'][0]['wavelength_samples'][0]['source'] == 'approximate_detector_position'
+        image = client.get(result['frames'][0]['image_url'])
+        assert image.status_code == 200 and image.content.startswith(b'\x89PNG')
+
+
+def _http_result(mode):
+    import time
+    from fastapi.testclient import TestClient
+    from api.main import app
+    client = TestClient(app)
+    for _ in range(200):
+        response = client.get('/api/view', params={'ra':CENTER.ra.deg,'dec':CENTER.dec.deg,'fov':3,'det':3,'mode':mode})
+        if response.status_code != 202:
+            break
+        time.sleep(.01)
+    assert response.status_code == 200
+    return response.json()
+
+
+@pytest.mark.parametrize('mode', ['single','coadd','diff','trail'])
+def test_one_epoch_through_http_has_no_fake_animation(synthetic, monkeypatch, mode):
+    monkeypatch.setattr(irsa, 'exposures', lambda *args: [{'uri':'u0','mjd':100}])
+    result = _http_result(mode)
+    assert result['status'] == 'ready' and result['data_status'] == 'single_epoch'
+    assert len(result['frames']) == (0 if mode == 'diff' else 1)
+    assert result['trail_url'] is None
+    assert any('одна эпоха' in message for message in result['warnings'])
+
+
+def test_partial_http_result_retries_failed_exposure_after_short_ttl(synthetic, monkeypatch):
+    import os
+    import time
+    def sometimes_broken(uri, *args):
+        if uri == 'u0':
+            raise OSError('controlled outage')
+        return uri
+    monkeypatch.setattr(irsa, 'cutout', sometimes_broken)
+    first = _http_result('coadd')
+    assert first['data_status'] == 'partial' and first['exposure_counts']['failed'] == 1
+    key = first['frames'][0]['image_url'].split('/')[2]
+    stamp = time.time()-61
+    os.utime(synthetic/key/'result.json', (stamp,stamp))
+    monkeypatch.setattr(irsa, 'cutout', lambda uri,*args: uri)
+    recovered = _http_result('coadd')
+    assert recovered['data_status'] == 'available'
+    assert recovered['exposure_counts']['used'] == 4 and recovered['exposure_counts']['failed'] == 0
+
+
+def test_stationary_star_and_changed_background_through_http(synthetic, monkeypatch):
+    original = jobs.load_exposure
+    def changed(*args, **kwargs):
+        exp = original(*args, **kwargs)
+        if exp.mjd > 200:
+            exp.image = exp.image + 40
+        exp.image[:, 0] = np.nan  # no-data edge must not become a source
+        return exp
+    monkeypatch.setattr(jobs, 'load_exposure', changed)
+    result = _http_result('diff')
+    assert len(result['frames']) == 2
+    assert all(f['measured_px'] is None for f in result['frames'])
+    assert result['processing']['difference']['units'] == 'robust_residual_scale'

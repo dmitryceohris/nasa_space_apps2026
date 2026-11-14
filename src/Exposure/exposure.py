@@ -80,11 +80,14 @@ class Exposure:
     wcs: WCS                     # пиксель <-> (RA, Dec)
     wave_wcs: WCS | None         # пиксель -> (λ, ширина полосы); None если не удалось прочитать
     detector: int                # 1..6
-    mjd: float                   # время середины экспозиции (MJD)
+    mjd: float                   # MJD UTC; midpoint only when confirmed by time_source
     obs_id: str
     flag_bits: dict[str, int] = field(default_factory=lambda: dict(DEFAULT_FLAG_BITS))
     source: str = ""             # путь или URL, откуда загружено
     header: fits.Header | None = field(default=None, repr=False)  # заголовок IMAGE
+
+    time_source: str = "unknown"
+    time_assumptions: list[str] = field(default_factory=list)
 
     # ---------- геометрия ----------
     @property

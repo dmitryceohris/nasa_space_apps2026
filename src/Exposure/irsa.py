@@ -78,7 +78,8 @@ def download_rows(rows, coord: SkyCoord, size_deg: float, *, workers: int = 6,
             return None
 
     exps = []
-    with ThreadPoolExecutor(max_workers=workers) as pool:
+    pool = ThreadPoolExecutor(max_workers=workers)
+    try:
         # as_completed: прогресс растёт по мере готовности, а не в порядке очереди
         for fut in as_completed([pool.submit(_one, r) for r in rows]):
             e = fut.result()
@@ -87,6 +88,8 @@ def download_rows(rows, coord: SkyCoord, size_deg: float, *, workers: int = 6,
                 progress(done, total)
             if e is not None:
                 exps.append(e)
+    finally:
+        pool.shutdown(wait=True, cancel_futures=True)
     return sorted(exps, key=lambda e: e.mjd)
 
 

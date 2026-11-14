@@ -80,6 +80,8 @@ class Frame:
     n_exp: int
     obs_ids: list[str] = field(default_factory=list)
     bg_offsets: list[float | None] = field(default_factory=list)  # остаточный фон каждой экспозиции, MJy/sr
+    time_sources: list[dict] = field(default_factory=list)
+    wavelength_samples: list[dict] = field(default_factory=list)
 
     @property
     def span_days(self) -> float:
@@ -119,7 +121,7 @@ def coadd(exps: list[Exposure], wcs: WCS, shape, center: SkyCoord) -> Frame | No
     num = np.zeros(shape)
     den = np.zeros(shape)
     contam = np.zeros(shape, bool)
-    waves, used, offsets = [], [], []
+    waves, used, offsets, samples = [], [], [], []
     for e in exps:
         img, var, bad, con = reproject_exposure(e, wcs, shape)
         if bad.all():
@@ -136,7 +138,12 @@ def coadd(exps: list[Exposure], wcs: WCS, shape, center: SkyCoord) -> Frame | No
         den += w
         contam |= con  # включая насыщенные пиксели, которые выброшены из суммы
         if e.contains(center):
-            waves.append(e.wavelength_at_sky(center)[0])
+            wave, width = e.wavelength_at_sky(center)
+            if np.isfinite(wave):
+                waves.append(wave)
+            samples.append({"obs_id": e.obs_id, "wave_um": float(wave) if np.isfinite(wave) else None,
+                            "bw_um": float(width) if np.isfinite(width) else None,
+                            "source": "spectral_wcs" if e.wave_wcs is not None else "approximate_detector_position"})
         used.append(e)
     if not used:
         return None
@@ -148,15 +155,20 @@ def coadd(exps: list[Exposure], wcs: WCS, shape, center: SkyCoord) -> Frame | No
                  mjd=float(np.mean(mjds)), mjd_min=float(min(mjds)), mjd_max=float(max(mjds)),
                  detector=used[0].detector,
                  wave_um=float(np.mean(waves)) if waves else float("nan"),
-                 n_exp=len(used), obs_ids=[e.obs_id for e in used], bg_offsets=offsets)
+                 n_exp=len(used), obs_ids=[e.obs_id for e in used], bg_offsets=offsets,
+                 time_sources=[{"obs_id": e.obs_id, "source": e.time_source,
+                                "assumptions": e.time_assumptions} for e in used],
+                 wavelength_samples=samples)
 
 
 MIN_DIFF_PIX = 50  # fewer valid pixels: the empirical noise of a difference frame is not estimated
 DIFF_METHOD = {
     "name": "leave_one_out_median",
     "description": "Кадр минус медиана ОСТАЛЬНЫХ эпох (без самого кадра), делённая на шум; шум затем "
-                   "нормирован робастно (MAD) по самому разностному кадру, чтобы 1 единица = 1σ на деле.",
+                   "нормирован робастно (MAD) по самому разностному кадру. Шкала показывает относительные остатки.",
+    "units": "robust_residual_scale",
     "limitations": [
+        "это не откалиброванная статистическая значимость: корреляции интерполяции и оценка фона не распространены полностью",
         "λ в точке может различаться между эпохами (LVF): у объектов с крутым спектром остаток бывает не движением",
         "переменная звезда даёт остаток того же знака на месте, а не пару «+/−»",
         "медленное движение (меньше ~1 пикселя между эпохами) даёт слабую пару, слившуюся в один диполь",

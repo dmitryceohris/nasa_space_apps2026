@@ -6,12 +6,16 @@ only finds the exposures (local table or IRSA TAP), downloads the cutouts, calls
 PNG files and adds the object centres.
 """
 import io
+import hashlib
+import json
 import logging
+import os
 import threading
+import time
 import uuid
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 from astropy import units as u
@@ -46,6 +50,9 @@ class Job:
     total: int = 0
     message: str = ""
     result: dict | None = None
+    created: float = field(default_factory=time.monotonic)
+    started: bool = False
+    finished: float | None = None
 
 
 def _poll(k: str, runner):
@@ -54,8 +61,19 @@ def _poll(k: str, runner):
     if res:
         return 200, res
     with LOCK:
+        # The worker may have published and removed its Job since the first cache read.
+        res = cache.read(k)
+        if res:
+            return 200, res
+        now = time.monotonic()
+        retention = float(os.environ.get("JOB_RETENTION_SECONDS", "300"))
+        for old_key, old in list(JOBS.items()):
+            if old.status != "running" and now - (old.finished or old.created) > retention:
+                JOBS.pop(old_key)
         j = JOBS.get(k)
         if j is None:
+            if len(JOBS) >= int(os.environ.get("MAX_PENDING_JOBS", "16")):
+                raise ApiError(503, "busy", "Очередь запросов заполнена. Повторите запрос позже")
             j = JOBS[k] = Job(k, uuid.uuid4().hex[:8])
             POOL.submit(_run, j, runner)
         if j.status == "error":  # drop it so the next request retries
@@ -64,36 +82,55 @@ def _poll(k: str, runner):
         if j.status == "ready":
             JOBS.pop(k)
             return 200, j.result
-        return 202, {"status": "running", "job_id": j.id, "stage": j.stage, "done": j.done, "total": j.total,
+        if now - j.created > float(os.environ.get("MAX_JOB_SECONDS", "1800")):
+            raise ApiError(503, "timeout", "Задача превысила время ожидания; загрузки ещё завершаются. Повторите запрос позже")
+        return 202, {"status": "running", "job_id": j.id, "stage": j.stage if j.started else "queued", "done": j.done, "total": j.total,
                      "message": j.message}
 
 
 def _run(j, runner):
     try:
+        j.started = True
+        _deadline(j)
         res = runner(j)
-        empty = (res.get("frames") is not None and not res["frames"]) or (
-            res.get("points") is not None and not res["points"])
-        if not empty:
-            cache.write(j.key, res)
-            with LOCK:
-                JOBS.pop(j.key, None)
-        else:  # nothing to show: do not cache, new SPHEREx releases may fill it later
-            j.result, j.status = res, "ready"
+        _deadline(j)
+        cache.write(j.key, res)
+        with LOCK:
+            if JOBS.get(j.key) is j:
+                JOBS.pop(j.key)
     except ApiError as e:
-        j.status, j.message = "error", e.message
+        with LOCK:
+            j.status, j.message, j.finished = "error", e.message, time.monotonic()
     except Exception as e:
         log.exception("job %s failed", j.key)
-        j.status, j.message = "error", f"внутренняя ошибка: {e}"
+        with LOCK:
+            j.status, j.message, j.finished = "error", f"внутренняя ошибка: {e}", time.monotonic()
 
 
 def _stage(j, stage, msg="", done=0, total=0):
+    _deadline(j)
     j.stage, j.message, j.done, j.total = stage, msg, done, total
 
 
+def _deadline(j):
+    if time.monotonic() - j.created > float(os.environ.get("MAX_JOB_SECONDS", "1800")):
+        raise ApiError(503, "timeout", "Превышено время обработки запроса")
+
+
 # ---------------------------------------------------------------- view
+def _model_key(key, r):
+    # Fixed fields and tracking queries at the same centre must never share results.
+    if not r.get("motion"):
+        return key
+    model = json.dumps(r["motion"], sort_keys=True, ensure_ascii=False)
+    return hashlib.sha1((key + model).encode()).hexdigest()[:16]
+
+
 def _view_key(p: Params, r: dict) -> str:
     ra, dec = r["center"]
-    return cache.key(ra, dec, p.fov, p.det, p.mode, p.max_per_epoch)
+    key = cache.key(ra, dec, p.fov, p.det, p.mode, p.max_per_epoch)
+    key = hashlib.sha1((key + irsa.selection_token()).encode()).hexdigest()[:16]
+    return _model_key(key, r)
 
 
 def view(p: Params):
@@ -165,12 +202,13 @@ def _pipeline(j, p, r):
     res = {"status": "ready",
            "query": {"ra": ra, "dec": dec, "fov": p.fov, "det": p.det, "mode": p.mode, "target": r["label"]},
            "grid": grid_header_json(wcs, shape), "frames": [], "trail_url": None, "motion": _motion(r),
-           "warnings": [], "credits": CREDITS, "processing": _processing(p)}
+           "target_info": r.get("motion"), "center_mjd": r.get("center_mjd"),
+           "data_status": "no_archive_results", "warnings": [], "credits": CREDITS, "processing": _processing(p)}
 
     _stage(j, "query", "Поиск снимков")
     meta = irsa.exposures(ra, dec, p.det)
     if not meta:
-        res["warnings"].append("SPHEREx ещё не наблюдал эту область")
+        res["warnings"].append("По этим параметрам нет доступных кадров в ответе архива")
         return res
     groups = select_per_epoch([m["mjd"] for m in meta], p.max_per_epoch)  # epochs, <= max_per_epoch each
     if p.mode == "single":  # one exposure per epoch: download only those
@@ -180,9 +218,11 @@ def _pipeline(j, p, r):
     size = p.fov / 60 * 1.5  # cutout a bit larger than the grid so rotated footprints still fill it
     _stage(j, "download", f"Скачано 0 из {len(flat)} снимков", 0, len(flat))
     paths, failed = {}, 0
-    with ThreadPoolExecutor(6) as ex:
+    ex = ThreadPoolExecutor(6)
+    try:
         futs = {ex.submit(irsa.cutout, meta[i]["uri"], ra, dec, size): i for i in flat}
         for f in as_completed(futs):
+            _deadline(j)
             try:
                 paths[futs[f]] = f.result()
             except Exception as e:
@@ -190,10 +230,14 @@ def _pipeline(j, p, r):
                 log.warning("cutout failed: %s", e)
             j.done += 1
             j.message = f"Скачано {j.done} из {j.total} снимков"
+    finally:
+        # Do not drain the remaining queue after the request deadline. In-flight HTTP calls are bounded.
+        ex.shutdown(wait=True, cancel_futures=True)
 
     _stage(j, "process", "Обработка", 0, len(groups))
     frames = []
     for g in groups:
+        _deadline(j)
         exps = []
         for i in g:
             if i not in paths:
@@ -213,6 +257,18 @@ def _pipeline(j, p, r):
     if failed:
         res["warnings"].append(f"Не удалось получить или обработать {failed} из {len(flat)} снимков")
 
+    res["data_status"] = ("download_failed" if not paths else "unusable_data") if not frames else (
+        "partial" if failed or sum(f.n_exp for f in frames) < len(flat) else "single_epoch" if len(frames) == 1 else "available")
+    used = sum(f.n_exp for f in frames)
+    res["exposure_counts"] = {"selected": len(flat), "failed": failed, "used": used,
+                              "rejected": len(flat) - failed - used}
+    if not frames:
+        res["warnings"].append("Все загрузки выбранных экспозиций не удались" if not paths else
+                               "Файлы получены, но пригодных для изображения пикселей нет")
+    if res["exposure_counts"]["rejected"]:
+        res["warnings"].append(f"Отброшено непригодных экспозиций: {res['exposure_counts']['rejected']}")
+    if len(frames) == 1:
+        res["warnings"].append("Доступна одна эпоха: последовательность разных дат пока недоступна")
     diffs = template = scales = None
     if p.mode in ("diff", "trail"):
         if len(frames) < 2:
@@ -231,6 +287,9 @@ def _pipeline(j, p, r):
     for i, f in enumerate(frames):
         signed = p.mode == "diff"
         arr = diffs[i] if signed else f.image
+        if not np.isfinite(arr).any():
+            res["warnings"].append(f"Эпоха {i + 1}: нет пригодных пикселей для " + ("разности" if signed else "изображения"))
+            continue
         if signed:
             prender.save_diff(arr, d / f"f{i}.png")
         else:
@@ -239,31 +298,54 @@ def _pipeline(j, p, r):
         pred = None
         if r["motion"]:  # where the object should be on the frame date
             x, y = wcs.world_to_pixel(_sky(r, f.mjd))
-            pred = prender.fits_to_png_xy(x, y, h)
+            if np.isfinite([x, y]).all() and 0 <= x < shape[1] and 0 <= y < h:
+                pred = prender.fits_to_png_xy(x, y, h)
+            else:
+                res["warnings"].append(f"Эпоха {i + 1}: прогноз вне поля; маркер скрыт")
         m = centroid.measure(arr, signed, saturated=f.contam)
         cands = [{"kind": c["kind"], "sign": c["sign"], "xy": prender.fits_to_png_xy(c["xy"][0], c["xy"][1], h),
                   "err_px": [round(e, 3) for e in c["err_px"]], "area_px": c["area"], "snr": round(c["snr"], 1),
                   "quality": c["quality"], "flags": c["flags"]}
                  for c in m["candidates"]]
+        coverage = float(np.isfinite(arr).sum() / arr.size)
+        limitations = []
+        if coverage < 1:
+            limitations.append("incomplete_pixel_coverage")
+        if f.contam.any():
+            limitations.append("contaminated_pixels")
+        if any(s["source"] != "spectral_wcs" for s in f.wavelength_samples):
+            limitations.append("approximate_wavelength")
+        if any(s["wave_um"] is None or s["bw_um"] is None for s in f.wavelength_samples):
+            limitations.append("invalid_wavelength")
+        if any(t["assumptions"] for t in f.time_sources):
+            limitations.append("time_assumptions")
         res["frames"].append({
             "index": i, "label": f"Эпоха {i + 1}", "mjd": round(f.mjd, 4), "date": f.date,
             "mjd_span": [round(f.mjd_min, 4), round(f.mjd_max, 4)], "det": f.detector,
             "wave_um": round(f.wave_um, 4) if np.isfinite(f.wave_um) else None, "n_exp": f.n_exp,
             "image_url": f"/cache/{j.key}/f{i}.png", "flags_url": f"/cache/{j.key}/f{i}_flags.png",
             "predicted_px": pred,
+            "prediction_status": ("in_frame" if pred else "outside_field") if r["motion"] else "no_model",
             # measured_px: the centre when the choice is unambiguous (status ok); null when nothing is found or
             # when the largest and the central object differ (both are listed, nothing is guessed). In diff mode
             # only the "+" residual (where the object is in this frame) gives the position.
-            "measured_px": prender.fits_to_png_xy(m["xy"][0], m["xy"][1], h) if m["status"] == "ok" else None,
+            "measured_px": prender.fits_to_png_xy(m["xy"][0], m["xy"][1], h) if m["status"] == "ok" and m["quality"] != "poor" else None,
             "measured_candidates": cands,
             "measurement": {"status": m["status"], "reason": m["reason"], "quality": m["quality"],
                             "flags": m["flags"], "n_rejected_hot": m["n_rejected_hot"],
                             "n_low_snr": m["n_low_snr"],
                             "err_px": None if m["err_px"] is None else [round(e, 3) for e in m["err_px"]]},
+            "quality": {"status": "limited" if limitations else "unchecked", "verified": False,
+                        "coverage_fraction": round(coverage, 5), "reasons": limitations},
+            "time_sources": f.time_sources, "wavelength_samples": f.wavelength_samples,
             "span_days": round(f.span_days, 3), "bg_offsets": f.bg_offsets,
             "diff_noise_scale": scales[i] if scales else None,
             "obs_ids": f.obs_ids})
-    if diffs is not None:
+    if frames and not res["frames"]:
+        res["data_status"] = "unusable_data"
+    elif len(res["frames"]) < len(frames):
+        res["data_status"] = "partial"
+    if diffs is not None and res["frames"]:
         prender.save_rgb(trail(diffs), d / "trail.png", background=template, vmin=vmin, vmax=vmax)
         res["trail_url"] = f"/cache/{j.key}/trail.png"
 
@@ -295,13 +377,15 @@ def _spectrum_job(j, r):
 
     res = build_spectrum(center, lambda mjd: _sky(r, mjd), progress=progress)
     res["query"] = {"ra": ra, "dec": dec, "target": r["label"]}
+    res["target_info"] = r.get("motion")
+    res["center_mjd"] = r.get("center_mjd")
     return res
 
 
 def spectrum_view(p: Params):
     """Only target / ra+dec of p are used."""
     r = resolve.for_params(p)
-    return _poll(cache.key_spectrum(*r["center"]), lambda j: _spectrum_job(j, r))
+    return _poll(_model_key(cache.key_spectrum(*r["center"]), r), lambda j: _spectrum_job(j, r))
 
 
 def default_window(det: int):
@@ -318,4 +402,6 @@ def lightcurve_view(p: Params, wave_min: float, wave_max: float):
         return status, payload
     res = lightcurve_from_spectrum(payload, wave_min, wave_max)
     res["query"] = payload.get("query")
+    res["target_info"] = payload.get("target_info")
+    res["warnings"] = payload.get("warnings", [])
     return 200, res
