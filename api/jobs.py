@@ -15,7 +15,11 @@ from astropy.time import Time
 from astropy.wcs import WCS
 from reproject import reproject_interp
 
+from processing import render as proc_render  # src/processing (on sys.path via api/__init__.py)
+from processing.frames import trail as proc_trail
+
 from . import cache, centroid, irsa, render, resolve
+from . import spectrum as spec
 from .errors import ApiError
 from .params import Params
 
@@ -41,11 +45,21 @@ class Job:
 
 def view(p: Params):
     """-> (http_status, payload): 200 cached/ready/error, 202 running."""
-    if p.mode == "trail":
-        raise ApiError(501, "not_implemented", "режим trail ещё не реализован")
     r = resolve.for_params(p)
     ra, dec = r["center"]
     k = cache.key(ra, dec, p.fov, p.det, p.mode, p.max_per_epoch)
+    return _get_or_start(k, lambda j: _pipeline(j, p, r))
+
+
+def spectrum(p: Params, per_epoch: int):
+    """Spectrum at a point over all 6 detectors; same 202/200 mechanism as view(). Uses src/processing."""
+    r = resolve.for_params(p)
+    ra, dec = r["center"]
+    k = cache.key(ra, dec, 0, 0, "spectrum", per_epoch)
+    return _get_or_start(k, lambda j: spec.run(j, ra, dec, r, per_epoch, _stage))
+
+
+def _get_or_start(k: str, runner):
     res = cache.read(k)
     if res:
         return 200, res
@@ -53,7 +67,7 @@ def view(p: Params):
         j = JOBS.get(k)
         if j is None:
             j = JOBS[k] = Job(k, uuid.uuid4().hex[:8])
-            POOL.submit(_run, j, p, r)
+            POOL.submit(_run, j, runner)
         if j.status == "error":  # drop it so the next request retries
             JOBS.pop(k)
             return 200, {"status": "error", "message": j.message}
@@ -89,10 +103,10 @@ def prewarm():
             log.exception("prewarm %s failed", t["id"])
 
 
-def _run(j, p, r):
+def _run(j, runner):
     try:
-        res = _pipeline(j, p, r)
-        if res["frames"]:
+        res = runner(j)
+        if res.get("frames") or res.get("points"):
             cache.write(j.key, res)
             with LOCK:
                 JOBS.pop(j.key, None)
@@ -169,9 +183,10 @@ def _pipeline(j, p, r):
         j.done += 1
     if failed:
         res["warnings"].append(f"Не удалось получить или обработать {failed} из {len(flat)} снимков")
-    if p.mode == "diff":
+    tmpl = None
+    if p.mode in ("diff", "trail"):
         if len(epochs) < 2:
-            res["warnings"].append("diff требует минимум 2 эпохи")
+            res["warnings"].append(f"{p.mode} требует минимум 2 эпохи")
             epochs = []
         else:  # this epoch minus the median over all epochs
             tmpl = np.nanmedian([e["img"] for e in epochs], axis=0)
@@ -179,7 +194,7 @@ def _pipeline(j, p, r):
                 e["img"] = e["img"] - tmpl
 
     _stage(j, "render", "Рисую кадры", 0, len(epochs))
-    signed = p.mode == "diff"
+    signed = p.mode in ("diff", "trail")  # trail: frames are the diffs, plus one trail.png
     lo, hi = render.limits([e["img"] for e in epochs], signed)
     d = cache.CACHE / j.key
     d.mkdir(exist_ok=True)
@@ -201,4 +216,21 @@ def _pipeline(j, p, r):
             # the central object differ (both are then listed in measured_candidates instead of guessing one).
             "predicted_px": pred, "measured_px": cands[0]["xy"] if len(cands) == 1 else None,
             "measured_candidates": cands, "obs_ids": e["obs"]})
+
+    if p.mode == "trail" and epochs:
+        # All epochs on one image, colour = time (viridis: old purple -> new yellow), alpha 0.35 -> 1.0.
+        # Residuals are ADDED (src/processing/frames.trail): ordinary "over" blending with alpha=1 for the newest
+        # frame would erase every older frame. Diffs are put in noise units first so faint movers count too.
+        sig = [e["img"] / _robust_sigma(e["img"]) for e in epochs]
+        blo, bhi = render.limits([tmpl])
+        proc_render.save_rgb(proc_trail(sig), d / "trail.png", background=tmpl, vmin=blo, vmax=bhi)
+        res["trail_url"] = f"/cache/{j.key}/trail.png"
     return res
+
+
+def _robust_sigma(img) -> float:
+    v = img[np.isfinite(img)]
+    if v.size == 0:
+        return 1.0
+    s = 1.4826 * float(np.median(np.abs(v - np.median(v))))
+    return s if s > 0 else 1.0
