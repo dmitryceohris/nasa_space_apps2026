@@ -108,5 +108,9 @@ def _startup():
         threading.Thread(target=jobs.prewarm, daemon=True).start()
 
 
+_ROOT = Path(__file__).resolve().parent.parent
 app.mount("/cache", StaticFiles(directory=cache.CACHE), name="cache")
-app.mount("/", StaticFiles(directory=Path(__file__).resolve().parent.parent / "static", html=True), name="static")
+# "/" is the team's frontend (frontend/index.html, same origin as the API, so one link for the demo);
+# the API developer's test page stays available at /dev/.
+app.mount("/dev", StaticFiles(directory=_ROOT / "static", html=True), name="dev")
+app.mount("/", StaticFiles(directory=_ROOT / "frontend", html=True), name="frontend")
