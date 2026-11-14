@@ -198,3 +198,9 @@ def test_equivalent_coordinate_requests_reach_same_job(monkeypatch):
     assert seen[0].ra == pytest.approx(seen[1].ra)
     assert seen[0].dec == pytest.approx(seen[1].dec)
     assert (seen[0].fov, seen[0].det, seen[0].mode) == (seen[1].fov, seen[1].det, seen[1].mode)
+
+
+def test_dev_without_slash_redirects_to_existing_page():
+    response = c.get('/dev', follow_redirects=False)
+    assert response.status_code == 307 and response.headers['location'] == '/dev/'
+    assert c.get(response.headers['location']).status_code == 200

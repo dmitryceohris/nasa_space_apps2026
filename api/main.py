@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import cache, irsa, jobs, params, resolve
@@ -105,6 +105,13 @@ def _startup():
 
 
 _ROOT = Path(__file__).resolve().parent.parent
+
+
+@app.get("/dev", include_in_schema=False)
+def dev_redirect():
+    return RedirectResponse("/dev/")
+
+
 app.mount("/cache", StaticFiles(directory=cache.CACHE), name="cache")
 # "/" is the team's frontend (frontend/index.html, same origin as the API, so one link for the demo);
 # the API developer's test page stays available at /dev/.

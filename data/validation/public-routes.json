@@ -1,0 +1,90 @@
+{
+  "checked_at": "2026-11-14T15:25:07.507351+00:00",
+  "scope": "external HTTP from workstation; not independent-device verification",
+  "checks": [
+    {
+      "path": "/dev",
+      "status": 307,
+      "expected": 307,
+      "passed": true,
+      "location": "/dev/"
+    },
+    {
+      "path": "/dev/",
+      "status": 200,
+      "expected": 200,
+      "passed": true,
+      "location": null
+    },
+    {
+      "path": "/api/view?ra=nan&dec=0",
+      "status": 400,
+      "expected": 400,
+      "passed": true,
+      "location": null
+    },
+    {
+      "path": "/api/view?target=barnard&ra=133.795",
+      "status": 400,
+      "expected": 400,
+      "passed": true,
+      "location": null
+    },
+    {
+      "target": "barnard",
+      "image_url": "/cache/16cfac16708fbd88/f0.png",
+      "status": 200,
+      "content_type": "image/png",
+      "passed": true
+    },
+    {
+      "target": "epsindib",
+      "image_url": "/cache/1ba29d131434ff60/f0.png",
+      "status": 200,
+      "content_type": "image/png",
+      "passed": true
+    },
+    {
+      "target": "wise0855",
+      "image_url": "/cache/88ef84a62f828c32/f0.png",
+      "status": 200,
+      "content_type": "image/png",
+      "passed": true
+    },
+    {
+      "target": "rwaur",
+      "image_url": "/cache/d6b7bac2f7251985/f0.png",
+      "status": 200,
+      "content_type": "image/png",
+      "passed": true
+    },
+    {
+      "target": "rdra",
+      "image_url": "/cache/9a0a49471aae4272/f0.png",
+      "status": 200,
+      "content_type": "image/png",
+      "passed": true
+    },
+    {
+      "target": "Proxima Cen",
+      "image_url": "/cache/bd6350b1f8cf0385/f0.png",
+      "status": 200,
+      "content_type": "image/png",
+      "passed": true
+    },
+    {
+      "target": "61 Cyg A",
+      "image_url": "/cache/421931484ae2b333/f0.png",
+      "status": 200,
+      "content_type": "image/png",
+      "passed": true
+    },
+    {
+      "target": "Vega",
+      "image_url": "/cache/0f6e913f226c852b/f0.png",
+      "status": 200,
+      "content_type": "image/png",
+      "passed": true
+    }
+  ]
+}
