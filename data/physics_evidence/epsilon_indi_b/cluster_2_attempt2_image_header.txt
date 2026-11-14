@@ -1,0 +1,276 @@
+XTENSION= 'IMAGE   '           / Image extension                                
+BITPIX  =                  -32 / array data type                                
+NAXIS   =                    2 / number of array dimensions                     
+NAXIS1  =                   15                                                  
+NAXIS2  =                   15                                                  
+PCOUNT  =                    0 / number of parameters                           
+GCOUNT  =                    1 / number of groups                               
+EXTNAME = 'IMAGE   '           / extension name                                 
+EXTTYPE = 'IMAGE   '           / Extension supports mask overlay                
+BUNIT   = 'MJy / sr'           / Unit of pixel value                            
+DETECTOR=                    4 / 1-3: SWIR, 4-6: MWIR                           
+OBSID   = '2026W18_1A_0032_1'  / Observation ID                                 
+EXPIDN  =      202618101003214 / Integer Exposure ID                            
+DATE    = '2026-09-01T12:19:44.743' / HDU creation time (UTC)                   
+TSAMP   =               1.5349 / [s] Interval between pixel readouts (frame)    
+KOVR_A  =                15000 / [adu] Overflow detection limit, active pixels  
+KOVR_R  =                15000 / [adu] Overflow detection limit, ref pixels     
+KOVR_P  =                15000 / [adu] Overflow detection limit, phantom pixels 
+OVRDLY  =                    5 / threshold for overflow error flag              
+SURLIM  =                   77 / Number of frames detector accumulated charge   
+SURDLY  =                    3 / Frame count when SUR sums accumulation begins  
+TRANDLY =                    7 / Frame count when transient detection begins    
+TCUT    =                   38 / threshold for transient error flag             
+KEN_A   = 20000 / [adu2] Transient white noise threshold, active pixels         
+KEN_R   = 10000 / [adu2] Transient white noise threshold, ref pixels            
+KEN_P   = 500 / [adu2] Transient white noise threshold, phantom pixels          
+KSN_A   = 100 / [adu] Transient shot noise threshold, active pixels             
+KSN_R   = 0 / [adu] Transient shot noise threshold, ref pixels                  
+KSN_P   = 0 / [adu] Transient shot noise threshold, phantom pixels              
+NSKIP   =                   32 / Number of rows skipped after a full row is read
+HIERARCH NVISITROW = 4 / Number of visits to each reference row                 
+HIERARCH NVISITCOL = 1 / Number of visits to each reference col                 
+MPHAN   =                    4 / Number of phantom columns reads                
+NCHANNEL=                   32 / Number of readout channels                     
+WCHANNEL=                   64 / Number of columns in each readout channel      
+JREF    =                    8 / Number of physical reference rows on H2RG      
+KREF    =                    8 / Number of physical reference cols on H2RG      
+JACTIVE =                 2040 / Number of light-sensitive pixel rows           
+KACTIVE =                 2040 / Number of light-sensitive pixel cols           
+HIERARCH SPS_TARGET = 'SPS_056822_S12' / Extended target ID from Survey Planning
+HIERARCH SPS_FLAGS = 'all_sky ' / Flags defined by Survey Planning              
+HIERARCH OBS_IN_SBAND = 'False   ' / Observed during S-band transmission        
+HIERARCH NON_SURVEY = 'False   ' / Observation is not part of a science survey  
+HIERARCH SGT_LAT_MIDPT = -54.338672 / [deg] Ground track latitude at midpoint   
+HIERARCH SGT_LON_MIDPT = 53.101534 / [deg] Ground track longitude at midpoint   
+HIERARCH SGT_MIN_GCD2SAA = 32.090348 / [deg] Closest ground track dist to SAA   
+SPS_ELON= 306.206897 / [deg] Ecliptic longitude of planned telescope boresight  
+SPS_ELAT= -41.890010 / [deg] Ecliptic latitude of planned telescope boresight   
+SPS_EPA = 0.000000 / [deg] PA of FP y axis at planned boresight, E of ecl N     
+DETCOORD= 'sky     '           / MWIR pixels flipped on X to match SWIR view    
+L1DQAFLG= 'Pass    '           / L1 DQA outcome                                 
+RADESYS = 'ICRS    '           / Equatorial coordinate system                   
+HIERARCH X_SC_START = 2681.357246098761 / [km] Exposure START x position        
+HIERARCH Y_SC_START = -2686.7274859164418 / [km] Exposure START y position      
+HIERARCH Z_SC_START = -5917.598504221509 / [km] Exposure START z position       
+HIERARCH VX_SC_START = 2.980965336989649 / [km/s] Exposure START v_x velocity   
+HIERARCH VY_SC_START = -5.676224948151298 / [km/s] Exposure START v_y velocity  
+HIERARCH VZ_SC_START = 3.9375748756359017 / [km/s] Exposure START v_z velocity  
+HIERARCH XYZ_SC_SYSTEM = 'GEOCENTER' / Reference frame for spacecraft position (
+HIERARCH VXYZ_SC_SYSTEM = 'GEOCENTER' / Reference frame for spacecraft velocity 
+X_SC    =    2847.558867834114 / [km] Exposure MID x position                   
+Y_SC    =   -3007.770838526306 / [km] Exposure MID y position                   
+Z_SC    =   -5680.163467312792 / [km] Exposure MID z position                   
+VX_SC   =   2.7991651351837303 / [km/s] Exposure MID v_x velocity               
+VY_SC   =   -5.488979586522163 / [km/s] Exposure MID v_y velocity               
+VZ_SC   =    4.319953293471349 / [km/s] Exposure MID v_z velocity               
+X_SC_END=    3002.998286690221 / [km] Exposure END x position                   
+Y_SC_END=   -3317.446420230376 / [km] Exposure END y position                   
+Z_SC_END=   -5421.203097194742 / [km] Exposure END z position                   
+HIERARCH VX_SC_END = 2.6066756871428205 / [km/s] Exposure END v_x velocity      
+HIERARCH VY_SC_END = -5.280872849338844 / [km/s] Exposure END v_y velocity      
+HIERARCH VZ_SC_END = 4.686178488268271 / [km/s] Exposure END v_z velocity       
+SNWSTRK =                    0 / Saturating streaks from snowball-halo detection
+NBLMSRCS=                   74 / Number of Saturating Bloomed Srcs              
+SNW7-5CT=                   36 / Early snowball count (first half of exposure)  
+SNW3-1CT=                   82 / Late snowball count (second half of exposure)  
+SNW2-5CT=                    4 / Very early snowball count (frames ~5-7)        
+SNW6-5CT=                    2 / Very early snowball count (before frame ~10)   
+NSNOWSRC=                  124 / Total Number of Snowball Srcs                  
+NBLM5SCS=                    1 / Number of Non-Overflow-Bloomed Srcs            
+HIERARCH L2 N_NONLINEAR = 0 / number of pixels flagged nonlinear                
+PSTHRESH=                  0.1 / [electron/s] persistence threshold             
+HIERARCH L2 N_PERSIST = 2655 / number of pixels flagged persist                 
+HIERARCH L2 N_HOT =                    9 / number of pixels flagged hot         
+HIERARCH L2 N_COLD = 2257 / number of pixels flagged cold                       
+HIERARCH L2 N_TRAN_NB = 166472 / number of not bad transient pixels             
+HIERARCH L2 N_PERS_NB = 2654 / number of persistence and not bad pixels         
+HIERARCH OMEGA_MEDIAN = 37.94424578521253 /  [arcsec**2] solid angle pixel map m
+HIERARCH OMEGA_STDDEV = 0.2010624842021055 /  [arcsec**2] solid angle pixel map 
+FINAST  =                    0 / good fine-astrometric solution                 
+DAXIS   =   0.9295687172016924                                                  
+HIERARCH CONTRAST =                 60.3                                        
+HIERARCH MATCH_NSTARS = 1199                                                    
+HIERARCH QS_NMATCH_VAR = 0.0312698075478315                                     
+HIERARCH ASTRONETSOLVED = T                                                     
+PXSRCMSK=                47.95 / Percentage of pixels with SOURCE flag          
+HIERARCH L2 N_SOURCE = 1995568 / number of source flagged pixels                
+HIERARCH L2 N_XTALK = 0 / number of crosstalk flagged pixels                    
+HIERARCH L2 N_GHOST = 0 / number of ghost flagged pixels                        
+HIERARCH L2 N_GHOST_FPA = 0 / number of ghost_fpa flagged pixels                
+HIERARCH L2 N_GHOST_EXT = 0 / number of ghost_ext flagged pixels                
+HIERARCH L2 N_BLOOM_NS = 0 / number of BLOOM flagged pixels not flagged SOURCE  
+HIERARCH L2 N_SNOW_NS = 1350 / number of SNOW flagged pixels not flagged SOURCE 
+HIERARCH L2 N_OUTLIER = 120435 / number of flagged outlier pixels               
+HIERARCH L2 SATSTRKS_PXS = 0 / Number of flagged satellite streak pixels        
+HIERARCH L2 SATSTRKS = 0 / Number of detected satellite streaks                 
+PSF_FWHM=    8.672612363488842 /  [arcsec] PSF FWHM Median                      
+HIERARCH AURORA_CORR = 0.0 / Correl coeff with aurora template                  
+HIERARCH SHUTTLE_GLOW_CORR = 0.0 / Correl coeff with shuttle-glow template      
+HIERARCH HE_AIRGLOW_CONT = F / True for detectors 1 and 2, False otherwise      
+HIERARCH SHUTTLE_GLOW_CONT = F / True if SHUTTLE_GLOW_CORR > 0.2                
+HIERARCH AURORA_CONT = F / True if AURORA_CORR > 0.2                            
+L2DQAFLG= 'Pass    '           / L2 DQA outcome                                 
+HIERARCH L2 N_TRANSIENT = 177235 / number of flagged flagged transient pixels   
+HIERARCH L2 N_OVERFLOW = 3127 / number of flagged overflow pixels               
+HIERARCH L2 N_SUR_ERROR = 70653 / number of flagged sur error pixels            
+HIERARCH L2 N_NONFUNC = 22468 / number of flagged nonfunctional pixels          
+HIERARCH L2 N_DICHROIC = 112375 / number of flagged pixels due to low efficiency
+HIERARCH L2 N_MISSING = 0 / number of flagged pixels with missing data          
+HIERARCH L2 N_FULLSAMPLE = 240 / number of flagged full-sample pixels           
+HIERARCH L2 N_PHANMISS = 0 / number of flagged phanmiss pixels                  
+HIERARCH L2 N_SNOWBALL = 2544 / number of flagged snowball artifact pixels      
+HIERARCH L2 N_BLOOM = 2025 / number of flagged bloom artifact pixels            
+HIERARCH L2 N_HALO = 420426 / number of flagged transient halo pixels           
+HIERARCH L2 N_SAT_HALO = 0 / number of flagged streak halo pixels               
+WCSAXES =                    2 / Number of coordinate axes                      
+CRPIX1  =               -669.5 / Pixel coordinate of reference point            
+CRPIX2  =               -200.5 / Pixel coordinate of reference point            
+PC1_1   =     -0.0014432328817 / Coordinate transformation matrix element       
+PC1_2   =   -0.000865404208277 / Coordinate transformation matrix element       
+PC2_1   =    -0.00091950506741 / Coordinate transformation matrix element       
+PC2_2   =       0.001478067596 / Coordinate transformation matrix element       
+CDELT1  =                  1.0 / [deg] Coordinate increment at reference point  
+CDELT2  =                  1.0 / [deg] Coordinate increment at reference point  
+CUNIT1  = 'deg'                / Units of coordinate increment and value        
+CUNIT2  = 'deg'                / Units of coordinate increment and value        
+CTYPE1  = 'RA---TAN-SIP'       / TAN (gnomonic) projection + SIP distortions    
+CTYPE2  = 'DEC--TAN-SIP'       / TAN (gnomonic) projection + SIP distortions    
+CRVAL1  =        333.215682662 / [deg] Coordinate value at reference point      
+CRVAL2  =       -56.5059153381 / [deg] Coordinate value at reference point      
+LONPOLE =                180.0 / [deg] Native longitude of celestial pole       
+LATPOLE =       -56.5059153381 / [deg] Native latitude of celestial pole        
+A_ORDER =                    3 / SIP polynomial order, axis 0, detector to sky  
+A_0_0   =       0.138807267366 / SIP distortion coefficient                     
+A_0_1   =    -0.00031577921657 / SIP distortion coefficient                     
+A_0_2   =   -1.42000882896E-06 / SIP distortion coefficient                     
+A_0_3   =   -6.01600175856E-11 / SIP distortion coefficient                     
+A_1_0   =    0.000547662203132 / SIP distortion coefficient                     
+A_1_1   =    4.24619526949E-06 / SIP distortion coefficient                     
+A_1_2   =    6.40328892438E-10 / SIP distortion coefficient                     
+A_2_0   =   -1.58799788998E-06 / SIP distortion coefficient                     
+A_2_1   =   -2.04420693424E-10 / SIP distortion coefficient                     
+A_3_0   =    5.68654138988E-10 / SIP distortion coefficient                     
+B_ORDER =                    3 / SIP polynomial order, axis 1, detector to sky  
+B_0_0   =       -1.07166791232 / SIP distortion coefficient                     
+B_0_1   =    -0.00119403663613 / SIP distortion coefficient                     
+B_0_2   =    1.93438132252E-06 / SIP distortion coefficient                     
+B_0_3   =    3.22829463164E-10 / SIP distortion coefficient                     
+B_1_0   =   -0.000600570696476 / SIP distortion coefficient                     
+B_1_1   =   -7.32359031069E-07 / SIP distortion coefficient                     
+B_1_2   =   -1.44574664682E-10 / SIP distortion coefficient                     
+B_2_0   =    6.72362869405E-06 / SIP distortion coefficient                     
+B_2_1   =    6.33416496427E-10 / SIP distortion coefficient                     
+B_3_0   =   -4.53925343806E-11 / SIP distortion coefficient                     
+AP_ORDER=                    3 / SIP polynomial order, axis 0, sky to detector  
+AP_0_0  =      -0.135945496604 / SIP distortion coefficient                     
+AP_0_1  =    0.000320003439915 / SIP distortion coefficient                     
+AP_0_2  =    1.41427536226E-06 / SIP distortion coefficient                     
+AP_0_3  =    4.80296497712E-11 / SIP distortion coefficient                     
+AP_1_0  =   -0.000553190344767 / SIP distortion coefficient                     
+AP_1_1  =   -4.22416861795E-06 / SIP distortion coefficient                     
+AP_1_2  =   -6.05759504993E-10 / SIP distortion coefficient                     
+AP_2_0  =    1.57133732392E-06 / SIP distortion coefficient                     
+AP_2_1  =    1.59389373897E-10 / SIP distortion coefficient                     
+AP_3_0  =   -5.31770689484E-10 / SIP distortion coefficient                     
+BP_ORDER=                    3 / SIP polynomial order, axis 1, sky to detector  
+BP_0_0  =        1.06815348465 / SIP distortion coefficient                     
+BP_0_1  =     0.00119066342517 / SIP distortion coefficient                     
+BP_0_2  =   -1.92940333623E-06 / SIP distortion coefficient                     
+BP_0_3  =   -3.14616645139E-10 / SIP distortion coefficient                     
+BP_1_0  =    0.000603915405194 / SIP distortion coefficient                     
+BP_1_1  =    7.16325437613E-07 / SIP distortion coefficient                     
+BP_1_2  =    1.16456547924E-10 / SIP distortion coefficient                     
+BP_2_0  =   -6.70396551834E-06 / SIP distortion coefficient                     
+BP_2_1  =   -5.47191162078E-10 / SIP distortion coefficient                     
+BP_3_0  =    1.81422150758E-11 / SIP distortion coefficient                     
+WCSAXESA=                    2 / Number of coordinate axes                      
+CRPIX1A =              -1689.0 / Pixel coordinate of reference point            
+CRPIX2A =              -1220.0 / Pixel coordinate of reference point            
+CDELT1A =                  1.0 / [pixel] Coordinate increment at reference point
+CDELT2A =                  1.0 / [pixel] Coordinate increment at reference point
+CUNIT1A = 'pixel'              / Units of coordinate increment and value        
+CUNIT2A = 'pixel'              / Units of coordinate increment and value        
+CTYPE1A = 'LINEAR'             / Coordinate type code                           
+CTYPE2A = 'LINEAR'             / Coordinate type code                           
+CRVAL1A =                  0.0 / [pixel] Coordinate value at reference point    
+CRVAL2A =                  0.0 / [pixel] Coordinate value at reference point    
+LATPOLEA=                 90.0 / [deg] Native latitude of celestial pole        
+WCSNAMEA= '0-based active pixel coordinates' / Coordinate system title          
+TIMESYS = 'UTC'                / Time scale                                     
+MJDREF  =                  0.0 / [d] MJD of fiducial time                       
+DATE-OBS= '2026-04-27T03:02:51.094' / ISO-8601 time of observation              
+MJD-OBS =      61157.126980255 / [d] MJD of observation                         
+DATE-BEG= '2026-04-27T03:02:51.094' / ISO-8601 time at start of observation     
+MJD-BEG =      61157.126980255 / [d] MJD at start of observation                
+DATE-AVG= '2026-04-27T03:03:48.653' / ISO-8601 time at midpoint of observation  
+MJD-AVG =      61157.127646444 / [d] MJD at midpoint of observation             
+DATE-END= '2026-04-27T03:04:46.211' / ISO-8601 time at end of observation       
+MJD-END =      61157.128312633 / [d] MJD at end of observation                  
+XPOSURE =             113.5826 / [s] Exposure (integration) time                
+TELAPSE =             118.1873 / [s] Elapsed time (start to stop)               
+WCSAXESW=                    2 / Two output axes: wavelength and bandwidth      
+WCSNAMEW= 'Approximated per-pixel wavelength and bandwidth' / WCS label         
+CNAME1W = 'Wavelength'         / First output axis is central wavelength        
+CNAME2W = 'Bandwidth'          / Second output axis is bandwidth                
+CRPIX1W =              -1689.0 / Lookup table is in raw FITS coordinates        
+CRPIX2W =              -1220.0 / Lookup table is in raw FITS coordinates        
+CDELT1W =                    1 / [pixel] Lookup table is in raw FITS coordinates
+CDELT2W =                    1 / [pixel] Lookup table is in raw FITS coordinates
+CUNIT1W = 'um      '           / Wavelength is reported in microns              
+CUNIT2W = 'um      '           / Bandpass is reported in microns                
+CTYPE1W = 'WAVE-TAB'           / Bilinear lookup table, FITS Paper 3, Sect 6.1  
+CTYPE2W = 'WAVE-TAB'           / Bilinear lookup table, FITS Paper 3, Sect 6.1  
+CRVAL1W =                    1 / [pixel] Lookup table is in raw FITS coordinates
+CRVAL2W =                    1 / [pixel] Lookup table is in raw FITS coordinates
+PV1_3W  =                    1 / Index of wavelength in VALUES array            
+PV2_3W  =                    2 / Index of bandwidth in VALUES array             
+PS1_0W  = 'WCS-WAVE'           / Extension with wavelength lookup table         
+PS2_0W  = 'WCS-WAVE'           / Extension with bandwidth lookup table          
+PS1_1W  = 'VALUES  '           / Column with values for wavelength              
+PS2_1W  = 'VALUES  '           / Column with values for bandwidth               
+PS1_2W  = 'X       '           / Column with control points for detector in X   
+PS2_2W  = 'Y       '           / Column with control points for detector in Y   
+COMMENT TELAPSE ends at MJD-END, starts prior to MJD-BEG:                       
+COMMENT   includes discarded frames                                             
+COMMENT XPOSURE is the scientifically meaningful exposure time:                 
+COMMENT   the time between the start and end of collecting data that            
+COMMENT   contributes to the photocurrent                                       
+HISTORY GDS Image Association, SSDC-MS-002 v2.1.1                               
+HISTORY Estimate Coarse Astrometry, SSDC-MS-003 v2.4                            
+HISTORY Convert to Engineering Units, SSDC-MS-005 v3.2                          
+HISTORY Correct Preamplifier, SSDC-MS-006 v1.5                                  
+HISTORY Create Image Data Files, SSDC-MS-007 v1.2.1                             
+HISTORY Perform Data Quality Assessment for Level 1, SSDC-MS-009 v1.3           
+HISTORY [CALIB] dichroic 019f521b-3547-7804-8fac-f144308ff47a                   
+HISTORY [CALIB] gain_factors 019f521b-4ad3-7698-b7c3-a40aefa6469e               
+HISTORY [CALIB] initial_distortion_table 019f521b-605a-79ba-ab36-caf4d55f5d5e   
+HISTORY [CALIB] nonfunc_v2 019f521b-b4f6-7eaa-b8fa-d2bb1fa9c0a2                 
+HISTORY [CALIB] sband_mnemonics 019f521c-f507-7801-8542-ad9eb4fc903d            
+HISTORY [CALIB] spectral_wcs 019f4f99-3265-766b-b368-e28eb08fdbed               
+HISTORY GDS Image Association, SSDC-MS-002 v2.1.1                               
+HISTORY Source blooming and cosmic ray halo flagging, SSDC-MS-0011 v1           
+HISTORY Correct Non-Linearity, SSDC-MS-010 v3.2                                 
+HISTORY Create Variance Map, SSDC-MS-011 v4.2                                   
+HISTORY Update Persistence Mask, SSDC-MS-012 v2.2.1                             
+HISTORY [CALIB] gain_factors 019f521b-4ad3-7698-b7c3-a40aefa6469e               
+HISTORY [CALIB] nonlinear_pars 019f521c-358f-7a49-820c-fa015710cdc2             
+HISTORY [CALIB] readnoise_pars 019f521c-b665-77e2-a0c0-de0b531467f9             
+HISTORY Apply Bad Pixel Mask, SSDC-MS-013 v1.1                                  
+HISTORY Apply Flat Field and Photometric Calibration, SSDC-MS-014 v1.5          
+HISTORY Estimate Fine Astrometry, SSDC-MS-016 v2.5                              
+HISTORY Create Source Mask, SSDC-MS-019 v3.5                                    
+HISTORY Detect Outlier Pixels, SSDC-MS-020 v1.4                                 
+HISTORY Get Zodi Model, SSDC-MS-022 v2.3                                        
+HISTORY Measure Per-Exposure PSF, SSDC-MS-023 v3.3                              
+HISTORY Create Spectral Image, SSDC-MS-024 v2.2                                 
+HISTORY Perform Data Quality Assessment for Level 2, SSDC-MS-025 v1.4           
+HISTORY [CALIB] abs_gain_matrix 019f4f95-6173-79cb-872b-f0f8abd8ed65            
+HISTORY [CALIB] dark 019f4f96-1086-7845-9c97-d9a1076a80ed                       
+HISTORY [CALIB] epsf 019f4f97-864d-7bee-8722-a634bea7288f                       
+HISTORY [CALIB] sip 019f4f98-7f49-79e3-9a45-85e5641166aa                        
+HISTORY [CALIB] spectral_wcs 019f4f99-3265-766b-b368-e28eb08fdbed               
+HISTORY [CALIB] xtalk_class2 019f521e-5e08-7cfe-942e-3cbb4851b510               
+HISTORY Get Zodi Model, SSDC-MS-022 v2.4                                        
+HISTORY [CALIB] zodi_scaling_v2 01a09305-d0fa-7ef8-b551-9dab610353ee            
+END                                                                             
