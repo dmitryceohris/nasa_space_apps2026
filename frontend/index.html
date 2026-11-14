@@ -110,7 +110,8 @@ function graphQuery() {
   const q = new URLSearchParams({per_epoch: PER_EPOCH});
   if (ra && dec) { q.set("ra", ra); q.set("dec", dec); }
   else if (t) q.set("target", t);
-  else { const c = center(); q.set("ra", c.ra); q.set("dec", c.dec); }
+  else if (lastGrid) { const c = center(); q.set("ra", c.ra); q.set("dec", c.dec); }
+  else throw new Error("pick a test object or type a name or RA and Dec");   // nothing chosen yet: no request
   return q;
 }
 function center() {
