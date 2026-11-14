@@ -33,8 +33,8 @@
   <input id="target" placeholder="Object name, e.g. Barnard's Star" size="24">
 </div>
 <div class="row">
-  <input id="ra" placeholder="RA (deg)" size="10">
-  <input id="dec" placeholder="Dec (deg)" size="10">
+  <input id="ra" placeholder="RA (deg or hh:mm:ss)" size="18">
+  <input id="dec" placeholder="Dec (deg or dd:mm:ss)" size="18">
 </div>
 <div class="row">
   <label>Field of view (arcmin) <input id="fov" type="range" min="1" max="20" value="5"></label>
@@ -111,6 +111,7 @@ async function pollJson(path, isCurrent, onProgress) {
 const PER_EPOCH = 3;  // exposures per epoch and detector: one job serves both graphs; more = more light-curve points
 function graphQuery() {
   const t = $("target").value.trim(), ra = $("ra").value.trim(), dec = $("dec").value.trim();
+  if (Boolean(ra) !== Boolean(dec)) throw new Error("Please enter both RA and Dec coordinates.");
   const q = new URLSearchParams({per_epoch: PER_EPOCH});
   if (ra && dec) { q.set("ra", ra); q.set("dec", dec); }
   else if (t) q.set("target", t);
@@ -360,9 +361,15 @@ async function update() {
   ["flagimg", "flagbox", "marker", "measured"].forEach(id => $(id).style.display = "none");
   plotMessage("Loading the graph for the selected object...");
   syncUrl();
+  const ra = $("ra").value.trim(), dec = $("dec").value.trim();
+  if (Boolean(ra) !== Boolean(dec)) {
+    $("info").textContent = "Please enter both RA and Dec coordinates.";
+    plotMessage("Please enter both RA and Dec coordinates.");
+    return;
+  }
   $("info").textContent = "Loading...";
   try {
-    const f = await getFrames($("ra").value, $("dec").value, $("fov").value, $("det").value, mode, my);
+    const f = await getFrames(ra, dec, $("fov").value, $("det").value, mode, my);
     if (f === null || my !== reqId) return;      // a newer request replaced this one
     frames = f; show(0);
   } catch (err) {
