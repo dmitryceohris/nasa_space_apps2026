@@ -184,6 +184,8 @@ def _processing(p):
     from processing.frames import DIFF_METHOD
 
     return {"epochs": epoch_limits(), "background": BACKGROUND_METHOD,
+            "registration": {"name": "header_wcs_reprojection", "independently_verified": False,
+                             "astrometric_precision_arcsec": None},
             "difference": DIFF_METHOD if p.mode in ("diff", "trail") else None,
             "measurement": centroid.METHOD}
 
@@ -270,6 +272,17 @@ def _pipeline(j, p, r):
         res["warnings"].append(f"Отброшено непригодных экспозиций: {res['exposure_counts']['rejected']}")
     if len(frames) == 1:
         res["warnings"].append("Доступна одна эпоха: последовательность разных дат пока недоступна")
+    if frames:
+        res["warnings"].extend([
+            "Независимая регистрация по опорным звёздам не проверена; точность измеренного движения не подтверждена",
+            "Центроиды — кандидаты, не подтверждённые положения цели; ошибки центроидов не включают все систематические эффекты",
+        ])
+    if len(frames) > 1:
+        # Even a <5% change can select a different narrow LVF band. The average wavelength
+        # and detector ID cannot certify matching bandpasses, PSFs or photometric response.
+        res["warnings"].append(
+            "Различия яркости и разностные остатки не подтверждают переменность или движение: "
+            "нужны сопоставимые полосы/отклики, проверка масок и точности совмещения")
     diffs = template = scales = None
     if p.mode in ("diff", "trail"):
         if len(frames) < 2:

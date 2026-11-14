@@ -185,7 +185,7 @@ def _robust_std(d: np.ndarray) -> float | None:
 
 
 def difference_details(frames: list[Frame], renorm: bool = True) -> dict:
-    """Разностные кадры в единицах σ и сведения о нормировке.
+    """Разностные кадры в относительной робастной шкале и сведения о нормировке.
 
     Шаблон для кадра i — медиана ОСТАЛЬНЫХ эпох: если включать в него сам кадр, при двух эпохах
     шаблон равен среднему и остаток вдвое слабее, а шум кадра и шаблона коррелирован.
@@ -225,7 +225,7 @@ def difference_details(frames: list[Frame], renorm: bool = True) -> dict:
 
 
 def difference(frames: list[Frame], renorm: bool = True) -> tuple[list[np.ndarray], np.ndarray]:
-    """Разностные кадры в единицах σ и шаблон (см. difference_details)."""
+    """Относительные разностные остатки и шаблон (см. difference_details)."""
     r = difference_details(frames, renorm)
     return r["diffs"], r["template"]
 
@@ -250,7 +250,7 @@ def trail(diff_sigma: list[np.ndarray], clip: float = 8.0, floor: float = 2.0) -
     for i, d in enumerate(diff_sigma):
         t = i / max(n - 1, 1)
         alpha = 0.55 + 0.45 * t
-        # остатки ниже floor σ — шум: без порога каждая эпоха даёт цветную «рябь» по всему кадру
+        # остатки ниже порога визуализации floor подавляем: без порога каждая эпоха даёт цветную «рябь» по всему кадру
         pos = np.clip(np.nan_to_num(d) - floor, 0, clip - floor) / (clip - floor)
         rgb += alpha * pos[..., None] * np.array(cmap(t)[:3])
     return np.clip(rgb, 0, 1)

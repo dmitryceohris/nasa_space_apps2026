@@ -14,7 +14,7 @@ def key(ra, dec, fov, det, mode, max_per_epoch) -> str:
     return hashlib.sha1(s.encode()).hexdigest()[:16]
 
 
-VERSION = 8  # Target/time/coverage metadata and photometry quality; FITS remain reusable.
+VERSION = 9  # Explicit registration/candidate limits and band-comparison warning; reuse FITS.
 
 
 def key_spectrum(ra, dec) -> str:
