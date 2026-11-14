@@ -127,11 +127,24 @@ def build_spectrum(center: SkyCoord, coord_at: Callable[[float], SkyCoord], per_
     exps = download_rows(rows, center, 0.035,
                          progress=lambda d, t: progress("download", d, t, f"Скачано {d} из {t} снимков"))
     pts = spectrum(exps, coord_at)
+    good = _good(pts)
     return {"status": "ready", "points": pts, "n_points": len(pts),
             "n_saturated": sum(1 for p in pts if not p["ok"]), "credits": CREDITS,
-            "bands": {str(k): [v[0], v[1]] for k, v in DETECTOR_BANDS.items()}}
+            "bands": {str(k): [v[0], v[1]] for k, v in DETECTOR_BANDS.items()},
+            # плоские массивы только надёжных точек (ok): их напрямую рисует frontend/index.html
+            "wavelength": [p["wave_um"] for p in good], "flux": [p["flux_ujy"] for p in good],
+            "flux_err": [p["err_ujy"] for p in good]}
+
+
+def _good(pts: list[dict]) -> list[dict]:
+    return [p for p in pts if p.get("ok") and p.get("flux_ujy") is not None]
 
 
 def lightcurve_from_spectrum(spec: dict, wave_min: float, wave_max: float) -> dict:
+    from astropy.time import Time
+
     pts = light_curve(spec["points"], wave_min, wave_max)
-    return {"status": "ready", "wave_window_um": [wave_min, wave_max], "points": pts}
+    good = _good(pts)
+    return {"status": "ready", "wave_window_um": [wave_min, wave_max], "points": pts,
+            "dates": [Time(p["mjd"], format="mjd").to_value("iso", subfmt="date") for p in good],
+            "flux": [p["flux_ujy"] for p in good], "flux_err": [p["err_ujy"] for p in good]}

@@ -1,12 +1,14 @@
 """Offline tests: no IRSA/SIMBAD traffic. Run: .venv/bin/python -m pytest -q tests"""
 import os
+import time
 
 os.environ["PREWARM"] = "0"  # before importing the app
 
 import pytest
 from fastapi.testclient import TestClient
 
-from api import irsa, render, resolve
+from Exposure import DETECTOR_BANDS
+from api import cache, irsa, jobs, render, resolve
 from api.main import app
 from api.params import parse
 
@@ -39,6 +41,79 @@ def test_unknown_name_is_404(monkeypatch):
     assert r.status_code == 404 and r.json()["error"]["code"] == "not_found"
 
 
+def test_all_presets_resolve_from_team_table_without_network(monkeypatch):
+    def no_network(name):
+        raise AssertionError("SIMBAD must not be asked for the five presets")
+
+    monkeypatch.setattr(resolve, "_fetch_sesame", no_network)
+    for tid in ["barnard", "epsindib", "wise0855", "rwaur", "rdra"]:
+        o = resolve.resolve(tid)
+        assert o["id"] == tid and o["pmra_masyr"] is not None and o["source"]
+    assert resolve.resolve("WISE 0855-0714")["id"] == "wise0855"  # the spec name that SIMBAD does not know
+    assert c.get("/api/resolve?target=wise0855").status_code == 200
+
+
+def test_spectrum_needs_target_or_coords():
+    r = c.get("/api/spectrum")
+    assert r.status_code == 400 and r.json()["error"]["code"] == "bad_param"
+
+
+@pytest.mark.parametrize("q", ["wave_min=3&wave_max=2", "wave_min=abc", "wave_min=0&wave_max=1"])
+def test_lightcurve_bad_window(q):
+    r = c.get("/api/lightcurve?ra=10&dec=10&" + q)
+    assert r.status_code == 400 and r.json()["error"]["code"] == "bad_param"
+
+
+def test_default_window_is_5_percent_around_band_middle():
+    lo, hi, _ = DETECTOR_BANDS[3]
+    wlo, whi = jobs.default_window(3)
+    assert wlo == pytest.approx((lo + hi) / 2 * 0.95) and whi == pytest.approx((lo + hi) / 2 * 1.05)
+
+
+def test_spectrum_job_202_then_200_and_lightcurve(monkeypatch, tmp_path):
+    """build_spectrum is replaced by a fake: only the job mechanism and the light-curve window are tested."""
+    monkeypatch.setattr(cache, "CACHE", tmp_path)
+
+    def pt(w, mjd):
+        return {"wave_um": w, "bw_um": 0.02, "flux_ujy": 5.0, "err_ujy": 1.0, "mjd": mjd, "det": 3,
+                "obs_id": "a", "ok": True, "flags": []}
+
+    def fake_build(center, coord_at, per_epoch=2, progress=None):
+        progress("download", 1, 2, "fake")
+        time.sleep(0.2)
+        return {"status": "ready", "points": [pt(2.0, 60000.0), pt(2.1, 60100.0), pt(4.9, 60200.0)],
+                "n_points": 3, "n_saturated": 0, "credits": "c", "bands": {}}
+
+    monkeypatch.setattr(jobs, "build_spectrum", fake_build)
+    first = c.get("/api/spectrum?ra=33.3&dec=44.4")
+    assert first.status_code == 202 and first.json()["status"] == "running"
+    for _ in range(100):
+        r = c.get("/api/spectrum?ra=33.3&dec=44.4")
+        if r.status_code == 200:
+            break
+        time.sleep(0.05)
+    assert r.status_code == 200 and r.json()["n_points"] == 3 and "v" not in r.json()
+    lc = c.get("/api/lightcurve?ra=33.3&dec=44.4&wave_min=1.9&wave_max=2.2").json()
+    assert lc["wave_window_um"] == [1.9, 2.2] and [p["mjd"] for p in lc["points"]] == [60000.0, 60100.0]
+    # flat arrays the frontend plots directly (frontend/index.html: d.dates / d.flux / d.flux_err)
+    assert lc["dates"] == ["2023-02-25", "2023-06-05"] and lc["flux"] == [5.0, 5.0] and lc["flux_err"] == [1.0, 1.0]
+
+
+def test_spectrum_flat_arrays_keep_only_reliable_points():
+    from processing.pipeline import _good
+
+    pts = [{"wave_um": 1.0, "flux_ujy": 2.0, "err_ujy": 0.1, "ok": True},
+           {"wave_um": 1.1, "flux_ujy": 9.0, "err_ujy": 0.1, "ok": False},   # saturated: not plotted
+           {"wave_um": 1.2, "flux_ujy": None, "err_ujy": None, "ok": True}]
+    assert [p["wave_um"] for p in _good(pts)] == [1.0]
+
+
+def test_root_serves_team_frontend_and_dev_page():
+    r = c.get("/")
+    assert r.status_code == 200 and "SPHEREx Sky Viewer" in r.text and "pollJson" in r.text
+    assert c.get("/dev/").status_code == 200
+
+
 def test_export_before_ready_is_409():
     assert c.get("/api/export.gif?ra=11.1&dec=22.2&fov=7").status_code == 409
 
@@ -58,12 +133,6 @@ def test_png_y_flip():
     assert render.png_xy(3, 0, 10) == [3.0, 9.0]  # FITS bottom row -> PNG bottom row
 
 
-def test_select_gap_and_even_spacing():
-    ex = [dict(uri=str(i), mjd=100 + i, lam=[1, 2]) for i in range(10)] + [dict(uri="late", mjd=200, lam=[1, 2])]
-    cl = irsa.select(ex, 3)
-    assert len(cl) == 2 and len(cl[0]) == 3 and cl[0][0]["uri"] == "0" and cl[0][-1]["uri"] == "9"
-
-
 def test_obs_id():
     assert irsa.obs_id("ibe/data/spherex/dr1/level2/2025W33_2C/x/6/level2_2025W33_2C_0386_3D6_spx_l2b-v27.fits") == "2025W33_2C_0386_3"
     assert irsa.obs_id("https://irsa.ipac.caltech.edu/datalink/links/spherex?ID=ivo://irsa.ipac/spherex_dr1?2025W38_1A_0596_1/D6") == "2025W38_1A_0596_1"
@@ -74,9 +143,3 @@ def test_barnard_proper_motion():  # SIMBAD-style record; shift over ~25 yr must
          "parallax_mas": 546.9759, "ref_epoch": 2000.0}
     ra, dec = resolve.propagate(o, 60903.0)
     assert 255 < (dec - o["dec"]) * 3600 < 275  # 10.36 arcsec/yr north for ~25.6 yr
-
-
-def test_root_serves_team_frontend_and_dev_page():
-    r = c.get("/")
-    assert r.status_code == 200 and "SPHEREx Sky Viewer" in r.text and "pollJson" in r.text
-    assert c.get("/dev/").status_code == 200

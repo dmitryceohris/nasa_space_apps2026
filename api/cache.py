@@ -13,14 +13,18 @@ def key(ra, dec, fov, det, mode, max_per_epoch) -> str:
     return hashlib.sha1(s.encode()).hexdigest()[:16]
 
 
-VERSION = 3  # bump when the result format changes: older cached results are then recomputed (FITS stay cached)
+VERSION = 4  # bump when the result format changes: older cached results are then recomputed (FITS stay cached)
+
+
+def key_spectrum(ra, dec) -> str:
+    return hashlib.sha1(f"spectrum|{round(ra, 5)}|{round(dec, 5)}".encode()).hexdigest()[:16]
 
 
 def read(k: str):
     p = CACHE / k / "result.json"
     if not p.exists():
         return None
-    res = json.loads(p.read_text())
+    res = json.loads(p.read_text(encoding="utf-8"))
     return res if res.pop("v", None) == VERSION else None  # "v" is internal, never sent to clients
 
 
@@ -29,5 +33,5 @@ def write(k: str, obj: dict):
     d = CACHE / k
     d.mkdir(exist_ok=True)
     tmp = d / "result.json.tmp"
-    tmp.write_text(json.dumps({**obj, "v": VERSION}, ensure_ascii=False))
+    tmp.write_text(json.dumps({**obj, "v": VERSION}, ensure_ascii=False), encoding="utf-8")
     tmp.replace(d / "result.json")

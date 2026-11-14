@@ -1,0 +1,53 @@
+{
+  "status": "ready",
+  "wave_window_um": [
+    1.9189999999999998,
+    2.121
+  ],
+  "points": [
+    {
+      "wave_um": 1.93446,
+      "bw_um": 0.04779,
+      "flux_ujy": 12360.832,
+      "err_ujy": 121.939,
+      "mjd": 60836.19048,
+      "det": 3,
+      "obs_id": "2025W24_1A_0245_4",
+      "ok": true,
+      "flags": [
+        "SOURCE"
+      ]
+    },
+    {
+      "wave_um": 1.97884,
+      "bw_um": 0.04887,
+      "flux_ujy": 14348.225,
+      "err_ujy": 128.539,
+      "mjd": 61164.11762,
+      "det": 3,
+      "obs_id": "2026W19_1A_0041_1",
+      "ok": true,
+      "flags": [
+        "SOURCE"
+      ]
+    },
+    {
+      "wave_um": 1.93385,
+      "bw_um": 0.04716,
+      "flux_ujy": 12295.82,
+      "err_ujy": 118.852,
+      "mjd": 61311.33729,
+      "det": 3,
+      "obs_id": "2026W40_1A_0070_2",
+      "ok": true,
+      "flags": [
+        "SOURCE"
+      ]
+    }
+  ],
+  "query": {
+    "ra": 331.0984070266234,
+    "dec": -56.801257162911156,
+    "target": "Epsilon Indi B"
+  }
+}

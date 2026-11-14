@@ -123,26 +123,6 @@ def exposures(ra, dec, det):
     return out or _tap_exposures(ra, dec, det)
 
 
-def select(exps, max_per_epoch, gap_days=30.0):
-    """Split by time gaps > gap_days into epochs, keep max_per_epoch exposures per epoch, evenly spaced in time."""
-    exps = sorted(exps, key=lambda e: e["mjd"])
-    clusters, cur = [], []
-    for e in exps:
-        if cur and e["mjd"] - cur[-1]["mjd"] > gap_days:
-            clusters.append(cur)
-            cur = []
-        cur.append(e)
-    if cur:
-        clusters.append(cur)
-    out = []
-    for c in clusters:
-        if len(c) > max_per_epoch:
-            idx = np.unique(np.linspace(0, len(c) - 1, max_per_epoch).round().astype(int))
-            c = [c[i] for i in idx]
-        out.append(c)
-    return out
-
-
 # ---------- cutouts ----------
 def _fits_url(uri: str) -> str:
     """TAP gives a relative IBE path; tables give a datalink URL whose '#this' row is the FITS."""
