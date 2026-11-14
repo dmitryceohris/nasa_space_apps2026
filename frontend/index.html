@@ -108,6 +108,7 @@ async function pollJson(path, isCurrent, onProgress) {
 const PER_EPOCH = 3;  // exposures per epoch and detector: one job serves both graphs; more = more light-curve points
 function graphQuery() {
   const t = $("target").value.trim(), ra = $("ra").value.trim(), dec = $("dec").value.trim();
+  if (Boolean(ra) !== Boolean(dec)) throw new Error("Please enter both RA and Dec coordinates.");
   const q = new URLSearchParams({per_epoch: PER_EPOCH});
   if (ra && dec) { q.set("ra", ra); q.set("dec", dec); }
   else if (t) q.set("target", t);
