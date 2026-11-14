@@ -24,8 +24,12 @@ PHOTOMETRY_METHOD = {
         "без поправки на апертуру: часть потока PSF за пределами r=2 пикс. теряется (зависит от λ)",
         "соседние источники в апертуре или кольце искажают поток",
         "яркие цели насыщены: такие точки помечены ok=false и не входят в плоские массивы",
-        "ошибка включает дисперсию пикселей апертуры; неопределённость оценки фона и систематика не добавлены",
+        "ошибка включает дисперсию пикселей апертуры (VARIANCE) и ошибку медианы фонового кольца; "
+        "не включены: апертурная поправка, калибровка потока, ошибка положения цели (апертура ставится по "
+        "каталожному прогнозу, а не по измеренному центру), ширина и форма спектрального канала",
     ],
+    "error_components": ["aperture_pixel_variance", "background_median"],
+    "error_not_included": ["aperture_correction", "flux_calibration", "position_error", "bandpass"],
     "not_implemented": ["PSF-фотометрия", "апертурная поправка по λ"],
 }
 
@@ -44,14 +48,21 @@ def forced_photometry(exp: Exposure, coord: SkyCoord, r_ap: float = 2.0,
     r = np.hypot(xx - x0, yy - y0)
     ap = r <= r_ap
     ann = (r >= r_in) & (r <= r_out)
-    bad = exp.bad_mask()
+    from .frames import lone_spike_mask
+
+    bad = exp.bad_mask() | lone_spike_mask(exp)
     contaminated = exp.bad_mask(include_contamination=True) & ~bad
     img = exp.background_subtracted()
 
     ann_good = ann & ~bad & ~contaminated
     if ap.sum() == 0 or ann_good.sum() < 5:
         return None
-    sky = float(np.median(img[ann_good]))
+    sky_vals = img[ann_good]
+    sky = float(np.median(sky_vals))
+    # error of the median of the ring: (pi/2) * sigma^2 / N, sigma from the ring itself (MAD) so that faint
+    # sources and structure in the ring count too
+    sky_sig = 1.4826 * float(np.median(np.abs(sky_vals - sky)))
+    var_sky_median = (np.pi / 2) * sky_sig ** 2 / ann_good.sum()
     ap_good = ap & ~bad
     n_ap, n_good = int(ap.sum()), int(ap_good.sum())
     if n_good == 0:
@@ -59,7 +70,7 @@ def forced_photometry(exp: Exposure, coord: SkyCoord, r_ap: float = 2.0,
     else:
         # недостающие (плохие) пиксели апертуры заполняем средним по хорошим
         flux = float(np.sum(img[ap_good] - sky)) * n_ap / n_good
-        var = float(np.sum(exp.variance[ap_good])) * (n_ap / n_good) ** 2
+        var = float(np.sum(exp.variance[ap_good])) * (n_ap / n_good) ** 2 + n_ap ** 2 * var_sky_median
     k = Exposure.mjysr_to_ujy_per_pixel()
     wl, bw = exp.wavelength_at(x0, y0)
     flags = sorted({n for yx in zip(*np.nonzero(ap)) for n in exp.flag_names_at(yx[1], yx[0])})
@@ -70,6 +81,8 @@ def forced_photometry(exp: Exposure, coord: SkyCoord, r_ap: float = 2.0,
         reasons.append("aperture_outside_cutout")
     if not annulus_complete:
         reasons.append("background_annulus_outside_cutout")
+    if ann_good.sum() < 0.5 * ann.sum():
+        reasons.append("background_annulus_mostly_masked")
     if n_good != n_ap:
         reasons.append("masked_aperture_pixels")
     if np.any(ap & contaminated):
@@ -87,7 +100,8 @@ def forced_photometry(exp: Exposure, coord: SkyCoord, r_ap: float = 2.0,
             "coverage": {"aperture_complete": bool(aperture_complete),
                          "background_annulus_complete": bool(annulus_complete),
                          "aperture_good_pixels": n_good, "aperture_pixels": n_ap,
-                         "background_good_pixels": int(ann_good.sum())},
+                         "background_good_pixels": int(ann_good.sum()),
+                         "background_pixels": int(ann.sum())},
             "wavelength_source": "spectral_wcs" if exp.wave_wcs is not None else "approximate_detector_position",
             "time_source": exp.time_source, "time_assumptions": exp.time_assumptions}
 

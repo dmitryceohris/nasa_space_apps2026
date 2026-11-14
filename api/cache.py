@@ -14,7 +14,7 @@ def key(ra, dec, fov, det, mode, max_per_epoch) -> str:
     return hashlib.sha1(s.encode()).hexdigest()[:16]
 
 
-VERSION = 9  # Explicit registration/candidate limits and band-comparison warning; reuse FITS.
+VERSION = 10  # Combined science/B1 acceptance, registration limits and native-pixel safeguards.
 
 
 def key_spectrum(ra, dec) -> str:
