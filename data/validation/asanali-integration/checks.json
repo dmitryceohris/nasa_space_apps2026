@@ -74,5 +74,10 @@
     "exposures": 59,
     "seconds": 10.43,
     "finite_timeout_and_retries": true
-  }
+  },
+  "verified_main_merge": "85aa06461fd751faddf1fc6dfbea8e1cd2542107",
+  "final_view_requests_ready": 10,
+  "final_view_download_failures": 0,
+  "final_graph_requests_ready": 2,
+  "final_spectrum_exposures_downloaded": 36
 }

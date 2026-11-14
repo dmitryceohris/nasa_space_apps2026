@@ -1,62 +1,162 @@
 [
   {
     "target": "barnard",
+    "mode": "coadd",
+    "http": 200,
     "status": "ready",
-    "archive_source": "sia2",
     "frames": 5,
     "data_status": "available",
+    "archive_source": "sia2",
     "exposure_counts": {
       "selected": 23,
       "failed": 0,
       "used": 23,
       "rejected": 0
-    }
+    },
+    "seconds": 0.05
+  },
+  {
+    "target": "barnard",
+    "mode": "diff",
+    "http": 200,
+    "status": "ready",
+    "frames": 5,
+    "data_status": "available",
+    "archive_source": "sia2",
+    "exposure_counts": {
+      "selected": 23,
+      "failed": 0,
+      "used": 23,
+      "rejected": 0
+    },
+    "seconds": 0.1
   },
   {
     "target": "epsindib",
-    "status": "running",
-    "archive_source": null,
-    "frames": 0,
-    "data_status": null,
-    "exposure_counts": null
+    "mode": "coadd",
+    "http": 200,
+    "status": "ready",
+    "frames": 7,
+    "data_status": "available",
+    "archive_source": "sia2",
+    "exposure_counts": {
+      "selected": 32,
+      "failed": 0,
+      "used": 32,
+      "rejected": 0
+    },
+    "seconds": 27.82
+  },
+  {
+    "target": "epsindib",
+    "mode": "diff",
+    "http": 200,
+    "status": "ready",
+    "frames": 7,
+    "data_status": "available",
+    "archive_source": "sia2",
+    "exposure_counts": {
+      "selected": 32,
+      "failed": 0,
+      "used": 32,
+      "rejected": 0
+    },
+    "seconds": 3.11
   },
   {
     "target": "wise0855",
+    "mode": "coadd",
+    "http": 200,
     "status": "ready",
-    "archive_source": "sia2",
     "frames": 4,
     "data_status": "available",
+    "archive_source": "sia2",
     "exposure_counts": {
       "selected": 18,
       "failed": 0,
       "used": 18,
       "rejected": 0
-    }
+    },
+    "seconds": 0.05
+  },
+  {
+    "target": "wise0855",
+    "mode": "diff",
+    "http": 200,
+    "status": "ready",
+    "frames": 4,
+    "data_status": "available",
+    "archive_source": "sia2",
+    "exposure_counts": {
+      "selected": 18,
+      "failed": 0,
+      "used": 18,
+      "rejected": 0
+    },
+    "seconds": 0.11
   },
   {
     "target": "rwaur",
+    "mode": "coadd",
+    "http": 200,
     "status": "ready",
-    "archive_source": "sia2",
     "frames": 3,
     "data_status": "available",
+    "archive_source": "sia2",
     "exposure_counts": {
       "selected": 18,
       "failed": 0,
       "used": 18,
       "rejected": 0
-    }
+    },
+    "seconds": 0.05
+  },
+  {
+    "target": "rwaur",
+    "mode": "diff",
+    "http": 200,
+    "status": "ready",
+    "frames": 3,
+    "data_status": "available",
+    "archive_source": "sia2",
+    "exposure_counts": {
+      "selected": 18,
+      "failed": 0,
+      "used": 18,
+      "rejected": 0
+    },
+    "seconds": 0.11
   },
   {
     "target": "rdra",
+    "mode": "coadd",
+    "http": 200,
     "status": "ready",
-    "archive_source": "sia2",
     "frames": 5,
     "data_status": "available",
+    "archive_source": "sia2",
     "exposure_counts": {
       "selected": 30,
       "failed": 0,
       "used": 30,
       "rejected": 0
-    }
+    },
+    "seconds": 0.05
+  },
+  {
+    "target": "rdra",
+    "mode": "diff",
+    "http": 200,
+    "status": "ready",
+    "frames": 5,
+    "data_status": "available",
+    "archive_source": "sia2",
+    "exposure_counts": {
+      "selected": 30,
+      "failed": 0,
+      "used": 30,
+      "rejected": 0
+    },
+    "seconds": 0.09
   }
 ]
