@@ -13,7 +13,7 @@ def key(ra, dec, fov, det, mode, max_per_epoch) -> str:
     return hashlib.sha1(s.encode()).hexdigest()[:16]
 
 
-VERSION = 4  # bump when the result format changes: older cached results are then recomputed (FITS stay cached)
+VERSION = 5  # 5: measurement/processing blocks, leave-one-out diff; bump when the result format changes: older cached results are then recomputed (FITS stay cached)
 
 
 def key_spectrum(ra, dec) -> str:

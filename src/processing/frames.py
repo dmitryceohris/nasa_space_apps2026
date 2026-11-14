@@ -79,25 +79,58 @@ class Frame:
     wave_um: float               # эффективная λ в центре поля
     n_exp: int
     obs_ids: list[str] = field(default_factory=list)
+    bg_offsets: list[float | None] = field(default_factory=list)  # остаточный фон каждой экспозиции, MJy/sr
+
+    @property
+    def span_days(self) -> float:
+        return self.mjd_max - self.mjd_min
 
     @property
     def date(self) -> str:
         return Time(self.mjd, format="mjd").to_value("iso", subfmt="date")
 
 
+MIN_BG_PIX = 25  # fewer valid pixels: the residual background of an exposure is not estimated
+BACKGROUND_METHOD = {
+    "name": "zodi_model_plus_clipped_median",
+    "description": "Из каждой экспозиции вычитается модель зодиакального света (HDU ZODI), затем остаточный "
+                   "постоянный фон: 3σ-клиппированная медиана по пикселям без флага SOURCE на общей сетке.",
+    "limitations": [
+        "вычитается только постоянная: градиент фона на больших полях остаётся",
+        "в плотных полях слабые незафлаганные источники слегка завышают фон",
+    ],
+}
+
+
+def _residual_background(img: np.ndarray, good: np.ndarray, source: np.ndarray) -> float | None:
+    """Остаточный фон экспозиции. Пиксели с флагом SOURCE исключаются (это сам объект);
+    если без них пикселей слишком мало, берутся все хорошие; если и их мало — None (не вычитаем)."""
+    for sel in (good & ~source, good):
+        if sel.sum() >= MIN_BG_PIX:
+            _, med, _ = sigma_clipped_stats(img[sel], sigma=3)
+            return float(med)
+    return None
+
+
 def coadd(exps: list[Exposure], wcs: WCS, shape, center: SkyCoord) -> Frame | None:
     """Взвешенное (1/σ²) среднее экспозиций одной эпохи на общей сетке."""
+    from reproject import reproject_interp
+
     num = np.zeros(shape)
     den = np.zeros(shape)
     contam = np.zeros(shape, bool)
-    waves, used = [], []
+    waves, used, offsets = [], [], []
     for e in exps:
         img, var, bad, con = reproject_exposure(e, wcs, shape)
         if bad.all():
             continue
+        src, _ = reproject_interp((e.flag_mask(("SOURCE",)).astype(float), e.wcs), wcs, shape_out=shape,
+                                  order="nearest-neighbor")
         # остаточный фон (модель зодиакального света неидеальна) — убираем медианой по кадру
-        _, med, _ = sigma_clipped_stats(img[~bad], sigma=3)
-        img = img - med
+        med = _residual_background(img, ~bad, np.nan_to_num(src) > 0.5)
+        if med is not None:
+            img = img - med
+        offsets.append(None if med is None else round(med, 6))
         w = np.where(bad, 0.0, 1.0 / np.where(bad, 1.0, var))
         num += np.where(bad, 0.0, img) * w
         den += w
@@ -115,23 +148,74 @@ def coadd(exps: list[Exposure], wcs: WCS, shape, center: SkyCoord) -> Frame | No
                  mjd=float(np.mean(mjds)), mjd_min=float(min(mjds)), mjd_max=float(max(mjds)),
                  detector=used[0].detector,
                  wave_um=float(np.mean(waves)) if waves else float("nan"),
-                 n_exp=len(used), obs_ids=[e.obs_id for e in used])
+                 n_exp=len(used), obs_ids=[e.obs_id for e in used], bg_offsets=offsets)
 
 
-def difference(frames: list[Frame]) -> tuple[list[np.ndarray], np.ndarray]:
-    """Разностные кадры в единицах σ: (кадр − медианный шаблон) / шум.
+MIN_DIFF_PIX = 50  # fewer valid pixels: the empirical noise of a difference frame is not estimated
+DIFF_METHOD = {
+    "name": "leave_one_out_median",
+    "description": "Кадр минус медиана ОСТАЛЬНЫХ эпох (без самого кадра), делённая на шум; шум затем "
+                   "нормирован робастно (MAD) по самому разностному кадру, чтобы 1 единица = 1σ на деле.",
+    "limitations": [
+        "λ в точке может различаться между эпохами (LVF): у объектов с крутым спектром остаток бывает не движением",
+        "переменная звезда даёт остаток того же знака на месте, а не пару «+/−»",
+        "медленное движение (меньше ~1 пикселя между эпохами) даёт слабую пару, слившуюся в один диполь",
+    ],
+}
 
-    Движущийся объект даёт пару: «+» там, где он сейчас, «−» там, где был в среднем.
+
+def _robust_std(d: np.ndarray) -> float | None:
+    v = d[np.isfinite(d)]
+    if v.size < MIN_DIFF_PIX:
+        return None
+    s = float(1.4826 * np.median(np.abs(v - np.median(v))))
+    return s if s > 0 else None
+
+
+def difference_details(frames: list[Frame], renorm: bool = True) -> dict:
+    """Разностные кадры в единицах σ и сведения о нормировке.
+
+    Шаблон для кадра i — медиана ОСТАЛЬНЫХ эпох: если включать в него сам кадр, при двух эпохах
+    шаблон равен среднему и остаток вдвое слабее, а шум кадра и шаблона коррелирован.
+    Дисперсия медианы m значений: σ²/m для m ≤ 2 (это среднее), ≈ (π/2)·σ²/m для m ≥ 3.
+    Распространённая дисперсия после билинейного перепроецирования завышена (интерполяция сглаживает
+    шум), поэтому при renorm результат делится на робастное σ самого разностного кадра (noise_scale).
+    Движущийся объект даёт пару: «+» там, где он в этом кадре, «−» там, где он в остальных.
+    -> {diffs, template (медиана всех эпох, фон для «следа»), noise_scale: [float|None], method}
     """
+    import warnings
+
     cube = np.array([f.image for f in frames])
-    template = np.nanmedian(cube, axis=0)
-    out = []
-    for f in frames:
-        with np.errstate(invalid="ignore"):
-            # шум шаблона медианы ≈ 1.25·σ/√N; добавляем его к шуму кадра
-            var_t = np.nanmedian([g.variance for g in frames], axis=0) * (1.57 / max(len(frames), 1))
-            out.append((f.image - template) / np.sqrt(f.variance + var_t))
-    return out, template
+    vcube = np.array([f.variance for f in frames])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        template = np.nanmedian(cube, axis=0)
+        diffs, scales = [], []
+        for i, f in enumerate(frames):
+            if len(frames) < 2:
+                diffs.append(np.where(np.isfinite(f.image), 0.0, np.nan))
+                scales.append(None)
+                continue
+            others, ovar = np.delete(cube, i, 0), np.delete(vcube, i, 0)
+            ref = np.nanmedian(others, axis=0)
+            m = np.isfinite(others).sum(axis=0)
+            factor = np.where(m <= 2, 1.0, np.pi / 2) / np.maximum(m, 1)
+            var_ref = np.nanmean(ovar, axis=0) * factor
+            with np.errstate(invalid="ignore", divide="ignore"):
+                d = (f.image - ref) / np.sqrt(f.variance + var_ref)
+            d[~np.isfinite(d)] = np.nan
+            sc = _robust_std(d) if renorm else None
+            if sc is not None:
+                d = d / sc
+            diffs.append(d)
+            scales.append(None if sc is None else round(sc, 4))
+    return {"diffs": diffs, "template": template, "noise_scale": scales, "method": DIFF_METHOD}
+
+
+def difference(frames: list[Frame], renorm: bool = True) -> tuple[list[np.ndarray], np.ndarray]:
+    """Разностные кадры в единицах σ и шаблон (см. difference_details)."""
+    r = difference_details(frames, renorm)
+    return r["diffs"], r["template"]
 
 
 TRAIL_OLD = (0.25, 0.55, 1.0)   # синий — самая ранняя эпоха

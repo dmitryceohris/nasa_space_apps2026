@@ -10,9 +10,10 @@ from astropy.coordinates import SkyCoord
 from Exposure import DETECTOR_BANDS, Exposure, download_rows, query_spherex
 
 from . import render
-from .epochs import group_epochs, select_per_epoch
-from .frames import Frame, coadd, difference, grid_header_json, make_grid, trail
-from .photometry import light_curve, spectrum
+from .epochs import epoch_limits, group_epochs, select_per_epoch
+from .frames import (BACKGROUND_METHOD, DIFF_METHOD, Frame, coadd, difference, grid_header_json, make_grid,
+                     trail)
+from .photometry import PHOTOMETRY_METHOD, light_curve, spectrum
 from .targets import Target
 
 Progress = Callable[[str, int, int, str], None]  # (stage, done, total, message)
@@ -89,7 +90,9 @@ def render_view(frames: list[Frame], wcs, shape, out_dir: Path, url_prefix: str,
                   "source": target.source, "pm_measured_arcsec_yr": None}
     return {"status": "ready", "grid": grid_header_json(wcs, shape), "frames": out_frames,
             "trail_url": f"{url_prefix}/{trail_png.name}", "gif_url": f"{url_prefix}/{gif.name}",
-            "motion": motion, "warnings": warnings, "credits": CREDITS}
+            "motion": motion, "warnings": warnings, "credits": CREDITS,
+            "processing": {"epochs": epoch_limits(), "background": BACKGROUND_METHOD,
+                           "difference": DIFF_METHOD if len(frames) > 1 else None}}
 
 
 def build_view(center: SkyCoord, fov_arcmin: float, det: int, max_per_epoch: int,
@@ -129,7 +132,7 @@ def build_spectrum(center: SkyCoord, coord_at: Callable[[float], SkyCoord], per_
     pts = spectrum(exps, coord_at)
     good = _good(pts)
     return {"status": "ready", "points": pts, "n_points": len(pts),
-            "n_saturated": sum(1 for p in pts if not p["ok"]), "credits": CREDITS,
+            "n_saturated": sum(1 for p in pts if not p["ok"]), "credits": CREDITS, "method": PHOTOMETRY_METHOD,
             "bands": {str(k): [v[0], v[1]] for k, v in DETECTOR_BANDS.items()},
             # плоские массивы только надёжных точек (ok): их напрямую рисует frontend/index.html
             "wavelength": [p["wave_um"] for p in good], "flux": [p["flux_ujy"] for p in good],
@@ -146,5 +149,7 @@ def lightcurve_from_spectrum(spec: dict, wave_min: float, wave_max: float) -> di
     pts = light_curve(spec["points"], wave_min, wave_max)
     good = _good(pts)
     return {"status": "ready", "wave_window_um": [wave_min, wave_max], "points": pts,
+            "method": dict(PHOTOMETRY_METHOD, window="поток по времени только в окне λ: иначе переменность "
+                                                     "спуталась бы с формой спектра (LVF)"),
             "dates": [Time(p["mjd"], format="mjd").to_value("iso", subfmt="date") for p in good],
             "flux": [p["flux_ujy"] for p in good], "flux_err": [p["err_ujy"] for p in good]}

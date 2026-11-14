@@ -19,8 +19,8 @@ from astropy.coordinates import SkyCoord
 
 from Exposure import DETECTOR_BANDS, load_exposure
 from processing import render as prender
-from processing.epochs import select_per_epoch
-from processing.frames import coadd, difference, grid_header_json, make_grid, trail
+from processing.epochs import epoch_limits, select_per_epoch, smear_px
+from processing.frames import BACKGROUND_METHOD, coadd, difference_details, grid_header_json, make_grid, trail
 from processing.pipeline import CREDITS, build_spectrum, lightcurve_from_spectrum
 
 from . import cache, centroid, irsa, render, resolve
@@ -32,6 +32,7 @@ POOL = ThreadPoolExecutor(max_workers=4)
 JOBS = {}
 LOCK = threading.Lock()
 WAVE_SPREAD_WARN = 0.05  # same threshold as src/processing/pipeline.py: lambda change between epochs
+SMEAR_WARN_PX = 0.5  # known proper motion moves the object more than this within one epoch -> warning
 warnings.filterwarnings("ignore")
 
 
@@ -132,6 +133,23 @@ def _motion(r):
             "source": o["source"], "pm_measured_arcsec_yr": None}
 
 
+def _pm_total(r):
+    """Total reference proper motion, arcsec/yr, or None."""
+    o = r["motion"]
+    if not o or o.get("pmra_masyr") is None or o.get("pmdec_masyr") is None:
+        return None
+    return float(np.hypot(o["pmra_masyr"], o["pmdec_masyr"])) / 1000
+
+
+def _processing(p):
+    """How the frames and centres were obtained, shown to the user next to the result."""
+    from processing.frames import DIFF_METHOD
+
+    return {"epochs": epoch_limits(), "background": BACKGROUND_METHOD,
+            "difference": DIFF_METHOD if p.mode in ("diff", "trail") else None,
+            "measurement": centroid.METHOD}
+
+
 def _sky(r, mjd):
     """Position of the object on `mjd`: proper motion if known, else the fixed query centre."""
     if r["motion"]:
@@ -147,7 +165,7 @@ def _pipeline(j, p, r):
     res = {"status": "ready",
            "query": {"ra": ra, "dec": dec, "fov": p.fov, "det": p.det, "mode": p.mode, "target": r["label"]},
            "grid": grid_header_json(wcs, shape), "frames": [], "trail_url": None, "motion": _motion(r),
-           "warnings": [], "credits": CREDITS}
+           "warnings": [], "credits": CREDITS, "processing": _processing(p)}
 
     _stage(j, "query", "Поиск снимков")
     meta = irsa.exposures(ra, dec, p.det)
@@ -195,14 +213,15 @@ def _pipeline(j, p, r):
     if failed:
         res["warnings"].append(f"Не удалось получить или обработать {failed} из {len(flat)} снимков")
 
-    diffs = template = None
+    diffs = template = scales = None
     if p.mode in ("diff", "trail"):
         if len(frames) < 2:
             res["warnings"].append(f"{p.mode} требует минимум 2 эпохи")
             if p.mode == "diff":  # nothing meaningful to show
                 frames = []
         else:
-            diffs, template = difference(frames)
+            dd = difference_details(frames)
+            diffs, template, scales = dd["diffs"], dd["template"], dd["noise_scale"]
 
     _stage(j, "render", "Рисую кадры", 0, len(frames))
     d = cache.CACHE / j.key
@@ -221,18 +240,29 @@ def _pipeline(j, p, r):
         if r["motion"]:  # where the object should be on the frame date
             x, y = wcs.world_to_pixel(_sky(r, f.mjd))
             pred = prender.fits_to_png_xy(x, y, h)
-        cands = [{"kind": c["kind"], "xy": prender.fits_to_png_xy(c["xy"][0], c["xy"][1], h), "area_px": c["area"]}
-                 for c in centroid.find(arr, signed)]
+        m = centroid.measure(arr, signed, saturated=f.contam)
+        cands = [{"kind": c["kind"], "sign": c["sign"], "xy": prender.fits_to_png_xy(c["xy"][0], c["xy"][1], h),
+                  "err_px": [round(e, 3) for e in c["err_px"]], "area_px": c["area"], "snr": round(c["snr"], 1),
+                  "quality": c["quality"], "flags": c["flags"]}
+                 for c in m["candidates"]]
         res["frames"].append({
             "index": i, "label": f"Эпоха {i + 1}", "mjd": round(f.mjd, 4), "date": f.date,
             "mjd_span": [round(f.mjd_min, 4), round(f.mjd_max, 4)], "det": f.detector,
             "wave_um": round(f.wave_um, 4) if np.isfinite(f.wave_um) else None, "n_exp": f.n_exp,
             "image_url": f"/cache/{j.key}/f{i}.png", "flags_url": f"/cache/{j.key}/f{i}_flags.png",
             "predicted_px": pred,
-            # measured_px: the centre when there is exactly one candidate; null when none or when the largest
-            # and the central object differ (both are then listed in measured_candidates, nothing is guessed).
-            "measured_px": cands[0]["xy"] if len(cands) == 1 else None,
-            "measured_candidates": cands, "obs_ids": f.obs_ids})
+            # measured_px: the centre when the choice is unambiguous (status ok); null when nothing is found or
+            # when the largest and the central object differ (both are listed, nothing is guessed). In diff mode
+            # only the "+" residual (where the object is in this frame) gives the position.
+            "measured_px": prender.fits_to_png_xy(m["xy"][0], m["xy"][1], h) if m["status"] == "ok" else None,
+            "measured_candidates": cands,
+            "measurement": {"status": m["status"], "reason": m["reason"], "quality": m["quality"],
+                            "flags": m["flags"], "n_rejected_hot": m["n_rejected_hot"],
+                            "n_low_snr": m["n_low_snr"],
+                            "err_px": None if m["err_px"] is None else [round(e, 3) for e in m["err_px"]]},
+            "span_days": round(f.span_days, 3), "bg_offsets": f.bg_offsets,
+            "diff_noise_scale": scales[i] if scales else None,
+            "obs_ids": f.obs_ids})
     if diffs is not None:
         prender.save_rgb(trail(diffs), d / "trail.png", background=template, vmin=vmin, vmax=vmax)
         res["trail_url"] = f"/cache/{j.key}/trail.png"
@@ -244,6 +274,14 @@ def _pipeline(j, p, r):
     c = (h // 2, shape[1] // 2)
     if any(f.contam[c[0] - 1:c[0] + 2, c[1] - 1:c[1] + 2].any() for f in frames):
         res["warnings"].append("В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)")
+    pm = _pm_total(r)
+    if pm and frames:
+        pix = res["grid"]["pixel_scale_arcsec"]
+        worst = max(frames, key=lambda f: f.span_days)
+        sm = smear_px(pm, worst.span_days, pix)
+        if sm > SMEAR_WARN_PX:
+            res["warnings"].append(f"Объект смещается на {sm:.1f} пикс. за эпоху ({worst.span_days:.0f} сут): "
+                                   "внутри кадра он размазан, центр — среднее положение за эпоху")
     return res
 
 

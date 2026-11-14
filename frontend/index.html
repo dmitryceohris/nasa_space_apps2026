@@ -17,6 +17,8 @@
   #marker { display: none; position: absolute; width: 24px; height: 24px; border: 2px solid #0f0; border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; }
   #measured { display: none; position: absolute; width: 24px; height: 24px; border: 2px dashed #fd0; border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; }
   #info { margin: 6px 0; font-size: 14px; color: #bbb; }
+  #method { margin: 6px 0; font-size: 13px; color: #aaa; }
+  #method ul { margin: 4px 0; padding-left: 18px; }
 </style>
 </head>
 <body>
@@ -54,6 +56,7 @@
   <div id="measured"></div>
 </div>
 <div id="info"></div>
+<details id="method" hidden><summary>How positions are measured</summary><div id="method-body"></div></details>
 
 <!-- PLAYER -->
 <div class="row">
@@ -164,8 +167,9 @@ async function getFrames(ra, dec, fov, det, mode, my) {
       date: f.date, wavelength: f.wave_um != null ? f.wave_um.toFixed(2) : "", n_exp: f.n_exp,
       url: API + f.image_url, flagsUrl: API + f.flags_url,
       expected: fr(f.predicted_px), measured: fr(f.measured_px),
-      candidates: f.measured_candidates || []
+      candidates: f.measured_candidates || [], measurement: f.measurement || null
     }));
+    showMethod(d.processing);
     if (mode === "trail" && d.trail_url) {
       // one picture with every epoch: residuals coloured by time (blue = first, yellow = last)
       const n = out.length;
@@ -199,6 +203,37 @@ const $ = id => document.getElementById(id);
 const MODES = ["single", "coadd", "diff", "trail"];
 let frames = [], i = 0, timer = null, mode = "coadd", tab = "spec";
 
+// ================= METHOD / QUALITY =================
+const esc = t => String(t).replace(/[&<>]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"})[c]);
+function showMethod(pr) {
+  if (!pr || !pr.measurement) { $("method").hidden = true; return; }
+  const m = pr.measurement, e = pr.epochs || {};
+  const li = a => (a || []).map(x => `<li>${esc(x)}</li>`).join("");
+  $("method-body").innerHTML =
+    `<p>${esc(m.description)}</p>` +
+    `<p>Epochs: gap &gt; ${e.gap_days} d starts a new one, each at most ${e.max_span_days} d long.</p>` +
+    (pr.background ? `<p>Background: ${esc(pr.background.description)}</p>` : "") +
+    (pr.difference ? `<p>Difference: ${esc(pr.difference.description)}</p>` : "") +
+    `<p>Limitations:</p><ul>${li(m.limitations)}${li(pr.background && pr.background.limitations)}` +
+    `${li(pr.difference && pr.difference.limitations)}</ul>` +
+    `<p>Not implemented yet: ${esc((m.not_implemented || []).join(", "))}</p>`;
+  $("method").hidden = false;
+}
+function measuredText(f) {
+  const m = f.measurement;
+  if (!m) {
+    if (f.candidates && !f.measured)
+      return f.candidates.length ? `  |  ${f.candidates.length} candidates, no single centre` : "  |  no source found";
+    return "";
+  }
+  if (m.status === "ok") {
+    const err = m.err_px ? ` ±${Math.max(...m.err_px).toFixed(2)} px` : "";
+    const fl = m.flags && m.flags.length ? ` (${m.flags.join(", ")})` : "";
+    return `  |  measured: ${m.quality}${err}${fl}`;
+  }
+  return `  |  ${m.status === "ambiguous" ? "ambiguous" : "not measured"}: ${m.reason}`;
+}
+
 // ================= PLAYER =================
 function put(el, p, on) {
   el.style.display = (on && p) ? "block" : "none";
@@ -216,10 +251,7 @@ function show(n) {
   }
   const wl = f.wavelength ? `  |  ${f.wavelength} µm` : "";
   const ne = f.n_exp ? `  |  ${f.n_exp} exposures` : "";
-  let ms = "";
-  if (f.candidates && !f.measured) {
-    ms = f.candidates.length ? `  |  ${f.candidates.length} candidates, no single centre` : "  |  no source found";
-  }
+  const ms = measuredText(f);
   $("info").textContent = `Frame ${i + 1} / ${frames.length}  |  ${f.date}${wl}${ne}  |  mode: ${mode}${ms}`;
 
   const flagsOn = $("flags").checked;

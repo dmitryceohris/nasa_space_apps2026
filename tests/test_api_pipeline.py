@@ -65,6 +65,27 @@ def test_diff_mode_gives_trail_and_signed_frames(synthetic):
     res, _ = run("diff")
     assert len(res["frames"]) == 2 and res["trail_url"]
     assert (synthetic / res["trail_url"].removeprefix("/cache/")).exists()
+    # a stationary star: no "+" residual worth a position, and the diff noise was renormalised
+    for f in res["frames"]:
+        assert f["measurement"]["status"] != "ok"
+        assert f["diff_noise_scale"] is not None
+        assert all(c["sign"] in (1, -1) for c in f["measured_candidates"])
+    assert res["processing"]["difference"]["name"] == "leave_one_out_median"
+
+
+def test_method_quality_and_limits_are_in_the_answer(synthetic):
+    res, _ = run("coadd")
+    pr = res["processing"]
+    assert pr["measurement"]["name"] == "threshold_moment_centroid" and pr["measurement"]["limitations"]
+    assert "PSF-фиттинг" in pr["measurement"]["not_implemented"]
+    assert pr["epochs"]["max_span_days"] == 20 and pr["background"]["limitations"]
+    assert pr["difference"] is None  # coadd mode: no difference frames
+    f = res["frames"][0]
+    m = f["measurement"]
+    assert m["status"] == "ok" and m["quality"] in ("good", "fair") and max(m["err_px"]) < 0.1
+    assert f["span_days"] == 1.0 and len(f["bg_offsets"]) == 2
+    c = f["measured_candidates"][0]
+    assert {"snr", "err_px", "quality", "flags", "sign"} <= set(c) and c["sign"] is None
 
 
 def test_trail_mode_shows_coadd_frames_plus_trail(synthetic):
