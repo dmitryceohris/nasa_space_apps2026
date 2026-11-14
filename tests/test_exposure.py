@@ -77,3 +77,11 @@ def test_live_barnard_cutout():
     wl, _ = e.wavelength_at_sky(BARNARD_2025)
     assert 4.42 <= wl <= 5.0
     assert e.contains(BARNARD_2025)
+
+
+def test_missing_variance_is_an_explicit_error():
+    """Without VARIANCE every pixel would be 'bad' and the frame silently empty: refuse with a clear message."""
+    hdul = _fake_hdul()
+    del hdul["VARIANCE"]
+    with pytest.raises(ValueError, match="VARIANCE"):
+        exposure_from_hdul(hdul, source="fake")

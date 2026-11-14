@@ -73,8 +73,9 @@ def exposure_from_hdul(hdul: fits.HDUList, source: str = "", *,
     zodi_hdu = _find_hdu(hdul, "ZODI")
 
     image = np.asarray(img_hdu.data, dtype=np.float32)
-    variance = (np.asarray(var_hdu.data, dtype=np.float32) if var_hdu is not None
-                else np.full_like(image, np.nan))
+    if var_hdu is None:  # without variance every pixel would be marked bad and the frame silently empty
+        raise ValueError(f"{source}: нет расширения VARIANCE — без дисперсии нельзя маскировать и взвешивать пиксели")
+    variance = np.asarray(var_hdu.data, dtype=np.float32)
     flags = (np.asarray(flags_hdu.data, dtype=np.int32) if flags_hdu is not None
              else np.zeros(image.shape, dtype=np.int32))
     zodi = np.asarray(zodi_hdu.data, dtype=np.float32) if zodi_hdu is not None else None

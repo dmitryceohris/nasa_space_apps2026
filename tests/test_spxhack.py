@@ -164,10 +164,15 @@ def test_ambiguous_frame_resolved_by_prediction():
     """A bigger, separate star off-centre makes every frame ambiguous; the target is picked by its prediction."""
     t = mover(pmra=0, pmdec=8000, plx=0)
     exps = exposures_of(t, [60900, 61100, 61300], extra=_add_star(offset(CENTER, 75, 60), 30, 1.8))
-    tr = spx.track(spx.stack(exps, t, fov=5))
+    st = spx.stack(exps, t, fov=5)
+    plain = spx.track(st)  # default = /api/view rule: the prediction never picks the object
+    assert all(r["status"] == "ambiguous" and r["xy"] is None for r in plain)
+    tr = spx.track(st, assist=True)
     assert all(r["status"] == "ambiguous" for r in tr)
     assert all(r["association"] == "nearest_to_prediction" and r["offset_px"] < 0.3 for r in tr)
-    assert spx.fit_motion(tr).pm[1] == pytest.approx(8.0, abs=0.5)
+    with pytest.raises(ValueError):
+        spx.fit_motion(tr)  # assisted rows are not used unless asked
+    assert spx.fit_motion(tr, include_assisted=True).pm[1] == pytest.approx(8.0, abs=0.5)
 
 
 def test_blend_with_bright_neighbour_measured_at_prediction():
@@ -177,17 +182,19 @@ def test_blend_with_bright_neighbour_measured_at_prediction():
     exps = exposures_of(t, [60900, 61100, 61300], extra=_add_star(offset(CENTER, 40, 40), 60, 3.0))
     st = spx.stack(exps, t, fov=4)
     assert spx.centroid(st.cube[0])["candidates"][0]["area"] > 100  # really merged
-    tr = spx.track(st)
+    assert all(r["xy"] is None or "far_from_prediction" in r["flags"] for r in spx.track(st))
+    tr = spx.track(st, assist=True)
     for r in tr:
         assert r["association"] == "windowed_at_prediction" and "blended" in r["flags"]
         assert r["offset_px"] < 0.3 and r["quality"] == "fair"
-    assert spx.fit_motion(tr).pm[1] == pytest.approx(8.0, abs=0.3)  # 8.9 without the local plane background
+    m = spx.fit_motion(tr, include_assisted=True)
+    assert m.pm[1] == pytest.approx(8.0, abs=0.3)  # 8.9 without the local plane background
 
 
 def test_undetected_target_forced_only_when_significant():
     t = mover(pmra=0, pmdec=8000, plx=0)
     faint = spx.stack(exposures_of(t, [60900, 61100], flux=0.0), t, fov=3)  # nothing there
-    assert all(r["xy"] is None for r in spx.track(faint))
+    assert all(r["xy"] is None for r in spx.track(faint, assist=True))
 
 
 def test_far_detection_is_flagged_and_not_fitted():
@@ -200,6 +207,20 @@ def test_far_detection_is_flagged_and_not_fitted():
     assert tr.good() == []
     with pytest.raises(ValueError):
         spx.fit_motion(tr)
+
+
+def test_fit_motion_across_ra_zero():
+    """Positions on both sides of RA 0/360 must not average to RA 180."""
+    t = spx.Target("wrap", "Wrap star", 0.0, 10.0, pmra=20000.0, pmdec=0.0, parallax=0.0, rv=0.0,
+                   ref_epoch=Time(61100, format="mjd"))
+    rows = []
+    for k, mjd in enumerate([60900.0, 61100.0, 61300.0]):
+        c = t.at(mjd)
+        rows.append({"index": k, "mjd": mjd, "ra": float(c.ra.deg), "dec": float(c.dec.deg), "err_arcsec": 0.1,
+                     "xy": [0, 0], "flags": [], "quality": "good", "association": "unique"})
+    assert rows[0]["ra"] > 359 and rows[2]["ra"] < 1  # really crosses the wrap
+    m = spx.fit_motion(spx.Track(rows, t, 6.15))
+    assert m.to_numpy() == pytest.approx([20.0, 0.0], abs=0.05)
 
 
 def test_parallax_offset_amplitude():

@@ -50,9 +50,9 @@ def forced_photometry(exp: Exposure, coord: SkyCoord, r_ap: float = 2.0,
     ann = (r >= r_in) & (r <= r_out)
     from .frames import lone_spike_mask
 
-    bad = exp.bad_mask() | lone_spike_mask(exp)
+    img, bad = exp.background_subtracted(), exp.bad_mask()
+    bad = bad | lone_spike_mask(exp, img, bad)
     contaminated = exp.bad_mask(include_contamination=True) & ~bad
-    img = exp.background_subtracted()
 
     ann_good = ann & ~bad & ~contaminated
     if ap.sum() == 0 or ann_good.sum() < 5:

@@ -18,7 +18,10 @@ from processing.photometry import spectrum as _spectrum
 from .data import target as _target
 from .stack import Stack
 
-ASSOC_PX = 3.0  # a detection farther than this from the prediction is another object, not the target
+ASSOC_PX = 1.0  # Same conservative display gate as /api/view, not a calibrated association radius.
+# Agreement with the prediction does not establish target identity or registration accuracy.
+ASSIST_PX = 3.0  # with assist=True: how far from the prediction a candidate may be picked or a window started
+ASSISTED = ("nearest_to_prediction", "windowed_at_prediction")
 WINDOW_R = 2.5  # radius (px) of the windowed centroid used at the predicted position
 MIN_FORCED_SNR = 5.0  # a windowed measurement below this S/N is not accepted
 
@@ -135,13 +138,16 @@ class Track:
     def __array__(self, dtype=None, copy=None):
         return np.asarray(self.to_numpy(), dtype=dtype)
 
-    def good(self, include_poor: bool = False) -> list[dict]:
-        """Rows usable for a motion fit: measured, near the prediction (if any), quality good/fair."""
+    def good(self, include_poor: bool = False, include_assisted: bool = False) -> list[dict]:
+        """Rows usable for a motion fit: measured, near the prediction (if any), quality good/fair.
+        Rows found with the help of the prediction (assist=True) only when include_assisted=True."""
         ok = []
         for r in self.rows:
             if r["xy"] is None or "far_from_prediction" in r["flags"]:
                 continue
             if r["quality"] == "poor" and not include_poor:
+                continue
+            if r["association"] in ASSISTED and not include_assisted:
                 continue
             ok.append(r)
         return ok
@@ -160,17 +166,20 @@ class Track:
         return f"Track({self.target.name!r}, {n}/{len(self.rows)} epochs measured)"
 
 
-def track(st: Stack, diff: bool = False, assoc_px: float = ASSOC_PX) -> Track:
+def track(st: Stack, diff: bool = False, assoc_px: float = ASSOC_PX, assist: bool = False) -> Track:
     """Measures the target in every epoch of the stack.
 
-    The measured position is taken when the frame has one unambiguous object (association='unique'). With a
-    known motion model the prediction then helps, in this order:
-      * ambiguous frame -> the detected candidate nearest to the prediction, within assoc_px
-        ('nearest_to_prediction');
+    Default (same rule as /api/view): the position is taken only when the frame has one unambiguous object
+    (association='unique'); farther than assoc_px (1 px) from the prediction it is flagged
+    'far_from_prediction' and not used by fit_motion. The prediction never chooses the object.
+
+    assist=True (exploration, NOT an independent measurement): the prediction may help, within ASSIST_PX:
+      * ambiguous frame -> the detected candidate nearest to the prediction ('nearest_to_prediction');
       * nothing usable near the prediction (no detection, or the detection is a blend centred elsewhere) ->
-        windowed centroid started at the prediction, accepted at S/N >= 5 and within assoc_px
-        ('windowed_at_prediction', flag 'blended' or 'forced', quality at best 'fair');
-      * otherwise the detection is kept but flagged 'far_from_prediction' and not used by fit_motion.
+        windowed centroid started at the prediction, accepted at S/N >= 5
+        ('windowed_at_prediction', flag 'blended' or 'forced', quality at best 'fair').
+    Such rows are used by fit_motion only with include_assisted=True: the prediction chose them, so a motion
+    fitted from them is not independent of the catalogue.
     diff=True measures the '+' residual of the difference frames instead of the coadds."""
     from .stack import diff as _diff
 
@@ -186,18 +195,19 @@ def track(st: Stack, diff: bool = False, assoc_px: float = ASSOC_PX) -> Track:
         xy, err, quality, flags, assoc = m["xy"], m["err_px"], m["quality"], list(m["flags"]), None
         if xy is not None:
             assoc = "unique"
-        elif pred is not None and m["status"] == "ambiguous":
+        elif assist and pred is not None and m["status"] == "ambiguous":
             cands = [c for c in m["candidates"] if c["sign"] in (None, 1)]
             if cands:
                 c = min(cands, key=lambda c: np.hypot(c["xy"][0] - pred[0], c["xy"][1] - pred[1]))
-                if np.hypot(c["xy"][0] - pred[0], c["xy"][1] - pred[1]) <= assoc_px:
+                if np.hypot(c["xy"][0] - pred[0], c["xy"][1] - pred[1]) <= ASSIST_PX:
                     xy, err, quality, flags = c["xy"], c["err_px"], c["quality"], list(c["flags"])
                     assoc = "nearest_to_prediction"
-        far = xy is not None and pred is not None and np.hypot(xy[0] - pred[0], xy[1] - pred[1]) > assoc_px
-        if pred is not None and (xy is None or far):
+        limit = ASSIST_PX if assoc == "nearest_to_prediction" else assoc_px
+        far = xy is not None and pred is not None and np.hypot(xy[0] - pred[0], xy[1] - pred[1]) > limit
+        if assist and pred is not None and (xy is None or far):
             w = windowed_centroid(imgs[i], *pred)  # weights are clipped at 0: in diff only the "+" counts
             if (w is not None and w["snr"] >= MIN_FORCED_SNR
-                    and np.hypot(w["xy"][0] - pred[0], w["xy"][1] - pred[1]) <= assoc_px):
+                    and np.hypot(w["xy"][0] - pred[0], w["xy"][1] - pred[1]) <= ASSIST_PX):
                 flags = ["blended"] if far else ["forced"]
                 xy, err, quality, assoc = w["xy"], w["err_px"], "fair", "windowed_at_prediction"
         row = {"index": i, "date": f.date, "mjd": f.mjd, "wave_um": f.wave_um, "n_exp": f.n_exp,
@@ -213,7 +223,7 @@ def track(st: Stack, diff: bool = False, assoc_px: float = ASSOC_PX) -> Track:
             if pred is not None:
                 off = float(np.hypot(xy[0] - pred[0], xy[1] - pred[1]))
                 row["offset_px"] = off
-                if off > assoc_px:
+                if off > (ASSIST_PX if assoc in ASSISTED else assoc_px):
                     row["flags"] = row["flags"] + ["far_from_prediction"]
         rows.append(row)
     return Track(rows, st.target, st.pixel_scale, diff)
@@ -263,7 +273,8 @@ class Motion:
         return s + ")"
 
 
-def fit_motion(tr: Track, parallax: str = "auto", include_poor: bool = False) -> Motion:
+def fit_motion(tr: Track, parallax: str = "auto", include_poor: bool = False,
+               include_assisted: bool = False) -> Motion:
     """Proper motion from the measured positions of a Track.
 
     Model per axis: offset(t) = p0 + mu*(t - t_mean) + plx * P(t), P = parallax factors.
@@ -271,7 +282,7 @@ def fit_motion(tr: Track, parallax: str = "auto", include_poor: bool = False) ->
               'catalog' / 'none' / 'fit' (needs >= 4 epochs).
     Errors are the centroid noise errors (in arcsec); when chi2_red > 1 they are scaled by sqrt(chi2_red),
     because the noise error does not include PSF or registration systematics."""
-    rows = tr.good(include_poor)
+    rows = tr.good(include_poor, include_assisted)
     warn = []
     if len(rows) < 2:
         raise ValueError(f"нужно минимум 2 измеренные эпохи, есть {len(rows)}")
@@ -279,7 +290,9 @@ def fit_motion(tr: Track, parallax: str = "auto", include_poor: bool = False) ->
     ra = np.array([r["ra"] for r in rows])
     dec = np.array([r["dec"] for r in rows])
     sig = np.array([max(r["err_arcsec"], 1e-3) for r in rows])
-    ra0, dec0 = np.mean(ra), np.mean(dec)
+    # mean RA through the 0/360 wrap: 359.99 and 0.01 average to 0.0, not 180
+    ra0 = (ra[0] + np.mean((ra - ra[0] + 180) % 360 - 180)) % 360
+    dec0 = np.mean(dec)
     east = (ra - ra0 + 180) % 360 - 180
     east = east * np.cos(np.radians(dec0)) * 3600
     north = (dec - dec0) * 3600

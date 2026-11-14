@@ -334,3 +334,78 @@ def test_lightcurve_mixing_channels_is_flagged():
 
 def test_pixel_scale_constant():
     assert PIX == pytest.approx(6.15)
+
+
+# ------------------------------------------------------------------ code review follow-ups
+def test_prediction_outside_the_field_gives_no_measured_position(serve):
+    """The model puts the target outside the frame: the star at the centre is not the target."""
+    exps = [fake_exposure(CENTER, 61000.0 + 200 * k, seed=k) for k in range(2)]
+    res = serve(exps, "single", sky=lambda mjd: SkyCoord(151, 20, unit="deg"))
+    for f in res["frames"]:
+        assert f["prediction_status"] == "outside_field" and f["measured_px"] is None
+        assert f["measurement"]["target_association"] == "prediction_outside_field"
+        assert f["measured_candidates"]  # still listed as a candidate
+
+
+def test_trail_keeps_the_no_data_colour(serve):
+    exps = []
+    for k, mjd in enumerate([61000.0, 61200.0]):
+        exps.append(fake_exposure(CENTER, mjd, seed=k, shift_px=(9.0, 0.3)))  # partial coverage
+    res = serve(exps, "trail")
+    rgb = np.asarray(Image.open(res["_dir"] / res["trail_url"].removeprefix("/cache/")).convert("RGB"))
+    nodata = np.all(rgb == NODATA_RGB, axis=2)
+    assert nodata.any() and not nodata.all()
+
+
+def test_dipole_overlap_found_even_when_the_minus_part_is_not_listed():
+    """A big '-' residual elsewhere is 'largest', another '-' under the centre is 'central': the target's own
+    '-' part next to its '+' is neither, and must still mark the '+' centre as biased."""
+    from processing.centroid import measure
+
+    yy, xx = np.indices((61, 61))
+    g = lambda x, y, s, a: a * np.exp(-((xx - x) ** 2 + (yy - y) ** 2) / (2 * s ** 2))  # noqa: E731
+    d = np.random.default_rng(0).normal(0, 1, (61, 61))
+    d += g(45, 30, 1.2, 40) - g(45, 32, 1.2, 40)  # the moving target, off-centre: + and - touch
+    d -= g(10, 10, 4.0, 40)  # a big negative residual far away -> 'largest'
+    d -= g(30, 30, 1.0, 20)  # a small negative residual at the centre -> 'central'
+    m = measure(d, signed=True)
+    neg = [c for c in m["candidates"] if c["sign"] == -1]
+    assert all(abs(c["xy"][0] - 45) > 3 for c in neg)  # the target's '-' is not among the listed ones
+    assert "overlaps_negative_residual" in m["flags"] and m["quality"] == "poor"
+
+
+@pytest.mark.parametrize("status", [400, 403, 404])
+def test_irsa_rejection_is_not_retried_as_an_outage(monkeypatch, status):
+    import httpx
+
+    from api.errors import ApiError
+    calls = []
+
+    def answer(method, url, **kw):
+        calls.append(url)
+        return httpx.Response(status, request=httpx.Request(method, url))
+    monkeypatch.setattr(httpx, "request", answer)
+    monkeypatch.setattr(irsa.time, "sleep", lambda s: pytest.fail("a permanent 4xx must not be retried"))
+    with pytest.raises(ApiError) as e:
+        irsa._send("GET", "https://irsa.example/cutout")
+    assert len(calls) == 1 and str(status) in e.value.message and "отклонил" in e.value.message
+
+
+@pytest.mark.parametrize("status", [408, 429, 500, 502, 503])
+def test_irsa_transient_failure_keeps_retrying(monkeypatch, status):
+    import httpx
+    from api.errors import ApiError
+
+    calls, pauses = [], []
+
+    def answer(method, url, **kw):
+        calls.append(url)
+        return httpx.Response(status, request=httpx.Request(method, url))
+
+    monkeypatch.setattr(httpx, "request", answer)
+    monkeypatch.setattr(irsa.time, "sleep", pauses.append)
+    with pytest.raises(ApiError) as error:
+        irsa._send("GET", "https://irsa.example/cutout")
+    assert len(calls) == 3 and pauses == [5, 10]
+    assert error.value.status == 502 and error.value.code == "upstream"
+    assert str(status) in error.value.message

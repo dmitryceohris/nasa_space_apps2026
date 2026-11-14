@@ -199,10 +199,11 @@ def measure(img, signed=False, saturated=None, k=K_SIGMA, min_area=MIN_AREA, smo
     a = np.asarray(img, float)
     sat = None if saturated is None else np.asarray(saturated, bool)
     signs = (1, -1) if signed else (1,)
-    per_sign, hot, faint = {}, 0, {}
+    per_sign, hot, faint, found = {}, 0, {}, {}
     for sg in signs:
         objs, h, lab = _detect(sg * a, k, min_area, smooth, sat, sg if signed else None)
         objs, faint[sg] = _split_faint(objs)
+        found[sg] = objs
         hot += h
         per_sign[sg] = _choose(objs, lab, a.shape)
     pos, reason = per_sign[1]
@@ -224,7 +225,7 @@ def measure(img, signed=False, saturated=None, k=K_SIGMA, min_area=MIN_AREA, smo
     c = pos[0]
     flags, quality = list(c["flags"]), c["quality"]
     if signed and any(np.hypot(n["xy"][0] - c["xy"][0], n["xy"][1] - c["xy"][1]) < DIPOLE_OVERLAP_PX
-                      for n in per_sign[-1][0]):
+                      for n in found[-1]):  # every '-' object, not only the listed largest/central ones
         flags.append("overlaps_negative_residual")
         quality = "poor"
     out.update(status="ok", xy=c["xy"], err_px=c["err_px"], quality=quality, flags=flags)

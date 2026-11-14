@@ -44,17 +44,19 @@ SPIKE_NEIGHBOUR_RATIO = 0.05  # ... whose brightest neighbour is below this frac
 # neighbour below 0.084 of the peak; a pixel-sized cosmic ray or hot pixel has neighbours at the noise level.
 
 
-def lone_spike_mask(exp: Exposure) -> np.ndarray:
+def lone_spike_mask(exp: Exposure, sub: np.ndarray | None = None, bad: np.ndarray | None = None) -> np.ndarray:
     """Unflagged single-pixel outliers (cosmic rays, hot pixels missed by the pipeline) in NATIVE pixels.
 
     Must be applied before interpolation: bilinear reprojection spreads one pixel over 2x2 grid pixels, after
     which it looks like a compact star (one such pixel became a S/N 279 "object" in an empty field).
     Needs at least 6 valid neighbours. SOURCE-only pixels are preserved: a sharp known source is not a
-    proven detector defect. A hard-bad bit still excludes it through bad_mask, independently of SOURCE."""
+    proven detector defect. A hard-bad bit still excludes it through bad_mask, independently of SOURCE.
+    sub / bad reuse the caller's background-subtracted image and bad mask."""
     from scipy import ndimage as ndi
 
-    bad = exp.bad_mask()
-    img = np.where(bad, np.nan, exp.background_subtracted()).astype(np.float64)
+    bad = exp.bad_mask() if bad is None else bad
+    sub = exp.background_subtracted() if sub is None else sub
+    img = np.where(bad, np.nan, sub).astype(np.float64)
     fin = np.isfinite(img)
     if fin.sum() < 9:
         return np.zeros(img.shape, bool)
@@ -79,8 +81,9 @@ def reproject_exposure(exp: Exposure, wcs: WCS, shape):
     """
     from reproject import reproject_interp
 
-    bad = exp.bad_mask() | lone_spike_mask(exp)
-    img = np.where(bad, np.nan, exp.background_subtracted()).astype(np.float64)
+    sub, bad = exp.background_subtracted(), exp.bad_mask()
+    bad = bad | lone_spike_mask(exp, sub, bad)
+    img = np.where(bad, np.nan, sub).astype(np.float64)
     var = np.where(bad, np.nan, exp.variance).astype(np.float64)
     contam = exp.flag_mask(("CROSSTALK", "GHOST", "GHOST_FPA", "GHOST_EXT", "STREAK",
                             "BLOOM", "SNOWBALL", "HALO", "OVERFLOW", "NONLINEAR"))

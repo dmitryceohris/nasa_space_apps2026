@@ -134,3 +134,12 @@ def test_api_exposes_unverified_registration_and_candidate_scope(synthetic):
     assert any("регистрац" in w for w in result["warnings"])
     assert any("кандидат" in w for w in result["warnings"])
     assert all(f["quality"]["verified"] is False for f in result["frames"])
+
+
+def test_sia_recovery_source_and_freshness_warning_reach_the_view(synthetic, monkeypatch):
+    exposures = irsa.exposures
+    monkeypatch.setattr(irsa, "exposures", lambda *args: irsa.ExposureRows(
+        exposures(*args), source="sia2", warnings=[irsa.SIA_LIMITATION]))
+    result = view()
+    assert result["frames"] and result["archive_source"] == "sia2"
+    assert irsa.SIA_LIMITATION in result["warnings"]
