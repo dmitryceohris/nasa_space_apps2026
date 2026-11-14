@@ -1,0 +1,3 @@
+# Preserve byte-for-byte responses, including source formatting and blank lines.
+*-simbad.txt -whitespace
+wise-plx.tsv -whitespace

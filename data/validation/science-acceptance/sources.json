@@ -1,0 +1,38 @@
+[
+  {
+    "file": "gaia.csv",
+    "url": "https://gea.esac.esa.int/tap-server/tap/sync?REQUEST=doQuery&LANG=ADQL&QUERY=SELECT+source_id%2Cref_epoch%2Cra%2Cra_error%2Cdec%2Cdec_error%2Cpmra%2Cpmra_error%2Cpmdec%2Cpmdec_error%2Cparallax%2Cparallax_error%2Cruwe%2Castrometric_params_solved%2Castrometric_excess_noise%2Cradial_velocity%2Cradial_velocity_error%2Cra_dec_corr%2Cra_parallax_corr%2Cra_pmra_corr%2Cra_pmdec_corr%2Cdec_parallax_corr%2Cdec_pmra_corr%2Cdec_pmdec_corr%2Cparallax_pmra_corr%2Cparallax_pmdec_corr%2Cpmra_pmdec_corr+FROM+gaiadr3.gaia_source+WHERE+source_id+IN+%284472832130942575872%2C6412596012146801152%2C156430817820015232%2C156430822114424576%2C1648328016354496384%29&FORMAT=csv",
+    "sha256": "6d9ad01eb74017c9f870fd4d8397d0c7703c1df924604a1ff31a686669f7e656",
+    "retrieved_utc": "2026-11-14T15:50:51.032625+00:00"
+  },
+  {
+    "file": "wise-plx.tsv",
+    "url": "https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=J/ApJS/253/7/plx&PName=0855-0714&-out.all&-out.max=10",
+    "sha256": "3789888cc1df4ef9e003ff4166c03341477b8e0f5c35c4f4eca5f59f8707d3dc",
+    "retrieved_utc": "2026-11-14T15:53:38.346804+00:00"
+  },
+  {
+    "file": "rw-A-simbad.txt",
+    "url": "https://simbad.harvard.edu/simbad/sim-id?Ident=V%2A+RW+Aur+A&output.format=ASCII",
+    "sha256": "defc6242995f354bb6bdc0ce02c0f9fecf8bd39fdfea013c5465534a52ee78b8",
+    "retrieved_utc": "2026-11-14T15:50:48.689882+00:00"
+  },
+  {
+    "file": "rw-B-simbad.txt",
+    "url": "https://simbad.harvard.edu/simbad/sim-id?Ident=V%2A+RW+Aur+B&output.format=ASCII",
+    "sha256": "b880e851f27e7d4f5ba7deef312138343c0dc8668d5670dba3ba702f019debd0",
+    "retrieved_utc": "2026-11-14T15:50:48.675600+00:00"
+  },
+  {
+    "file": "rdra-simbad.txt",
+    "url": "https://simbad.harvard.edu/simbad/sim-id?Ident=R+Dra&output.format=ASCII",
+    "sha256": "d90339362ebe1816df28d60bdd95ca9ae0488bb7a315e5b92ef125e3d7b1e9dc",
+    "retrieved_utc": "2026-11-14T15:50:48.676900+00:00"
+  },
+  {
+    "file": "irsa-products.csv",
+    "derivation": "Selected rows of the saved runtime exposure-cache JSON; no live IRSA response obtained in this review. Each URI matched to OBSID/DETECTOR and MJD-AVG of the existing FITS cutout.",
+    "sha256": "29de51400c17f9b08e0be3ca155403856988f937e60a3c4407e3bc33ce947394",
+    "live_irsa_attempt": "2026-11-14: URI-IN query timed out at 60 s; first four spatial queries timed out at 35 s, further spatial requests cancelled. Archive completeness/freshness not revalidated."
+  }
+]
