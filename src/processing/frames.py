@@ -38,16 +38,46 @@ def grid_header_json(wcs: WCS, shape) -> dict:
                     "CDELT1": float(wcs.wcs.cdelt[0]), "CDELT2": float(wcs.wcs.cdelt[1])}}
 
 
+SPIKE_SNR = 20.0  # a native pixel this many sigma above the sky ...
+SPIKE_NEIGHBOUR_RATIO = 0.05  # ... whose brightest neighbour is below this fraction of it is a lone spike
+# Real SPHEREx stars (1028 maxima with S/N > 30 in 160 cutouts, detectors 1-6) never had the brightest
+# neighbour below 0.084 of the peak; a pixel-sized cosmic ray or hot pixel has neighbours at the noise level.
+
+
+def lone_spike_mask(exp: Exposure) -> np.ndarray:
+    """Unflagged single-pixel outliers (cosmic rays, hot pixels missed by the pipeline) in NATIVE pixels.
+
+    Must be applied before interpolation: bilinear reprojection spreads one pixel over 2x2 grid pixels, after
+    which it looks like a compact star (one such pixel became a S/N 279 "object" in an empty field).
+    Needs at least 6 valid neighbours, so pixels next to masked (e.g. saturated) regions are never removed."""
+    from scipy import ndimage as ndi
+
+    bad = exp.bad_mask()
+    img = np.where(bad, np.nan, exp.background_subtracted()).astype(np.float64)
+    fin = np.isfinite(img)
+    if fin.sum() < 9:
+        return np.zeros(img.shape, bool)
+    a = img - np.nanmedian(img)
+    sig = np.sqrt(np.where(bad | ~(exp.variance > 0), np.nan, exp.variance))
+    ring = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
+    nb_max = ndi.maximum_filter(np.where(fin, a, -np.inf), footprint=ring, mode="constant", cval=-np.inf)
+    nb_count = ndi.convolve(fin.astype(int), ring, mode="constant", cval=0)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return fin & (a > SPIKE_SNR * sig) & (nb_count >= 6) & (nb_max < SPIKE_NEIGHBOUR_RATIO * a)
+
+
 def reproject_exposure(exp: Exposure, wcs: WCS, shape):
     """Перенос одной экспозиции на общую сетку.
 
     Возвращает (image, variance, bad, contam): яркость минус фон, дисперсию,
     маску «нельзя использовать» и маску «загрязнение» (блики, засветки — для слоя флагов).
+    Плохие родные пиксели (флаги HARD_BAD и одиночные выбросы) заменяются NaN ДО интерполяции:
+    билинейная интерполяция не может разнести их значение на соседние пиксели сетки.
     Маски переносятся ближайшим соседом: биты нельзя интерполировать.
     """
     from reproject import reproject_interp
 
-    bad = exp.bad_mask()
+    bad = exp.bad_mask() | lone_spike_mask(exp)
     img = np.where(bad, np.nan, exp.background_subtracted()).astype(np.float64)
     var = np.where(bad, np.nan, exp.variance).astype(np.float64)
     contam = exp.flag_mask(("CROSSTALK", "GHOST", "GHOST_FPA", "GHOST_EXT", "STREAK",
@@ -159,6 +189,25 @@ def coadd(exps: list[Exposure], wcs: WCS, shape, center: SkyCoord) -> Frame | No
                  time_sources=[{"obs_id": e.obs_id, "source": e.time_source,
                                 "assumptions": e.time_assumptions} for e in used],
                  wavelength_samples=samples)
+
+
+def spectral_sampling(frames: list[Frame]) -> dict:
+    """Which wavelengths the target was seen at, per exposure (LVF: each exposure has its own λ at a point).
+
+    different_channels=True when the spread of λ is larger than one spectral channel (the median width of
+    the samples, about λ/R). Then brightness differences between epochs mix variability with the spectrum."""
+    samples = [s for f in frames for s in f.wavelength_samples if s.get("wave_um") is not None]
+    if not samples:
+        return {"wave_min_um": None, "wave_max_um": None, "channel_width_um": None, "different_channels": None,
+                "n_samples": 0}
+    w = np.array([s["wave_um"] for s in samples], float)
+    bw = np.array([s["bw_um"] for s in samples if s.get("bw_um")], float)
+    width = float(np.median(bw)) if bw.size else None
+    spread = float(w.max() - w.min())
+    limit = width if width else 0.05 * float(np.mean(w))
+    return {"wave_min_um": round(float(w.min()), 4), "wave_max_um": round(float(w.max()), 4),
+            "channel_width_um": None if width is None else round(width, 4),
+            "different_channels": bool(spread > limit), "n_samples": len(samples)}
 
 
 MIN_DIFF_PIX = 50  # fewer valid pixels: the empirical noise of a difference frame is not estimated

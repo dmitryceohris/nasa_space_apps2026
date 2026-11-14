@@ -37,14 +37,20 @@ def _save(arr_hwc_or_hw: np.ndarray, path: Path) -> None:
     Image.fromarray(np.flipud(arr_hwc_or_hw)).save(path, optimize=True)
 
 
+NODATA_RGB = (72, 36, 110)  # dark violet: pixel without data (outside coverage or masked)
+
+
 def save_gray(img: np.ndarray, path: Path, vmin: float, vmax: float,
               saturated: np.ndarray | None = None) -> None:
     g = (_asinh(img, vmin, vmax) * 255).astype(np.uint8)
+    rgb = np.repeat(g[..., None], 3, axis=2)  # the sky stays grey: R = G = B
     nodata = ~np.isfinite(img)
-    g[nodata] = 25  # нет данных — тёмно-серый, отличимо от чёрного неба
+    # no data: a colour no sky pixel can have. The former grey level 25 lay inside the noise of a dark sky
+    # (asinh stretch puts the sky at ~0-20), so a gap in coverage looked like empty sky.
+    rgb[nodata] = NODATA_RGB
     if saturated is not None:
-        g[nodata & saturated] = 255  # насыщенное ядро яркой звезды — белым, а не «дырой»
-    _save(g, path)
+        rgb[nodata & saturated] = 255  # насыщенное ядро яркой звезды — белым, а не «дырой»
+    _save(rgb, path)
 
 
 def save_diff(sig: np.ndarray, path: Path, lim: float = 6.0) -> None:
