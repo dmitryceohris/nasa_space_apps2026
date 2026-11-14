@@ -87,12 +87,14 @@ def run(fits_cache, download_limit=0):
         x, y = (int(round(v)) for v in row["native_xy"])
         flags = exp.flags[y-2:y+3, x-2:x+3]
         assert flags.tolist() == row["flags_5x5_values"]
+        spikes = lone_spike_mask(exp)
+        assert not (spikes & exp.flag_mask(("SOURCE",))).any()
         for name, count in row["flag_counts_5x5"].items():
             assert int(((flags & (1 << exp.flag_bits[name])) != 0).sum()) == count
         input_checks.append({"response": row["response"], "obs_id": exp.obs_id,
                              "det": exp.detector, "release": row["release"],
                              "sha256": row["cutout_sha256"], "mjd_utc": exp.mjd,
-                             "native_spikes_rejected": int(lone_spike_mask(exp).sum()),
+                             "native_spikes_rejected": int(spikes.sum()),
                              "flags_5x5": row["flag_counts_5x5"]})
 
     results = []

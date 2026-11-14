@@ -97,6 +97,29 @@ def test_single_bad_native_pixel_never_becomes_the_target(serve, flagged):
         assert f["measured_px"] is None and f["measured_candidates"] == []
 
 
+def test_source_flag_survives_the_native_spike_heuristic_through_http(serve, monkeypatch):
+    import reproject
+    original = reproject.reproject_interp
+    seen = []
+
+    def project(input_data, *args, **kwargs):
+        arr, _ = input_data
+        if kwargs.get("order") == "bilinear":
+            assert np.isfinite(arr[24, 27]), "SOURCE alone must not become a missing pixel"
+            seen.append(True)
+        return original(input_data, *args, **kwargs)
+
+    monkeypatch.setattr(reproject, "reproject_interp", project)
+    exps = []
+    for seed, mjd in enumerate([61000., 61200.]):
+        exp = fake_exposure(None, mjd, seed=seed)
+        exp.image[24, 27] += 50
+        exp.flags[24, 27] = SOURCE
+        exps.append(exp)
+    result = serve(exps)
+    assert len(result["frames"]) == 2 and len(seen) == 4
+
+
 def test_source_is_kept_and_no_data_has_its_own_colour(serve):
     """SOURCE marks the object, it is never masked; pixels without coverage are not painted as dark sky."""
     star = offset(CENTER, 0, 0)

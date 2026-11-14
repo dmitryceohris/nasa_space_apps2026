@@ -49,7 +49,8 @@ def lone_spike_mask(exp: Exposure) -> np.ndarray:
 
     Must be applied before interpolation: bilinear reprojection spreads one pixel over 2x2 grid pixels, after
     which it looks like a compact star (one such pixel became a S/N 279 "object" in an empty field).
-    Needs at least 6 valid neighbours, so pixels next to masked (e.g. saturated) regions are never removed."""
+    Needs at least 6 valid neighbours. SOURCE-only pixels are preserved: a sharp known source is not a
+    proven detector defect. A hard-bad bit still excludes it through bad_mask, independently of SOURCE."""
     from scipy import ndimage as ndi
 
     bad = exp.bad_mask()
@@ -63,7 +64,8 @@ def lone_spike_mask(exp: Exposure) -> np.ndarray:
     nb_max = ndi.maximum_filter(np.where(fin, a, -np.inf), footprint=ring, mode="constant", cval=-np.inf)
     nb_count = ndi.convolve(fin.astype(int), ring, mode="constant", cval=0)
     with np.errstate(invalid="ignore", divide="ignore"):
-        return fin & (a > SPIKE_SNR * sig) & (nb_count >= 6) & (nb_max < SPIKE_NEIGHBOUR_RATIO * a)
+        return (fin & ~exp.flag_mask(("SOURCE",)) & (a > SPIKE_SNR * sig)
+                & (nb_count >= 6) & (nb_max < SPIKE_NEIGHBOUR_RATIO * a))
 
 
 def reproject_exposure(exp: Exposure, wcs: WCS, shape):
