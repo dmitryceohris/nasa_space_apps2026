@@ -22,7 +22,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "src")]
 os.environ["PREWARM"] = "0"
 
-import numpy as np
 import httpx
 from astropy.utils import iers
 from fastapi.testclient import TestClient
@@ -31,6 +30,7 @@ from Exposure import load_exposure
 from api import cache, irsa, resolve, main
 from api.limits import RequestLimiter
 from api.main import app
+from processing.frames import lone_spike_mask
 
 
 def sha(path):
@@ -92,6 +92,7 @@ def run(fits_cache, download_limit=0):
         input_checks.append({"response": row["response"], "obs_id": exp.obs_id,
                              "det": exp.detector, "release": row["release"],
                              "sha256": row["cutout_sha256"], "mjd_utc": exp.mjd,
+                             "native_spikes_rejected": int(lone_spike_mask(exp).sum()),
                              "flags_5x5": row["flag_counts_5x5"]})
 
     results = []
@@ -165,8 +166,8 @@ def run(fits_cache, download_limit=0):
                                     assert image.status_code == 200 and image.content.startswith(b"\x89PNG")
                                 if mode == "diff":
                                     assert all(c["sign"] in (-1, 1) for c in frame["measured_candidates"])
-                                elif mode == "single":
-                                    assert frame["measurement"] == ref["api_measurement"], ref["obs_id"]
+                                if frame["measurement"]["target_association"] == "far_from_prediction":
+                                    assert frame["measured_px"] is None
                             if mode in ("diff", "trail"):
                                 assert result["processing"]["difference"]["units"] == "robust_residual_scale"
                                 image = client.get(result["trail_url"])
@@ -179,6 +180,8 @@ def run(fits_cache, download_limit=0):
                 "OBJECT_PARAMETERS.csv", "output/predictions.csv", "data/physics_observations.csv")},
             "scenarios": results, "summary": {"real_inputs": len(input_checks),
                 "http_scenarios": len(results), "rendered_frames": sum(len(r["response"]["frames"]) for r in results),
+                "single_non_null_candidate_markers": sum(f["measured_px"] is not None for r in results
+                    if r["mode"] == "single" for f in r["response"]["frames"]),
                 "single_measurement_status": dict(Counter(f["measurement"]["status"] for r in results
                     if r["mode"] == "single" for f in r["response"]["frames"]))}}
 

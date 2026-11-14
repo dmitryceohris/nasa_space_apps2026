@@ -77,7 +77,7 @@ def render_view(frames: list[Frame], wcs, shape, out_dir: Path, url_prefix: str,
     ss = spectral_sampling(frames)
     if ss["different_channels"]:
         warnings.append(f"Цель снята в разных спектральных каналах ({ss['wave_min_um']:.2f}–{ss['wave_max_um']:.2f} мкм): "
-                        "разница яркости — смесь переменности и формы спектра, остатки diff могут быть не движением")
+                        "разница яркости может быть связана с формой спектра; переменность и движение не подтверждены")
     if len(frames) < 2:
         warnings.append("Только одна эпоха — движение пока не видно")
     c = (shape[0] // 2, shape[1] // 2)

@@ -37,9 +37,9 @@ POOL = ThreadPoolExecutor(max_workers=4)
 JOBS = {}
 LOCK = threading.Lock()
 SMEAR_WARN_PX = 0.5  # known proper motion moves the object more than this within one epoch -> warning
-ASSOC_PX = 1.0  # a measured centre farther than this from the prediction is not the target's position.
-# Empirical registration against Gaia DR3 (docs/reviews/processing-acceptance.md): WCS offset per exposure median
-# 0.14 px, max 0.40 px; star-to-star scatter 0.1 px. 1 px is 2.5x the worst offset seen.
+ASSOC_PX = 1.0  # Conservative display gate for candidate disagreement; NOT a calibrated association radius.
+# A match within this radius does not establish identity or registration accuracy, especially for blends
+# and fields without usable reference stars. All candidates remain available separately.
 warnings.filterwarnings("ignore")
 
 
@@ -321,8 +321,8 @@ def _pipeline(j, p, r):
             else:
                 res["warnings"].append(f"Эпоха {i + 1}: прогноз вне поля; маркер скрыт")
         m = centroid.measure(arr, signed, saturated=f.contam)
-        # A centre is the target's only if it agrees with the prediction: the frame may hold just another star
-        # (WISE 0855 at 4.42 um: the only object, 17 px from the target, was returned as measured_px before).
+        # Suppress a clearly discrepant candidate in the legacy single-marker field. Agreement alone does
+        # not identify the target (WISE 0855 at 4.42 um had a candidate 17 px from its prediction).
         assoc, offset = ("no_prediction" if pred_fits is None else "no_measurement"), None
         if m["xy"] is not None and pred_fits is not None:
             offset = float(np.hypot(m["xy"][0] - pred_fits[0], m["xy"][1] - pred_fits[1]))
@@ -379,8 +379,8 @@ def _pipeline(j, p, r):
     if ss["different_channels"]:
         width = f", ширина канала ≈ {ss['channel_width_um']:.3f} мкм" if ss["channel_width_um"] else ""
         res["warnings"].append(f"Цель снята в разных спектральных каналах ({ss['wave_min_um']:.2f}-{ss['wave_max_um']:.2f} мкм"
-                               f"{width}): разница яркости между кадрами — это смесь переменности и формы спектра, "
-                               "а остатки в разностном кадре могут быть не движением")
+                               f"{width}): разница яркости может быть связана с формой спектра; "
+                               "переменность и движение по этим остаткам не подтверждены")
     c = (h // 2, shape[1] // 2)
     if any(f.contam[c[0] - 1:c[0] + 2, c[1] - 1:c[1] + 2].any() for f in frames):
         res["warnings"].append("В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)")

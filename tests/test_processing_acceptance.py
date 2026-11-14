@@ -118,6 +118,19 @@ def test_source_is_kept_and_no_data_has_its_own_colour(serve):
     assert np.all(nodata | grey)  # every pixel is either sky/source (grey) or explicitly "no data"
 
 
+@pytest.mark.parametrize("mode", ["coadd", "diff", "trail"])
+def test_missing_pixels_keep_their_colour_in_each_view_mode(serve, mode):
+    exps = [fake_exposure(CENTER, mjd, seed=i, shift_px=(9.0, .3))
+            for i, mjd in enumerate([61000., 61200.])]
+    result = serve(exps, mode)
+    rgb = png(result, 0, result["_dir"])
+    assert np.all(rgb == NODATA_RGB, axis=2).any()
+    if mode in ("diff", "trail"):
+        path = result["_dir"] / result["trail_url"].removeprefix("/cache/")
+        rgb = np.asarray(Image.open(path).convert("RGB"))
+        assert np.all(rgb == NODATA_RGB, axis=2).any()
+
+
 # ------------------------------------------------------------------ 2. background and NaN edge
 def test_stationary_star_with_wrong_zodi_models_shows_no_change(serve):
     """Zodi model off by a different constant and gradient in each epoch: the star must not move or
