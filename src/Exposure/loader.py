@@ -1,6 +1,8 @@
 """Загрузка FITS-файла SPHEREx (полного или вырезки) в Exposure."""
 from __future__ import annotations
 
+import os
+import threading
 import warnings
 
 import numpy as np
@@ -96,25 +98,34 @@ def exposure_from_hdul(hdul: fits.HDUList, source: str = "", *,
     )
 
 
-def _download(url: str, cache: bool, timeout: float, retries: int = 3) -> str:
-    """Скачивание с повторами: IRSA периодически отвечает 503 на первый запрос вырезки."""
+# Общий на весь процесс лимит одновременных загрузок с IRSA. При ~12 параллельных запросах
+# сервис начинает массово отвечать 503 (проверено), поэтому все потоки и задачи делят этот семафор.
+_IRSA_SLOTS = threading.BoundedSemaphore(int(os.environ.get("IRSA_MAX_CONCURRENT", "4")))
+
+
+def _download(url: str, cache: bool, timeout: float, retries: int = 5) -> str:
+    """Скачивание с повторами и экспоненциальной паузой: IRSA периодически отвечает 503."""
+    import random
     import time
     from urllib.error import HTTPError, URLError
 
-    from astropy.utils.data import download_file
+    from astropy.utils.data import download_file, is_url_in_cache
+    if cache and is_url_in_cache(url):
+        return download_file(url, cache=True)  # из кэша — без очереди к IRSA
     for attempt in range(retries):
         try:
-            return download_file(url, cache=cache, timeout=timeout)
+            with _IRSA_SLOTS:
+                return download_file(url, cache=cache, timeout=timeout)
         except (HTTPError, URLError, TimeoutError, ConnectionError) as e:
             code = getattr(e, "code", None)
             if attempt == retries - 1 or (code is not None and code not in (429, 500, 502, 503, 504)):
                 raise
-            time.sleep(2 * (attempt + 1))
+            time.sleep(2 ** (attempt + 1) + random.uniform(0, 1.5))
     raise RuntimeError("unreachable")
 
 
 def load_exposure(path_or_url: str, *, mjd_hint: float | None = None,
-                  obs_id_hint: str = "", cache: bool = True, timeout: float = 120) -> Exposure:
+                  obs_id_hint: str = "", cache: bool = True, timeout: float = 60) -> Exposure:
     """Открывает локальный файл или URL (URL кэшируется на диске средствами astropy)."""
     src = path_or_url
     if path_or_url.startswith(("http://", "https://")):

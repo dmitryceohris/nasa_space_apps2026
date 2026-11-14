@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "spherex-viewer",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "--locked", "uvicorn", "api.main:app", "--port", "8000"],
+      "port": 8000
+    }
+  ]
+}

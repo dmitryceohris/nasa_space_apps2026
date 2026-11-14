@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import warnings
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 from astropy import units as u
@@ -60,13 +60,14 @@ def cutout_url(access_url: str, coord: SkyCoord, size_deg: float) -> str:
     return f"{access_url}?center={coord.ra.deg:.6f},{coord.dec.deg:.6f}d&size={size_deg:.5f}"
 
 
-def fetch_exposures(coord: SkyCoord, size_deg: float = 0.1, *, detector: int | None = None,
-                    max_files: int | None = None, workers: int = 6,
-                    collections=DEFAULT_COLLECTIONS) -> list[Exposure]:
-    """Ищет снимки и скачивает ВЫРЕЗКИ (не полные 70-МБ файлы). Сбойные загрузки пропускает."""
-    tbl = query_spherex(coord, detector=detector, collections=collections)
-    if max_files is not None:
-        tbl = tbl[:max_files]
+def download_rows(rows, coord: SkyCoord, size_deg: float, *, workers: int = 6,
+                  progress=None) -> list[Exposure]:
+    """Скачивает вырезки для выбранных строк таблицы query_spherex (параллельно).
+
+    progress(done, total) вызывается после каждого файла. Сбойные загрузки пропускаются.
+    """
+    rows = list(rows)
+    total, done = len(rows), 0
 
     def _one(row):
         try:
@@ -76,6 +77,24 @@ def fetch_exposures(coord: SkyCoord, size_deg: float = 0.1, *, detector: int | N
             warnings.warn(f"пропущен {row['obs_id']}: {e}")
             return None
 
+    exps = []
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        exps = [e for e in pool.map(_one, tbl) if e is not None]
+        # as_completed: прогресс растёт по мере готовности, а не в порядке очереди
+        for fut in as_completed([pool.submit(_one, r) for r in rows]):
+            e = fut.result()
+            done += 1
+            if progress:
+                progress(done, total)
+            if e is not None:
+                exps.append(e)
     return sorted(exps, key=lambda e: e.mjd)
+
+
+def fetch_exposures(coord: SkyCoord, size_deg: float = 0.1, *, detector: int | None = None,
+                    max_files: int | None = None, workers: int = 6,
+                    collections=DEFAULT_COLLECTIONS) -> list[Exposure]:
+    """Ищет снимки и скачивает ВЫРЕЗКИ (не полные 70-МБ файлы). Сбойные загрузки пропускает."""
+    tbl = query_spherex(coord, detector=detector, collections=collections)
+    if max_files is not None:
+        tbl = tbl[:max_files]
+    return download_rows(tbl, coord, size_deg, workers=workers)
