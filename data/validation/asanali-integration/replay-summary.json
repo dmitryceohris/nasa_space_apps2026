@@ -1,0 +1,19 @@
+{
+  "archive_requests": 0,
+  "summary": {
+    "real_inputs": 47,
+    "http_scenarios": 36,
+    "rendered_frames": 188,
+    "single_non_null_candidate_markers": 2,
+    "single_measurement_status": {
+      "ok": 24,
+      "ambiguous": 23
+    }
+  },
+  "preserved_inputs_sha256": {
+    "OBJECT_PARAMETERS.csv": "0ae7442597394ccd258b4bcb6594d6ecacdfbe1195e857d5c499498dd12b793c",
+    "output/predictions.csv": "d1e3f5eef318462015e0989d229acf66d7cca5d9fa8a55cb9f8de0041a5bee24",
+    "data/physics_observations.csv": "3ab0dc0495004ab53bfa3a2a78d31ec8ae7cf62193f9754e567145c68f1e83b8"
+  },
+  "full_replay_command": "python scripts/accept_processing.py --fits-cache <saved FITS directory> --output <report.json>"
+}

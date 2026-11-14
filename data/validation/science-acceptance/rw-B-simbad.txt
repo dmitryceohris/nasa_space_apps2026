@@ -1,0 +1,42 @@
+C.D.S.  -  SIMBAD4 rel 1.8  -  2026.11.14CET16:50:48
+
+V* RW Aur B
+-----------
+
+Object V* RW Aur B  ---  Or*  ---  OID=@14743763   (@@-1,255)  ---  coobox=4502
+
+Coordinates(ICRS,ep=J2000,eq=2000): 05 07 49.5645672912  +30 24 05.131380132 (Opt ) A [0.2816 0.1775 90] 2020yCat.1350....0G
+Coordinates(FK4,ep=B1950,eq=1950): 05 04 37.7301418804  +30 20 13.383920893
+Coordinates(Gal,ep=J2000,eq=2000): 174.2042061665971  -06.0028865414088
+hierarchy counts: #parents=2, #children=0, #siblings=0
+Proper motions: 4.906 -24.578 [0.329 0.255 90] A 2020yCat.1350....0G
+Parallax: 5.4541 [0.3324] A 2020yCat.1350....0G
+Radial Velocity: ~ [~ ~ ] ~ ~                  
+Redshift: ~ [~ ~ ] ~ ~                  
+cz: ~ [~ ~ ] ~ ~                  
+Flux G : 13.033747 [0.062264] C 2020yCat.1350....0G
+Spectral type: K2 D 2021ApJS..254...20L
+Morphological type: ~ ~ ~
+Angular size:     ~     ~   ~ (~)  ~ ~
+
+Identifiers (7):
+   V* RW Aur B                          WDS J05078+3024BC                    ** GHE 16                          
+   CCDM J05078+3024B                    ** JOY 5B                            Gaia DR2 156430817820015232        
+   Gaia DR3 156430817820015232                                                                                  
+
+Bibcodes  1850-2027 () (28):
+  2026A&A...705A..97K  2026A&A...708A.194K  2026A&A...711A.125V  2026A&A...711A.276S
+  2025A&A...699A.145D  2025RNAAS...9..277L  2024A&A...692A.155K  2024PASJ...76..437Y
+  2023A&A...674A..21M  2023ApJ...948...57P  2023ApJS..264....1T  2023MNRAS.520.5331W
+  2022A&A...662A.121R  2022ApJ...928..189L  2022ApJS..263...31S  2021AJ....162..110K
+  2021ApJ...908...46B  2021ApJ...921...90P  2021ApJS..254...20L  2020A&A...635A.196V
+  2020ApJ...894..115P  2020ApJ...901...24T  2020ApJ...902..132B  2020MNRAS.491..504C
+  2020MNRAS.497.4322D  2019A&A...628A..95M  2019A&A...630A.137G  2019ApJ...886..115Y
+
+Measures (distance:1  PLX:2  PM:2  ):
+distance:1PLX:2PM:2
+
+Notes (0) :
+
+================================================================================
+

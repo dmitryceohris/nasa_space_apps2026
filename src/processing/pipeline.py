@@ -12,7 +12,7 @@ from Exposure import DETECTOR_BANDS, PIXEL_SCALE_ARCSEC, Exposure, download_rows
 from . import render
 from .epochs import epoch_limits, group_epochs, select_per_epoch
 from .frames import (BACKGROUND_METHOD, DIFF_METHOD, Frame, coadd, difference, grid_header_json, make_grid,
-                     trail)
+                     spectral_sampling, trail)
 from .photometry import PHOTOMETRY_METHOD, light_curve, spectrum
 from .targets import Target
 
@@ -74,10 +74,10 @@ def render_view(frames: list[Frame], wcs, shape, out_dir: Path, url_prefix: str,
     render.save_gif(coadd_pngs, gif)
 
     # предупреждения, которые честно объясняют пользователю ограничения данных
-    waves = [f.wave_um for f in frames if np.isfinite(f.wave_um)]
-    if len(waves) > 1 and (max(waves) - min(waves)) / np.mean(waves) > 0.05:
-        warnings.append(f"λ в центре поля меняется между эпохами ({min(waves):.2f}–{max(waves):.2f} мкм): "
-                        "у объектов с крутым спектром остатки в разностном кадре могут быть не движением")
+    ss = spectral_sampling(frames)
+    if ss["different_channels"]:
+        warnings.append(f"Цель снята в разных спектральных каналах ({ss['wave_min_um']:.2f}–{ss['wave_max_um']:.2f} мкм): "
+                        "разница яркости может быть связана с формой спектра; переменность и движение не подтверждены")
     if len(frames) < 2:
         warnings.append("Только одна эпоха — движение пока не видно")
     c = (shape[0] // 2, shape[1] // 2)
@@ -170,7 +170,19 @@ def lightcurve_from_spectrum(spec: dict, wave_min: float, wave_max: float) -> di
 
     pts = light_curve(spec["points"], wave_min, wave_max)
     good = _good(pts)
+    w = np.array([p["wave_um"] for p in good], float)
+    bw = np.array([p["bw_um"] for p in good if p.get("bw_um")], float)
+    width = float(np.median(bw)) if bw.size else None
+    mixed = bool(w.size > 1 and width and np.ptp(w) > width)
+    lc_warn = []
+    if mixed:
+        lc_warn.append(f"Точки кривой блеска сняты в разных спектральных каналах ({w.min():.3f}–{w.max():.3f} мкм при "
+                       f"ширине канала ≈ {width:.3f} мкм): изменение потока не доказывает переменность")
     return {"status": "ready", "wave_window_um": [wave_min, wave_max], "points": pts,
+            "spectral_sampling": {"wave_min_um": float(w.min()) if w.size else None,
+                                  "wave_max_um": float(w.max()) if w.size else None,
+                                  "channel_width_um": width, "different_channels": mixed},
+            "lightcurve_warnings": lc_warn,
             "method": dict(PHOTOMETRY_METHOD, window="поток по времени только в окне λ: иначе переменность "
                                                      "спуталась бы с формой спектра (LVF)"),
             "dates": [Time(p["mjd"], format="mjd").to_value("iso", subfmt="date") for p in good],

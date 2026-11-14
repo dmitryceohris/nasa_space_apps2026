@@ -1,0 +1,62 @@
+[
+  {
+    "target": "barnard",
+    "status": "ready",
+    "archive_source": "sia2",
+    "frames": 5,
+    "data_status": "available",
+    "exposure_counts": {
+      "selected": 23,
+      "failed": 0,
+      "used": 23,
+      "rejected": 0
+    }
+  },
+  {
+    "target": "epsindib",
+    "status": "running",
+    "archive_source": null,
+    "frames": 0,
+    "data_status": null,
+    "exposure_counts": null
+  },
+  {
+    "target": "wise0855",
+    "status": "ready",
+    "archive_source": "sia2",
+    "frames": 4,
+    "data_status": "available",
+    "exposure_counts": {
+      "selected": 18,
+      "failed": 0,
+      "used": 18,
+      "rejected": 0
+    }
+  },
+  {
+    "target": "rwaur",
+    "status": "ready",
+    "archive_source": "sia2",
+    "frames": 3,
+    "data_status": "available",
+    "exposure_counts": {
+      "selected": 18,
+      "failed": 0,
+      "used": 18,
+      "rejected": 0
+    }
+  },
+  {
+    "target": "rdra",
+    "status": "ready",
+    "archive_source": "sia2",
+    "frames": 5,
+    "data_status": "available",
+    "exposure_counts": {
+      "selected": 30,
+      "failed": 0,
+      "used": 30,
+      "rejected": 0
+    }
+  }
+]

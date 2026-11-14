@@ -1,0 +1,78 @@
+{
+  "code_commit": "2753cd0de2b83ad9747725e9055e503f1a7c4348",
+  "local_date": "2026-11-15",
+  "timezone": "Asia/Almaty",
+  "offline_tests": {
+    "passed": 289,
+    "skipped": 1,
+    "failed": 0
+  },
+  "docker": {
+    "image": "spherex-api:asanali-integrated",
+    "build": "passed",
+    "health": "healthy",
+    "routes": {
+      "/api/health": 200,
+      "/api/resolve": 400,
+      "/api/no-such": 404
+    },
+    "temporary_container_removed": true
+  },
+  "live_irsa_diagnosis": {
+    "homepage": 200,
+    "tap_availability": {
+      "http": 200,
+      "available": true
+    },
+    "tap_schema_get": 200,
+    "tap_schema_post": {
+      "http": 502,
+      "body_type": "HTML Proxy Error: Error reading from remote server"
+    },
+    "spherex_tap_get": {
+      "outcome": "ReadTimeout",
+      "timeout_seconds": 50
+    },
+    "sia_dr1": {
+      "http": 200,
+      "query_status": "OK"
+    },
+    "sia_qr3": {
+      "http": 200,
+      "query_status": "OK"
+    },
+    "barnard_d3_unique_exposures": 59,
+    "new_cutout": {
+      "obs_id": "2025W33_2C_0321_1",
+      "detector": 3,
+      "shape": [
+        29,
+        29
+      ],
+      "mjd_utc": 60902.865380749,
+      "file_bytes": 4049280
+    }
+  },
+  "live_view": {
+    "target": "wise0855",
+    "http": 200,
+    "status": "ready",
+    "archive_source": "sia2",
+    "frames": 4,
+    "exposure_counts": {
+      "selected": 18,
+      "failed": 1,
+      "used": 17,
+      "rejected": 0
+    },
+    "data_status": "partial",
+    "note": "One transient file download failed; API exposes the partial result and retries after its TTL."
+  },
+  "live_spectrum_search": {
+    "target": "barnard",
+    "detector": 3,
+    "exposures": 59,
+    "seconds": 10.43,
+    "finite_timeout_and_retries": true
+  }
+}

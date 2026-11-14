@@ -12,6 +12,20 @@ from api import cache, irsa, jobs
 from api.errors import ApiError
 
 
+@pytest.mark.parametrize('version', [8, 9, 10])
+def test_previous_result_schemas_are_not_served(monkeypatch, tmp_path, version):
+    monkeypatch.setattr(cache, 'CACHE', tmp_path)
+    body = {'status': 'ready', 'frames': [{}]}
+    cache.write('old', body)
+    path = tmp_path / 'old' / 'result.json'
+    result = json.loads(path.read_text())
+    result['v'] = version
+    path.write_text(json.dumps(result))
+    assert cache.read('old') is None
+    cache.write('current', body)
+    assert cache.read('current') == body
+
+
 def test_expired_partial_and_empty_results_refresh_sooner(monkeypatch, tmp_path):
     monkeypatch.setattr(cache, 'CACHE', tmp_path)
     monkeypatch.setattr(cache.time, 'time', lambda: 1000)

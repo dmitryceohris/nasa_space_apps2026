@@ -1,0 +1,41 @@
+{
+  "checked_commit": "be2ca1a7d9d81613cdf4d1c3a7b8d11ed1b3fd70",
+  "base_main": "afa35ef05fe016669a29e85aee1190a552ceb0dc",
+  "science_original": "5b994633662e505ee4a6b701df50a9c86fc23ae4",
+  "science_transferred": "cb29e02",
+  "processing_original": "246603f0810b6ec8016a614f95dbefa8292ef42e",
+  "processing_transferred": "743c6e7",
+  "full_suite": {
+    "command": "uv run --offline --locked pytest -q",
+    "exit_code": 0,
+    "passed": 259,
+    "skipped": 1,
+    "warnings": 65,
+    "skip_reason": "separate opt-in live archive test"
+  },
+  "real_replay": {
+    "script": "scripts/accept_processing.py",
+    "real_inputs": 47,
+    "http_scenarios": 36,
+    "rendered_frames": 188,
+    "new_archive_data_requests": 0,
+    "native_SOURCE_pixels_removed_by_spike_heuristic": 0
+  },
+  "regressions_before_fixes": [
+    {
+      "commit": "4fc1037",
+      "test_source": "246603f:tests/test_processing_acceptance.py",
+      "passed": 6,
+      "failed": 11,
+      "note": "Temporary external test copy replaced only the missing NODATA_RGB import with its expected RGB tuple."
+    },
+    {
+      "commit": "b67c60b",
+      "test": "test_source_flag_survives_the_native_spike_heuristic_through_http",
+      "passed": 0,
+      "failed": 1,
+      "observed_real_SOURCE_pixels_removed_before_fix": 82,
+      "note": "Nature of these pixels was not established; SOURCE-only pixels are preserved in be2ca1a."
+    }
+  ]
+}
