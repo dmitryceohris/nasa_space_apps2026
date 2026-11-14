@@ -81,8 +81,34 @@ def _parse(name: str, texts: list[str]) -> dict | None:
     return None
 
 
+_team = {}  # OBJECT_PARAMETERS.csv: mtime and parsed targets
+
+
+def _preset_record(query: str) -> dict | None:
+    """The five challenge targets come from the team's OBJECT_PARAMETERS.csv (Gaia DR3 / Kirkpatrick+2021).
+    That table already settles what SIMBAD names get wrong: WISE 0855 (the name is not a SIMBAD identifier),
+    RW Aur A/B, eps Ind Ba. Matching by id or name is done by src/processing/targets.find_preset."""
+    from processing.targets import DEFAULT_CATALOG, find_preset, load_targets
+
+    if not DEFAULT_CATALOG.exists():
+        return None
+    m = DEFAULT_CATALOG.stat().st_mtime
+    if _team.get("m") != m:
+        _team.update(m=m, targets=load_targets())
+    t = find_preset(query, _team["targets"])
+    if t is None:
+        return None
+    return {"name": t.name, "id": t.id, "ra": t.ra, "dec": t.dec, "pmra_masyr": t.pmra, "pmdec_masyr": t.pmdec,
+            "parallax_mas": t.parallax or None, "rv_kms": t.rv or None, "ref_epoch": float(t.ref_epoch.jyear),
+            "source": t.source}
+
+
 def resolve(name: str) -> dict:
-    """Name -> J2000 position, proper motion, parallax. Cached forever (memory + resolve.json)."""
+    """Preset id or name -> team table; any other name -> SIMBAD (cached forever: memory + resolve.json).
+    Result: position at ref_epoch, proper motion, parallax."""
+    rec = _preset_record(name.strip())
+    if rec:
+        return rec
     k = name.strip().lower()
     with _lock:
         if not _mem and _FILE.exists():
@@ -108,6 +134,7 @@ def propagate(o: dict, mjd: float):
     plx = o.get("parallax_mas")
     if plx and plx > 0:
         kw["distance"] = (1000.0 / plx) * u.pc
+        kw["radial_velocity"] = (o.get("rv_kms") or 0.0) * u.km / u.s
     else:
         kw["radial_velocity"] = 0 * u.km / u.s
     c = SkyCoord(**kw).apply_space_motion(new_obstime=Time(mjd, format="mjd"))
@@ -123,6 +150,5 @@ def for_params(p: Params) -> dict:
     """-> {center:(ra,dec) used for the IRSA query and the grid, motion: SIMBAD record or None, label}."""
     if p.ra is not None:  # explicit coordinates: no proper motion is known, so no predicted position either
         return {"center": (p.ra, p.dec), "motion": None, "label": p.target}
-    name = next((x["name"] for x in PRESETS if x["id"] == p.target.lower()), p.target)
-    o = resolve(name)
+    o = resolve(p.target)
     return {"center": propagate(o, center_mjd()), "motion": o, "label": o["name"]}

@@ -55,8 +55,7 @@ def sources():
 
 @app.get("/api/resolve")
 def resolve_ep(target: str):
-    name = next((x["name"] for x in resolve.PRESETS if x["id"] == target.lower()), target)
-    return resolve.resolve(name)
+    return resolve.resolve(target)
 
 
 @app.get("/api/view")
@@ -73,19 +72,30 @@ def export_gif(target: str | None = None, ra: str | None = None, dec: str | None
     return Response(jobs.gif(_p(target, ra, dec, fov, det, mode, max_per_epoch)), media_type="image/gif")
 
 
-# Not implemented: left empty on purpose (nothing is better than a wrong number). Contract: spec sections 3.5, 3.6.
 @app.get("/api/spectrum")
-def spectrum(ra: str | None = None, dec: str | None = None, target: str | None = None):
-    # TODO: photometry at the point over all exposures of all 6 detectors -> {"points":[{wave_um,bw_um,flux_ujy,
-    # err_ujy,mjd,det,flags}], "n_rejected"}. Same 202/200 job mechanism as /api/view.
-    raise ApiError(501, "not_implemented", "спектр ещё не реализован")
+def spectrum(target: str | None = None, ra: str | None = None, dec: str | None = None):
+    """Photometry at the target over all exposures of all 6 detectors (src/processing.build_spectrum).
+    Same 202/200 job mechanism as /api/view."""
+    status, payload = jobs.spectrum_view(params.parse(target, ra, dec))
+    return JSONResponse(payload, status_code=status)
 
 
 @app.get("/api/lightcurve")
-def lightcurve(ra: str | None = None, dec: str | None = None, wave_min: float | None = None,
-               wave_max: float | None = None):
-    # TODO: flux vs time in a narrow wavelength window -> {"wave_window_um":[lo,hi], "points":[{mjd,flux_ujy,err_ujy}]}
-    raise ApiError(501, "not_implemented", "кривая блеска ещё не реализована")
+def lightcurve(target: str | None = None, ra: str | None = None, dec: str | None = None,
+               wave_min: str | None = None, wave_max: str | None = None, det: str | None = None):
+    """Flux over time in a narrow wavelength window of the (cached) spectrum.
+    Window defaults to +-5% around the middle of detector `det` (default 3)."""
+    p = params.parse(target, ra, dec, det=det)
+    lo, hi = jobs.default_window(p.det)
+    try:
+        lo = float(wave_min) if wave_min not in (None, "") else lo
+        hi = float(wave_max) if wave_max not in (None, "") else hi
+    except ValueError:
+        raise ApiError(400, "bad_param", "wave_min и wave_max должны быть числами (мкм)")
+    if not 0 < lo < hi:
+        raise ApiError(400, "bad_param", "нужно 0 < wave_min < wave_max")
+    status, payload = jobs.lightcurve_view(p, lo, hi)
+    return JSONResponse(payload, status_code=status)
 
 
 @app.on_event("startup")
