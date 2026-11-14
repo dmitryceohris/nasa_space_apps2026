@@ -1,0 +1,42 @@
+{
+  "checked_commit": "b67c60bc4d8cf2e591d120de09e465549e73bdc0",
+  "scope": "Controlled browser fixtures; no new live archive or external-device check",
+  "existing_controlled_suite": {
+    "passed": [
+      "empty form: presets only",
+      "partial coordinates: neither graph requested",
+      "coordinate strings, URL, candidates, persistent warnings and mobile width",
+      "late response ignored; mode switch stops player",
+      "rapid target switch ignores old target",
+      "late spectrum cannot replace current light curve",
+      "missing Plotly does not stop images",
+      "PNG failure does not report successful display",
+      "archive error clears image and does not enable mock",
+      "mock data visibly labelled"
+    ]
+  },
+  "processing_labels": {
+    "provenance": "controlled synthetic browser fixtures; current frontend from b67c60b",
+    "passed": [
+      "far candidate labelled without identity claim",
+      "violet no-data legend",
+      "candidate retained",
+      "date switch",
+      "persistent warnings"
+    ],
+    "widths": [
+      {
+        "viewport": 1440,
+        "image_width": 560
+      },
+      {
+        "viewport": 768,
+        "image_width": 560
+      },
+      {
+        "viewport": 375,
+        "image_width": 351
+      }
+    ]
+  }
+}

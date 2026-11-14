@@ -37,4 +37,3 @@ async page => {
     passed:['far candidate labelled without identity claim','violet no-data legend','candidate retained','date switch','persistent warnings'],
     widths};
 }
-
