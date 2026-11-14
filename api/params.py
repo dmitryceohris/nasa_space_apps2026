@@ -1,9 +1,10 @@
 """Parse and validate query parameters (names and ranges from the API spec, section 2)."""
-import re
+import warnings
 from dataclasses import dataclass
 
 from astropy import units as u
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import Angle
+from astropy.coordinates.angles import IllegalMinuteWarning, IllegalSecondWarning
 
 from .errors import ApiError
 
@@ -41,21 +42,25 @@ def parse_coords(ra: str, dec: str):
     """Degrees, or sexagesimal ('08h55m10.83s' / '08:55:10.83')."""
     ra, dec = str(ra).strip(), str(dec).strip()
     try:
-        if "h" in ra.lower():
-            c = SkyCoord(ra, dec)
-            ra_d, dec_d = float(c.ra.deg), float(c.dec.deg)
-        elif re.search(r"[:\s]", ra):
-            c = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
-            ra_d, dec_d = float(c.ra.deg), float(c.dec.deg)
-        else:
-            ra_d, dec_d = float(ra), float(dec)  # plain degrees: range-checked below with the spec's messages
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", IllegalMinuteWarning)
+            warnings.simplefilter("error", IllegalSecondWarning)
+            warnings.filterwarnings("ignore", message="'hour' was found.*")
+            try:
+                ra_d = float(ra)
+            except ValueError:
+                ra_d = float(Angle(ra, unit=u.hourangle).degree)
+            try:
+                dec_d = float(dec)
+            except ValueError:
+                dec_d = float(Angle(dec, unit=u.deg).degree)
     except Exception:
         raise _bad("не удалось разобрать ra/dec")
     if not 0 <= ra_d <= 360:
         raise _bad("ra должен быть в диапазоне 0..360")
     if not -90 <= dec_d <= 90:
         raise _bad("dec должен быть в диапазоне -90..90")
-    return ra_d, dec_d
+    return (0.0 if abs(ra_d - 360) < 1e-12 else ra_d), dec_d
 
 
 def parse(target=None, ra=None, dec=None, fov=None, det=None, mode=None, max_per_epoch=None) -> Params:

@@ -80,3 +80,57 @@ def test_root_serves_team_frontend_and_dev_page():
     r = c.get("/")
     assert r.status_code == 200 and "SPHEREx Sky Viewer" in r.text and "pollJson" in r.text
     assert c.get("/dev/").status_code == 200
+
+@pytest.mark.parametrize(('ra', 'dec'), [
+    ('08h55m10.831s', '-7d14m42.53s'),
+    ('08:55:10.831', '-07:14:42.53'),
+    ('133.79512916666667', '-7d14m42.53s'),
+    ('08:55:10.831', '-7.245147222222222'),
+])
+def test_wise_coordinate_formats(ra, dec):
+    p = parse(ra=f'  {ra} ', dec=f' {dec}  ')
+    assert p.ra == pytest.approx(133.79512916666667)
+    assert p.dec == pytest.approx(-7.245147222222222)
+
+
+@pytest.mark.parametrize(('ra', 'dec', 'expected_ra'), [('0', '-90', 0), ('360', '90', 0), ('24:00:00', '0', 0)])
+def test_coordinate_boundaries(ra, dec, expected_ra):
+    p = parse(ra=ra, dec=dec)
+    assert p.ra == expected_ra
+    assert p.dec == float(dec)
+
+
+@pytest.mark.parametrize(('ra', 'dec'), [
+    ('361', '0'), ('-1', '0'), ('24:00:01', '0'), ('0', '90.01'),
+    ('0', '-90:00:01'), ('nan', '0'), ('inf', '0'), ('0', '-inf'),
+    ('bad', '0'), ('1:60:00', '0'), ('0', ' '), (' ', '0'),
+])
+def test_invalid_coordinates_do_not_start_jobs(monkeypatch, ra, dec):
+    def fail(*args, **kwargs):
+        pytest.fail('invalid coordinates started a job')
+    monkeypatch.setattr('api.jobs.view', fail)
+    r = c.get('/api/view', params={'ra': ra, 'dec': dec, 'target': 'barnard'})
+    assert r.status_code == 400 and r.json()['error']['code'] == 'bad_param'
+
+
+def test_explicit_coordinates_never_resolve_or_propagate_target(monkeypatch):
+    def fail(*args, **kwargs):
+        pytest.fail('explicit coordinates should be fixed')
+    monkeypatch.setattr(resolve, 'resolve', fail)
+    monkeypatch.setattr(resolve, 'propagate', fail)
+    result = resolve.for_params(parse(target='barnard', ra='360', dec='-7:14:42.53'))
+    assert result['center'] == pytest.approx((0, -7.245147222222222))
+    assert result['motion'] is None
+
+
+def test_equivalent_coordinate_requests_reach_same_job(monkeypatch):
+    seen = []
+    def capture(p):
+        seen.append(p)
+        return 200, {'status': 'ready'}
+    monkeypatch.setattr('api.jobs.view', capture)
+    for ra, dec in [('08:55:10.831', '-7d14m42.53s'), ('133.79512916666667', '-7.245147222222222')]:
+        assert c.get('/api/view', params={'ra': ra, 'dec': dec}).status_code == 200
+    assert seen[0].ra == pytest.approx(seen[1].ra)
+    assert seen[0].dec == pytest.approx(seen[1].dec)
+    assert (seen[0].fov, seen[0].det, seen[0].mode) == (seen[1].fov, seen[1].det, seen[1].mode)
