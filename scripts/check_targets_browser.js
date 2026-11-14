@@ -8,7 +8,7 @@ async page => {
     await page.waitForFunction(()=>document.getElementById('info').textContent.startsWith('Frame'),null,{timeout:180000});
     await page.waitForFunction(()=>document.getElementById('frame').complete && document.getElementById('frame').naturalWidth>0);
     const before=await page.locator('#info').textContent();
-    await page.getByRole('button',{name:'→',exact:true}).click();
+    await page.getByRole('button',{name:'Next date →',exact:true}).click();
     if (await page.locator('#info').textContent() === before) throw new Error('Date did not change for '+target);
     results.push({target,before,after:await page.locator('#info').textContent(),loaded:await page.locator('#frame').evaluate(el=>el.naturalWidth),warnings:await page.locator('#warnings').textContent()});
   }

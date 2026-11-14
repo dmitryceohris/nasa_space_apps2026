@@ -1,0 +1,12 @@
+### Result
+{"provenance":"real public Barnard frames","before":"Observation date (UTC): 2025-08-15","after":"Observation date (UTC): 2026-03-19","step":"Date 2 of 5"}
+### Ran Playwright code
+```js
+await (async page => { await page.waitForFunction(()=>document.getElementById("frame-date").textContent.includes("2025"),null,{timeout:180000}); const before=await page.locator("#frame-date").textContent(); await page.getByRole("button",{name:"Next date →",exact:true}).click(); const after=await page.locator("#frame-date").textContent(); if(before===after)throw new Error("date did not change"); return {provenance:"real public Barnard frames",before,after,step:await page.locator("#date-step").textContent()}; })(page);
+```
+### Page
+- Page URL: https://three-employers-look-obtaining.trycloudflare.com/?target=barnard&fov=6&det=3&mode=single&max_per_epoch=1
+- Page Title: SPHEREx Sky Viewer
+- Console: 1 errors, 0 warnings
+### Events
+- New console entries: .playwright-cli/console-2026-11-14T15-28-23-487Z.log#L1

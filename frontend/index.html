@@ -16,6 +16,8 @@
   #flagbox { display: none; position: absolute; left: 45%; top: 45%; width: 10%; height: 10%; background: rgba(255,0,0,.4); pointer-events: none; }
   #marker { display: none; position: absolute; width: 24px; height: 24px; border: 2px solid #0f0; border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; }
   #measured { display: none; position: absolute; width: 24px; height: 24px; border: 2px dashed #fd0; border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; }
+  #frame-date { margin: 10px 0 4px; font-size: 21px; font-weight: 700; color: #fff; }
+  #date-step { color: #bbb; margin-bottom: 6px; }
   #info { margin: 6px 0; font-size: 14px; color: #bbb; }
   #method { margin: 6px 0; font-size: 13px; color: #aaa; }
   #method ul { margin: 4px 0; padding-left: 18px; }
@@ -55,6 +57,15 @@
   <div id="marker"></div>
   <div id="measured"></div>
 </div>
+<div id="frame-date" role="status"></div>
+<div id="date-step"></div>
+<!-- PLAYER -->
+<div class="row">
+  <button id="prev">← Previous date</button>
+  <button id="play">Play</button>
+  <button id="next">Next date →</button>
+  <label>Speed <input id="speed" type="range" min="100" max="1500" value="600"></label>
+</div>
 <div id="info" role="status"></div>
 <div id="warnings" role="status"></div>
 <div id="field-center"></div>
@@ -63,13 +74,6 @@
 <div id="demo-note" hidden>Synthetic demonstration data — not SPHEREx observations.</div>
 <details id="method" hidden><summary>How positions are measured</summary><div id="method-body"></div></details>
 
-<!-- PLAYER -->
-<div class="row">
-  <button id="prev">←</button>
-  <button id="play">Play</button>
-  <button id="next">→</button>
-  <label>Speed <input id="speed" type="range" min="100" max="1500" value="600"></label>
-</div>
 <div class="row">
   <label><input type="checkbox" id="flags"> Show flags</label>
   <label><input type="checkbox" id="mk"> Show expected position</label>
@@ -180,7 +184,7 @@ async function getFrames(ra, dec, fov, det, mode, my) {
     // API pixels start at 0, so the pixel centre is x + 0.5; convert to fractions 0..1
     const fr = p => p ? [(p[0] + 0.5) / g.width_px, (p[1] + 0.5) / g.height_px] : null;
     let out = d.frames.map(f => ({
-      date: f.mjd_span ? `${f.date} (MJD UTC ${f.mjd_span.join("–")})` : f.date, wavelength: f.wave_um != null ? f.wave_um.toFixed(2) : "", n_exp: f.n_exp,
+      displayDate: f.date, date: f.mjd_span ? `${f.date} (MJD UTC ${f.mjd_span.join("–")})` : f.date, wavelength: f.wave_um != null ? f.wave_um.toFixed(2) : "", n_exp: f.n_exp,
       url: API + f.image_url, flagsUrl: f.flags_url ? API + f.flags_url : null,
       expected: fr(f.predicted_px), measured: fr(f.measured_px),
       candidates: (f.measured_candidates || []).map(c => ({...c, xy: fr(c.xy)})), measurement: f.measurement || null,
@@ -191,7 +195,7 @@ async function getFrames(ra, dec, fov, det, mode, my) {
     if (mode === "trail" && d.trail_url) {
       // one picture with every epoch: residuals coloured by time (blue = first, yellow = last)
       const n = out.length;
-      out = [{date: `${out[0].date} → ${out[n - 1].date}`, url: API + d.trail_url, trail: true, epochs: n}];
+      out = [{displayDate: `${out[0].displayDate} → ${out[n - 1].displayDate}`, date: `${out[0].date} → ${out[n - 1].date}`, url: API + d.trail_url, trail: true, epochs: n}];
     }
     $("info").textContent = "Loading pictures...";
     await Promise.all(out.map(f => new Promise((res, reject) => {   // preload: no flicker while blinking
@@ -264,6 +268,8 @@ function show(n) {
   document.querySelectorAll(".candidate").forEach(el => el.remove());
   i = (n + frames.length) % frames.length;
   const f = frames[i];
+  $("frame-date").textContent = `${f.trail ? "Observation dates" : "Observation date"} (UTC): ${f.displayDate || f.date}`;
+  $("date-step").textContent = f.trail ? `All ${f.epochs} epochs combined` : `Date ${i + 1} of ${frames.length}`;
   const quality = f.quality;
   const details = ["Source: NASA SPHEREx via NASA/IPAC IRSA."];
   const reasonText = {incomplete_pixel_coverage:"some pixels have no usable data",contaminated_pixels:"saturated or contaminated pixels",approximate_wavelength:"wavelength is approximate",invalid_wavelength:"spectral calibration is unavailable here",time_assumptions:"observation time includes assumptions"};
@@ -390,6 +396,7 @@ async function update() {
   ++plotId;
   clearInterval(timer); timer = null; $("play").textContent = "Play";
   frames = []; lastGrid = null;
+  $("frame-date").textContent = ""; $("date-step").textContent = "";
   $("frame").removeAttribute("src");
   ["flagimg", "flagbox", "marker", "measured"].forEach(id => $(id).style.display = "none");
   plotMessage("Select Spectrum or Light curve to load a graph.");

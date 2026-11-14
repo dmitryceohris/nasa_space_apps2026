@@ -52,7 +52,7 @@ async page => {
   assert(await candidate.count()===1,'candidate marker missing');
   assert(await candidate.evaluate(e=>e.style.left)==='32.5%','candidate pixel normalization differs');
   const warning = await page.locator('#warnings').textContent();
-  await page.getByRole('button',{name:'→',exact:true}).click();
+  await page.getByRole('button',{name:'Next date →',exact:true}).click();
   assert(await page.locator('#warnings').textContent()===warning,'player cleared warnings');
   await page.setViewportSize({width:375,height:760});
   assert(await page.locator('#frame').evaluate(e=>e.getBoundingClientRect().width)<=375,'mobile image overflow');
