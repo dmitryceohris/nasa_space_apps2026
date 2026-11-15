@@ -1,35 +1,45 @@
-# SPHEREx Sky Viewer — результаты работы
+# SPHEREx Blink
 
-**Обновление 15 ноября:** реализованы исправления G1–G7: единые статусы качества, калибровки CWAVE/CBAND, ePSF-фотометрия, независимые центроиды/регистрация и ковариационные расчёты. [Результаты, ограничения и воспроизведение](docs/SCIENCE_REMEDIATION.md). Предварительные точки исключены из научных массивов; принятая фотометрия не означает подтверждённое движение или переменность.
+Explore NASA SPHEREx observations over time: look up a target or sky position, compare images from different epochs, and inspect image quality, candidate positions, spectra and light curves.
 
-Материалы NASA Space Apps 2026, собранные на **14 ноября 2026 года**: параметры пяти целей, расчёт движения звезды Барнарда и начальная подборка наблюдений SPHEREx из IRSA.
+**[Open SPHEREx Blink](https://spherex-sky-viewer-zeta.vercel.app/)** · **[Five-target GIF gallery](https://spherex-sky-viewer-zeta.vercel.app/challenge-demo/)** · **[User guide and data interpretation](docs/USER_GUIDE.md)**
 
-## Что готово
+> **Scientific use:** Images, predicted positions, centroid candidates and difference residuals are exploratory. They do not by themselves establish a source identification, proper motion or variability. Check the displayed quality information, masks, spectral comparability and validation status before drawing conclusions.
 
-- **Общий расчёт пяти целей с геометрическим годичным параллаксом**: `sky_motion.py`, [15 предсказаний для реальных эпох](output/predictions.csv), [список кадров](data/physics_observations.csv) и [научная записка с запуском, качеством кадров и определением метанового индекса](docs/PHYSICS.md). Быструю локальную проверку прошли 3 кадра; 4 имеют плохие флаги, 8 остались непроверенными из-за HTTP 503 архива. Это предсказания и проверка качества, не измерения движения или потоков.
-- **Параметры пяти объектов** с погрешностями, идентификаторами и ссылками на источники: [описание](OBJECT_PARAMETERS.md) и [CSV](OBJECT_PARAMETERS.csv).
-- **Расчёт положения звезды Барнарда** на заданную дату или список наблюдений: [скрипт](barnard_motion.py) и [инструкция с описанием метода](BARNARD_MOTION.md). Используется запись Gaia DR3 `4472832130942575872`; учитываются пространственное движение, лучевая скорость и перенос формальной ковариации.
-- **Выполненный учебный блокнот**: [barnard_motion.ipynb](output/jupyter-notebook/barnard_motion.ipynb), [результаты двух учебных дат](output/barnard_demo_positions.csv) и график ниже.
-- **Три наблюдения SPHEREx D1 / DR1** с проверенными временами из заголовков FITS и прогнозом координат: [входной список](data/irsa_barnard_20261114/observations.csv), [рассчитанные позиции](output/barnard_positions_irsa.csv).
-- **Проверка исходной выгрузки и поиск IRSA**: [отчёт](AIGERIM_DATA_CHECK.md), [ответ архива на 378 кандидатов](data/irsa_barnard_20261114/search_results.vot), [правила отбора и метаданные](data/irsa_barnard_20261114/selection.json), три заголовка IMAGE в той же папке.
+This project was developed for NASA Space Apps 2026 using data from NASA SPHEREx via NASA/IPAC IRSA. The hosted application may include newer changes than the code currently on GitHub.
 
-Исходная выгрузка Айгерим не покрывает звезду Барнарда; по координатам она соответствует области галактики NGC 6822. Три наблюдения звезды найдены отдельным поиском. Между первой и последней выбранными датами — **196.354049 дня**, предсказанное смещение — **5.594198″**.
+## What you can do
 
-![Учебный график движения звезды Барнарда](output/barnard_motion_demo.png)
+- Search by object name, select a test object, or enter right ascension and declination.
+- Choose a field of view and detector, then display single exposures, epoch coadds, differences or a time-coloured trail.
+- Step through dates or play a sequence, with optional flags, catalogue-predicted positions and centroid candidates.
+- Use an optical reference map for orientation, and request a spectrum or light curve when suitable measurements are available.
+- Share a view or explore the [saved five-target gallery](https://spherex-sky-viewer-zeta.vercel.app/challenge-demo/).
 
-График показывает учебные даты 1 апреля и 1 октября 2025 года; они отличаются от трёх реальных наблюдений IRSA.
+Start with the [user guide](docs/USER_GUIDE.md) for step-by-step instructions, an explanation of the overlays and plots, and the limits of the results.
 
-## Как запустить
+## Run locally
 
-Понадобятся Git и [uv](https://docs.astral.sh/uv/). Откройте терминал и выполните:
+Install Git and [uv](https://docs.astral.sh/uv/), then run:
 
 ```sh
 git clone https://github.com/dmitryceohris/nasa_space_apps2026.git
 cd nasa_space_apps2026
 uv sync --locked --python 3.12.13
+bash start.sh
 ```
 
-Для повторного расчёта трёх выбранных наблюдений:
+Open <http://127.0.0.1:8000/>. Installation and live archive searches require network access. Some previously saved or cached data can be used offline; availability depends on the files present locally. The local checkout can differ from the hosted application.
+
+To run the test suite:
+
+```sh
+uv run --offline --locked pytest -q
+```
+
+### Reproduce the Barnard's Star example
+
+The saved example propagates the catalogue position for three selected SPHEREx observations. This is a prediction, not a measurement of motion from the images.
 
 ```sh
 uv run --offline --locked python barnard_motion.py \
@@ -37,68 +47,56 @@ uv run --offline --locked python barnard_motion.py \
   --output output/barnard_positions_irsa.csv
 ```
 
-Для открытия учебного блокнота:
+For the educational notebook:
 
 ```sh
 uv run --offline --locked jupyter lab output/jupyter-notebook/barnard_motion.ipynb
 ```
 
-Для проверки расчёта и обработки входных данных:
+![Illustrative prediction of Barnard's Star's motion](output/barnard_motion_demo.png)
 
-```sh
-uv run --offline --locked pytest -q
-```
+The plot uses the illustrative dates 1 April and 1 October 2025, not the three selected IRSA observations. The chosen observations span 196.354049 days; their predicted displacement is 5.594198 arcseconds.
 
-### Библиотека spxhack: обработка прямо из Python
+## Python interface
 
-Тот же конвейер, что и у сайта, доступен как библиотека `spxhack` (`src/spxhack`): без сервера, результат — массивы numpy. Пример с реальными данными и измеренным собственным движением WISE 0855 и звезды Барнарда: [examples/spxhack_demo.ipynb](examples/spxhack_demo.ipynb). Пока библиотека не упакована, запускайте из репозитория, добавив в начало скрипта `sys.path.insert(0, "src")` (в ноутбуке из `examples/` — `"../src"`), и выполняйте через `uv run --locked python ...`.
+The processing pipeline is also available as the `spxhack` library in `src/spxhack`. It is not packaged separately, so run it from the repository and add `src` to Python's import path. The [example notebook](examples/spxhack_demo.ipynb) demonstrates an exploratory workflow; catalogue-assisted selections are not independent motion measurements.
 
 ```python
+import sys
+sys.path.insert(0, "src")
 import spxhack as spx
 
-t    = spx.target("barnard")              # имя пресета/SIMBAD, (ra, dec), SkyCoord или свой spx.Target
-exps = spx.fetch(t, det=3, fov=3)         # поиск в IRSA и вырезки (сеть); или spx.load(["a.fits", ...])
-st   = spx.stack(exps, t, fov=3)          # эпохи -> сложенные кадры на одной сетке, север вверху
+target = spx.target("barnard")
+exposures = spx.fetch(target, det=3, fov=3)  # Live IRSA search and cutouts
+stack = spx.stack(exposures, target, fov=3)
 
-st.cube                                   # np.ndarray (эпохи, y, x), MJy/sr; то же np.asarray(st), st.to_numpy()
-spx.diff(st)                              # (эпохи, y, x), робастная шкала остатков, не σ
-spx.trail(st)                             # (y, x, 3) «след» движения
-
-tr = spx.track(st)                        # цель в каждой эпохе (то же правило, что /api/view): положение, ошибка, качество, прогноз
-tr.to_numpy()                             # (эпохи, 11): mjd, x, y, err_x, err_y, ra, dec, err_arcsec, pred_x, pred_y, offset_px
-pm = spx.fit_motion(tr)                   # измеренное собственное движение ± ошибка, сравнение с каталогом
-pm.to_numpy()                             # [μα·cosδ, μδ], ″/год
-
-sp = spx.spectrum(exps, t)                # фотометрия в точке цели; sp.to_numpy() -> (N, 3): λ, поток, ошибка
-lc = spx.lightcurve(sp, 2.0, 2.2)         # поток во времени в окне λ; lc.to_numpy() -> (N, 3)
-
-spx.centroid(any_2d_array)                # центр объекта на любом массиве
-spx.show(st, track=tr)                    # «мигалка» (в Jupyter проигрывается прямо в ячейке)
-spx.save(st, "out/")                      # PNG, GIF, result.json как на сайте
-spx.to_fits(st, "cube.fits")              # куб с WCS для DS9 / Aladin
+stack.cube                  # Epoch, y, x; MJy/sr
+spx.diff(stack)             # Relative residuals, not calibrated sigma
+spx.trail(stack)            # Time-coloured visualisation
+track = spx.track(stack)    # Candidate positions and quality
+motion = spx.fit_motion(track)
+spectrum = spx.spectrum(exposures, target)
+lightcurve = spx.lightcurve(spectrum, 2.0, 2.2)
+spx.show(stack, track=track)
+spx.save(stack, "out/")
+spx.to_fits(stack, "cube.fits")
 ```
 
-Что важно знать:
-- Пиксели — numpy: `[x, y]` от 0, ось `y` на север, восток слева (в PNG и веб-API ось `y` направлена вниз).
-- `track` по умолчанию работает по правилу `/api/view`: берёт только однозначный объект кадра, и только если он не дальше 1 пикселя от прогноза (иначе `far_from_prediction`, в подгонку не идёт); прогноз объект не выбирает. `track(st, assist=True)` — режим исследования: при неоднозначности выбирается кандидат у прогноза, при слиянии с соседом центр уточняется окном у прогноза (флаги `blended` / `forced`). Такие точки зависят от каталога и попадают в `fit_motion` только с `include_assisted=True`.
-- `fit_motion` фиксирует годичный параллакс по каталогу (или подгоняет его при `parallax="fit"`, нужно ≥ 4 эпох). Ошибка центра только шумовая, поэтому при χ²_red > 1 ошибки движения масштабируются на √χ²_red.
-- Ноутбук показывает исследовательский сценарий с `assist=True` и `include_assisted=True`: каталог участвует в выборе кандидатов, поэтому результат не является независимым измерением движения. Числа прежнего сохранённого прогона не подтверждают обнаружение WISE 0855 или точность движения; изменённые ячейки нужно выполнить заново. Для количественных выводов нужны независимая регистрация и проверка идентичности источников.
-- Методы и ограничения всех шагов: `spx.METHODS`. ePSF-фиттинг и совместная подгонка заданных соседей реализованы; автоматическая идентификация компонентов не подтверждена. Подробнее — в отчёте исправлений выше.
+`spx.track` normally uses unambiguous candidates and applies a distance check when a prediction is available. `assist=True` can use the catalogue prediction to select or refine a candidate; assisted points are excluded from a motion fit unless explicitly requested. Formal centroid uncertainties do not include every systematic effect. A numerical result or fitted motion is not necessarily scientifically validated. See `spx.METHODS` and the [science assessment](docs/SCIENCE_REMEDIATION.md) for the method and its limits.
 
-Python и зависимости зафиксированы в `.python-version`, `pyproject.toml` и `uv.lock`. Установка требует интернета; дальнейший расчёт использует сохранённые данные и работает без сети. Окружение `.venv` создаётся при установке и в репозиторий не входит.
+## Data and scientific context
 
-## Границы готового результата
+- [Parameters and references for the five targets](OBJECT_PARAMETERS.md) and the [parameter table](OBJECT_PARAMETERS.csv).
+- [Five-target position predictions and methods](docs/PHYSICS.md), including predicted positions for real epochs. Predictions are not image-based motion measurements.
+- [Barnard's Star calculation and method](BARNARD_MOTION.md), [selected observation list](data/irsa_barnard_20261114/observations.csv) and [calculated positions](output/barnard_positions_irsa.csv).
+- [Input-data and IRSA search assessment](AIGERIM_DATA_CHECK.md). The original supplied field corresponds to the NGC 6822 region rather than Barnard's Star; the three Barnard observations were found in a separate search.
+- [Science remediation and validation](docs/SCIENCE_REMEDIATION.md), [target validation](docs/TARGET_VALIDATION.md) and [gallery scientific notes](frontend/challenge-demo/STATISTICS.md). Some detailed historical documents and machine-readable source values are in Russian.
+- [API reference](docs/API.md) and [deployment notes](docs/DEPLOYMENT.md).
 
-Координаты прежнего расчёта `barnard_motion.py` — **барицентрические астрометрические ICRS**, без годичного параллакса и поправки на положение SPHEREx. Новый `sky_motion.py` отдельно выдаёт барицентрические и геометрические геоцентрические координаты с годичным параллаксом; это ещё не полная видимая позиция. Прогноз смещения не является измерением по изображениям. Для новой подборки сохранены ответы поиска, заголовки и локальные значения FLAGS в [проверках качества](data/physics_evidence/selection.json); полные изображения и потоки не загружались. Исходные локальные таблицы Айгерим также не включены; отчёт сохраняет результаты их проверки.
+The 15 November science assessment describes quality statuses, calibration, photometry and astrometric checks. Accepted photometry does not imply validated motion or variability. In the examined sample, no target has a confirmed light curve or proper-motion measurement; this is a statement about that sample, not the whole SPHEREx archive. Reference-star queries used for real-image registration timed out, so registration of those frames remains unverified.
 
-Основной интерфейс уже находится в `frontend/index.html` и обслуживается API по адресу `/`; тестовая страница доступна по `/dev/`. Запуск и существующие режимы описаны в [API.md](docs/API.md). Общая модель пяти целей из `sky_motion.py` пока не подключена к API в текущем `main`; научная корректность обработки и работа на реальных целях требуют отдельных проверок.
+The older `barnard_motion.py` calculation provides barycentric astrometric ICRS positions without annual parallax or the SPHEREx spacecraft position. `sky_motion.py` separately provides barycentric and geometric geocentric predictions including annual parallax; these are not a complete apparent-position model. See the linked methods before comparing predictions with observations.
 
-[Актуальный план Дилайлы](DILAYLA_PLAN.md) полностью переработан под обязательные цели NASA и существующий код: оставшиеся изменения, проверки готовности и зависимости от работы других участников. Уже реализованные расчёты и дополнительные возможности в нём отделены от задач, которые ещё предстоит выполнить.
+## Credits
 
-## Как поделиться
-
-Можно отправить [ссылку на репозиторий](https://github.com/dmitryceohris/nasa_space_apps2026) или [скачать весь набор ZIP-архивом](https://github.com/dmitryceohris/nasa_space_apps2026/archive/refs/heads/main.zip). Для просмотра документов, таблиц и графика запуск Python не требуется.
-
-Проверка просмотра пяти целей NASA и трёх дополнительных звёзд: [TARGET_VALIDATION.md](docs/TARGET_VALIDATION.md).
-
-Запуск на внешнем сервере, контейнер и постоянный кэш: [DEPLOYMENT.md](docs/DEPLOYMENT.md).
+SPHEREx observations are provided by NASA/IPAC IRSA. Catalogue sources and assumptions for individual targets are documented in the [target parameters](OBJECT_PARAMETERS.md) and shown in the application's observation details.
