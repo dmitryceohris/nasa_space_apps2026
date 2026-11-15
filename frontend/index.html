@@ -24,9 +24,11 @@
   #aladin { width: 100%; height: 340px; margin: 0 0 12px; border-radius: 6px; overflow: hidden; background: #000; }
   #target-info, #field-center, #frame-quality, #warnings, #method { overflow-wrap: anywhere; }
 </style>
+<link rel="stylesheet" href="design.css">
 </head>
 <body>
-<h2>SPHEREx Sky Viewer</h2>
+<h2>SPHEREx Blink</h2>
+<div id="layout"><div id="col-left">
 <p><a style="color:#8fd7ff" href="/challenge-demo/">Five targets · saved GIF gallery</a></p>
 
 <!-- INPUT -->
@@ -71,7 +73,7 @@
 <div id="frame-date" role="status"></div>
 <div id="date-step"></div>
 <!-- PLAYER -->
-<div class="row">
+<div class="row" id="player">
   <button id="prev">← Previous date</button>
   <button id="play">Play</button>
   <button id="next">Next date →</button>
@@ -91,6 +93,7 @@
   <label><input type="checkbox" id="ms"> Show centroid / candidates</label>
 </div>
 
+</div><div id="col-right">
 <div id="aladin"></div>
 <!-- GRAPHS -->
 <div class="row">
@@ -100,7 +103,7 @@
 <label><input type="checkbox" id="show-diagnostic-points"> Show preliminary and rejected measurements</label>
 <p id="plot-quality" aria-live="polite"></p>
 <div id="plot" style="height:300px"></div>
-
+</div></div>
 <script>
 // ================= DATA LAYER (the only part that changes later) =================
 const P = new URLSearchParams(location.search);
@@ -424,7 +427,7 @@ function syncUrl() {
   history.replaceState(null, "", "?" + p.toString());
   const iframe = document.createElement("iframe");
   iframe.src = location.href;
-  iframe.title = "SPHEREx Sky Viewer";
+  iframe.title = "SPHEREx Blink";
   iframe.style.cssText = "width:100%;height:800px;border:0";
   iframe.loading = "lazy";
   $("share-url").value = iframe.src;
