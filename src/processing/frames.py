@@ -70,6 +70,12 @@ def lone_spike_mask(exp: Exposure, sub: np.ndarray | None = None, bad: np.ndarra
                 & (nb_count >= 6) & (nb_max < SPIKE_NEIGHBOUR_RATIO * a))
 
 
+# Contamination/saturation flags kept per grid pixel for explanations, in this fixed bit order
+# (the bit numbers inside SPHEREx files are read from each header and may differ between files).
+FLAG_CODE_NAMES = ("CROSSTALK", "GHOST", "GHOST_FPA", "GHOST_EXT", "STREAK",
+                   "BLOOM", "SNOWBALL", "HALO", "OVERFLOW", "NONLINEAR")
+
+
 def reproject_exposure(exp: Exposure, wcs: WCS, shape):
     """Перенос одной экспозиции на общую сетку.
 
@@ -79,26 +85,36 @@ def reproject_exposure(exp: Exposure, wcs: WCS, shape):
     билинейная интерполяция не может разнести их значение на соседние пиксели сетки.
     Маски переносятся ближайшим соседом: биты нельзя интерполировать.
     """
-    from reproject import reproject_interp
-
     sub, bad = exp.background_subtracted(), exp.bad_mask()
     bad = bad | lone_spike_mask(exp, sub, bad)
     img = np.where(bad, np.nan, sub).astype(np.float64)
+    r_img, r_var, r_bad, r_codes = _reproject(exp, wcs, shape, sub, bad, img)
+    return r_img, r_var, r_bad, r_codes > 0
+
+
+def _reproject(exp: Exposure, wcs: WCS, shape, sub=None, bad=None, img=None):
+    """reproject_exposure plus the grid of FLAG_CODE_NAMES bits (uint16) instead of one contamination mask."""
+    from reproject import reproject_interp
+
+    if img is None:
+        sub, bad = exp.background_subtracted(), exp.bad_mask()
+        bad = bad | lone_spike_mask(exp, sub, bad)
+        img = np.where(bad, np.nan, sub).astype(np.float64)
     var = np.where(bad, np.nan, exp.variance).astype(np.float64)
-    contam = exp.flag_mask(("CROSSTALK", "GHOST", "GHOST_FPA", "GHOST_EXT", "STREAK",
-                            "BLOOM", "SNOWBALL", "HALO", "OVERFLOW", "NONLINEAR"))
+    codes = np.zeros(exp.shape, np.float64)
+    for k, name in enumerate(FLAG_CODE_NAMES):
+        codes += exp.flag_mask((name,)) * float(1 << k)
 
     r_img, foot = reproject_interp((img, exp.wcs), wcs, shape_out=shape, order="bilinear")
     r_var, _ = reproject_interp((var, exp.wcs), wcs, shape_out=shape, order="bilinear")
     r_bad, _ = reproject_interp((bad.astype(float), exp.wcs), wcs, shape_out=shape,
                                 order="nearest-neighbor")
-    r_con, _ = reproject_interp((contam.astype(float), exp.wcs), wcs, shape_out=shape,
-                                order="nearest-neighbor")
+    r_codes, _ = reproject_interp((codes, exp.wcs), wcs, shape_out=shape, order="nearest-neighbor")
     outside = foot <= 0
     r_bad = (np.nan_to_num(r_bad, nan=1.0) > 0.5) | outside | ~np.isfinite(r_img) | ~np.isfinite(r_var)
     r_img[r_bad] = np.nan
     r_var[r_bad] = np.nan
-    return r_img, r_var, r_bad, np.nan_to_num(r_con) > 0.5
+    return r_img, r_var, r_bad, np.rint(np.nan_to_num(r_codes)).astype(np.uint16)
 
 
 # ---------------------------------------------------------------- кадры
@@ -117,6 +133,7 @@ class Frame:
     bg_offsets: list[float | None] = field(default_factory=list)  # остаточный фон каждой экспозиции, MJy/sr
     time_sources: list[dict] = field(default_factory=list)
     wavelength_samples: list[dict] = field(default_factory=list)
+    flag_codes: np.ndarray | None = None  # uint16 OR of FLAG_CODE_NAMES bits over the epoch's exposures
 
     @property
     def span_days(self) -> float:
@@ -156,9 +173,11 @@ def coadd(exps: list[Exposure], wcs: WCS, shape, center: SkyCoord) -> Frame | No
     num = np.zeros(shape)
     den = np.zeros(shape)
     contam = np.zeros(shape, bool)
+    codes = np.zeros(shape, np.uint16)
     waves, used, offsets, samples = [], [], [], []
     for e in exps:
-        img, var, bad, con = reproject_exposure(e, wcs, shape)
+        img, var, bad, code = _reproject(e, wcs, shape)
+        con = code > 0
         if bad.all():
             continue
         src, _ = reproject_interp((e.flag_mask(("SOURCE",)).astype(float), e.wcs), wcs, shape_out=shape,
@@ -172,6 +191,7 @@ def coadd(exps: list[Exposure], wcs: WCS, shape, center: SkyCoord) -> Frame | No
         num += np.where(bad, 0.0, img) * w
         den += w
         contam |= con  # включая насыщенные пиксели, которые выброшены из суммы
+        codes |= code
         if e.contains(center):
             wave, width = e.wavelength_at_sky(center)
             if np.isfinite(wave):
@@ -193,7 +213,7 @@ def coadd(exps: list[Exposure], wcs: WCS, shape, center: SkyCoord) -> Frame | No
                  n_exp=len(used), obs_ids=[e.obs_id for e in used], bg_offsets=offsets,
                  time_sources=[{"obs_id": e.obs_id, "source": e.time_source,
                                 "assumptions": e.time_assumptions} for e in used],
-                 wavelength_samples=samples)
+                 wavelength_samples=samples, flag_codes=codes)
 
 
 def spectral_sampling(frames: list[Frame]) -> dict:

@@ -23,6 +23,21 @@
   #method ul { margin: 4px 0; padding-left: 18px; }
   #aladin { width: 100%; height: 340px; margin: 0 0 12px; border-radius: 6px; overflow: hidden; background: #000; }
   #target-info, #field-center, #frame-quality, #warnings, #method { overflow-wrap: anywhere; }
+  #wrap.selecting { cursor: crosshair; touch-action: none; }
+  #selbox { display: none; position: absolute; border: 2px solid #3cf; background: rgba(60,200,255,.12); pointer-events: none; }
+  .explain-pin { position: absolute; width: 20px; height: 20px; border: 2px solid #3cf; border-radius: 50%; transform: translate(-50%,-50%);
+                 pointer-events: none; color: #3cf; font: 700 12px sans-serif; text-align: center; line-height: 20px; text-shadow: 0 0 3px #000; }
+  #explain { margin: 8px 0; font-size: 15px; line-height: 1.45; }
+  #explain .card { border: 1px solid #355; border-left: 4px solid #3cf; border-radius: 6px; padding: 8px 10px; margin: 8px 0; background: #161b1d; }
+  #explain h3 { margin: 0 0 6px; font-size: 17px; }
+  #explain p { margin: 4px 0; }
+  #explain .caveat { color: #fc6; }
+  #explain .next { color: #9cf; font-style: italic; }
+  #explain .footer { color: #999; font-size: 13px; }
+  .term { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; position: relative; outline: none; }
+  .term .tip { display: none; position: absolute; left: 0; top: 1.5em; z-index: 10; width: min(260px, 70vw); padding: 6px 8px;
+               background: #222; color: #eee; border: 1px solid #555; border-radius: 4px; font-size: 13px; font-style: normal; line-height: 1.35; }
+  .term:hover .tip, .term:focus .tip { display: block; }
 </style>
 </head>
 <body>
@@ -58,7 +73,13 @@
   <div id="flagbox"></div>
   <div id="marker"></div>
   <div id="measured"></div>
+  <div id="selbox"></div>
 </div>
+<div class="row">
+  <button id="explain-btn" title="Drag a rectangle on the image to get an explanation">Explain a region</button>
+  <span id="explain-hint"></span>
+</div>
+<div id="explain" role="status"></div>
 <div id="frame-date" role="status"></div>
 <div id="date-step"></div>
 <!-- PLAYER -->
@@ -97,7 +118,7 @@ const API = P.get("api") || "";
 // Double-click the file (no ?api=) -> fake data. Any server address -> real data.
 const USE_MOCK = P.get("mock") === "1" || (location.protocol === "file:" && !P.get("api"));
 document.getElementById("demo-note").hidden = !USE_MOCK;
-let lastGrid = null;
+let lastGrid = null, lastViewQuery = null;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function apiJson(path) {
@@ -162,6 +183,7 @@ async function getFrames(ra, dec, fov, det, mode, my) {
   else if (target) q.set("target", target);
   else throw new Error("Pick a test object or type a name or RA and Dec");
   const url = `${API}/api/view?${q}`;
+  lastViewQuery = q.toString();
 
   while (true) {                                   // ask again until the job is ready
     if (my !== reqId) return null;                 // user changed something: stop
@@ -332,6 +354,97 @@ document.addEventListener("keydown", e => {
   if (e.key === "ArrowLeft") show(i - 1);
 });
 
+// ================= EXPLAIN A REGION =================
+// Drag a rectangle on the frame -> /api/explain describes what happens there (texts: docs/EXPLAIN_TEXTS.md).
+let selecting = false, dragStart = null, explainId = 0;
+function setSelecting(on) {
+  selecting = on;
+  $("wrap").classList.toggle("selecting", on);
+  $("explain-btn").classList.toggle("active", on);
+  $("explain-hint").textContent = on ? "Drag a rectangle on the image." : "";
+  if (!on) $("selbox").style.display = "none";
+}
+function clearExplain() {
+  ++explainId;
+  $("explain").innerHTML = "";
+  $("selbox").style.display = "none";
+  document.querySelectorAll(".explain-pin").forEach(el => el.remove());
+}
+$("explain-btn").onclick = () => {
+  if (!frames.length || !lastGrid) { $("explain-hint").textContent = "Load frames first."; return; }
+  setSelecting(!selecting);
+};
+function fracAt(e) {                        // pointer -> fraction of the image (0..1)
+  const r = $("frame").getBoundingClientRect();
+  return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))];
+}
+function drawBox(a, b) {
+  const box = $("selbox");
+  box.style.left = Math.min(a[0], b[0]) * 100 + "%"; box.style.top = Math.min(a[1], b[1]) * 100 + "%";
+  box.style.width = Math.abs(a[0] - b[0]) * 100 + "%"; box.style.height = Math.abs(a[1] - b[1]) * 100 + "%";
+  box.style.display = "block";
+}
+$("wrap").addEventListener("pointerdown", e => {
+  if (!selecting) return;
+  e.preventDefault(); $("wrap").setPointerCapture(e.pointerId);
+  dragStart = fracAt(e); drawBox(dragStart, dragStart);
+});
+$("wrap").addEventListener("pointermove", e => { if (selecting && dragStart) drawBox(dragStart, fracAt(e)); });
+$("wrap").addEventListener("pointerup", e => {
+  if (!selecting || !dragStart) return;
+  const a = dragStart, b = fracAt(e); dragStart = null;
+  const w = lastGrid.width_px, h = lastGrid.height_px;
+  if (Math.abs(a[0] - b[0]) * w < 2 || Math.abs(a[1] - b[1]) * h < 2) {
+    $("explain-hint").textContent = "The rectangle is too small: drag at least 2 pixels wide and tall."; return;
+  }
+  setSelecting(false); drawBox(a, b);
+  const px = f => [f[0] * w - 0.5, f[1] * h - 0.5];      // fraction -> PNG pixel (pixel centres at integers)
+  explainRegion(px(a), px(b));
+});
+
+// "[term]" or "[shown text|glossary key]" -> underlined term with a tooltip; only the first one per card.
+function markup(text, glossary, seen) {
+  return esc(text).replace(/\[([^\]|]+)(?:\|([^\]]+))?\]/g, (_, shown, key) => {
+    key = key || shown;
+    const tip = glossary[key];
+    if (!tip || seen.has(key)) return shown;
+    seen.add(key);
+    return `<span class="term" tabindex="0">${shown}<span class="tip" role="tooltip">${esc(tip)}</span></span>`;
+  });
+}
+function showExplanation(d) {
+  const g = d.glossary || {};
+  let html = d.header ? `<p>${esc(d.header)}</p>` : "";
+  d.cards.forEach((c, k) => {
+    const seen = new Set(), n = d.cards.length > 1 ? `${k + 1}. ` : "";
+    html += `<div class="card"><h3>${n}${esc(c.title)}</h3>` +
+      c.paragraphs.map(t => `<p>${markup(t, g, seen)}</p>`).join("") +
+      c.caveats.map(t => `<p class="caveat">${markup(t, g, seen)}</p>`).join("") +
+      `<p class="next">${markup(c.next, g, seen)}</p></div>`;
+    if (c.xy && lastGrid) {                    // numbered ring on the source the card talks about
+      const el = document.createElement("div"); el.className = "explain-pin";
+      el.textContent = d.cards.length > 1 ? k + 1 : "";
+      $("wrap").appendChild(el);
+      put(el, [(c.xy[0] + 0.5) / lastGrid.width_px, (c.xy[1] + 0.5) / lastGrid.height_px], true);
+    }
+  });
+  $("explain").innerHTML = html + `<p class="footer">${esc(d.footer)}</p>`;
+}
+async function explainRegion(a, b) {
+  clearExplain(); drawBox(...[a, b].map(p => [(p[0] + 0.5) / lastGrid.width_px, (p[1] + 0.5) / lastGrid.height_px]));
+  const my = explainId;
+  if (USE_MOCK) { $("explain").textContent = "Explanations need the SPHEREx server (not available in demo data)."; return; }
+  $("explain").textContent = "Reading the data in this area...";
+  const q = new URLSearchParams(lastViewQuery);
+  q.set("x0", a[0].toFixed(2)); q.set("y0", a[1].toFixed(2)); q.set("x1", b[0].toFixed(2)); q.set("y1", b[1].toFixed(2));
+  try {
+    const d = await apiJson(`/api/explain?${q}`);
+    if (my === explainId) showExplanation(d);
+  } catch (err) {
+    if (my === explainId) $("explain").textContent = "Could not explain this area: " + err.message;
+  }
+}
+
 // ================= MODES =================
 MODES.forEach(m => {
   const b = document.createElement("button");
@@ -403,7 +516,7 @@ async function update() {
   const my = ++reqId;
   ++plotId;
   clearInterval(timer); timer = null; $("play").textContent = "Play";
-  frames = []; lastGrid = null;
+  frames = []; lastGrid = null; lastViewQuery = null; clearExplain(); setSelecting(false);
   $("frame-date").textContent = ""; $("date-step").textContent = "";
   $("frame").removeAttribute("src");
   ["flagimg", "flagbox", "marker", "measured"].forEach(id => $(id).style.display = "none");
