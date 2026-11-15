@@ -1,0 +1,8 @@
+{
+  "provenance": "merged main, real local API and downloaded IRSA FITS",
+  "target": "rwaur",
+  "spectrum_points": 2,
+  "lightcurve_message": "No reliable points in the window 1.292–1.4280000000000002 µm. Try another detector. В окне 1.292–1.428 мкм нет надёжных точек спектра; задайте wave_min и wave_max шире или на другом детекторе",
+  "mobile_width": 375,
+  "horizontal_overflow": false
+}

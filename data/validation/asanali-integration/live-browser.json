@@ -1,0 +1,9 @@
+{
+  "provenance": "real local API result from live IRSA SIA2 and downloaded FITS",
+  "target": "rwaur",
+  "frames": 3,
+  "date_switch": "Observation date (UTC): 2026-03-04",
+  "mobile_width": 375,
+  "image_width": 351,
+  "horizontal_overflow": false
+}

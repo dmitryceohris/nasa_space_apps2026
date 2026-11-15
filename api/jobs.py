@@ -24,7 +24,8 @@ from astropy.coordinates import SkyCoord
 from Exposure import DETECTOR_BANDS, load_exposure
 from processing import render as prender
 from processing.epochs import epoch_limits, select_per_epoch, smear_px
-from processing.frames import BACKGROUND_METHOD, coadd, difference_details, grid_header_json, make_grid, trail
+from processing.frames import (BACKGROUND_METHOD, coadd, difference_details, grid_header_json, make_grid,
+                               spectral_sampling, trail)
 from processing.pipeline import CREDITS, build_spectrum, lightcurve_from_spectrum
 
 from . import cache, centroid, irsa, render, resolve
@@ -35,8 +36,10 @@ log = logging.getLogger("jobs")
 POOL = ThreadPoolExecutor(max_workers=4)
 JOBS = {}
 LOCK = threading.Lock()
-WAVE_SPREAD_WARN = 0.05  # same threshold as src/processing/pipeline.py: lambda change between epochs
 SMEAR_WARN_PX = 0.5  # known proper motion moves the object more than this within one epoch -> warning
+ASSOC_PX = 1.0  # Conservative display gate for candidate disagreement; NOT a calibrated association radius.
+# A match within this radius does not establish identity or registration accuracy, especially for blends
+# and fields without usable reference stars. All candidates remain available separately.
 warnings.filterwarnings("ignore")
 
 
@@ -44,12 +47,11 @@ warnings.filterwarnings("ignore")
 class Job:
     key: str
     id: str
-    status: str = "running"  # running | ready (empty result, not cached) | error
+    status: str = "running"  # running | error (every finished result goes to the cache, empty ones with a short TTL)
     stage: str = "query"  # query -> download -> process -> render
     done: int = 0
     total: int = 0
     message: str = ""
-    result: dict | None = None
     created: float = field(default_factory=time.monotonic)
     started: bool = False
     finished: float | None = None
@@ -80,9 +82,6 @@ def _poll(k: str, runner):
         if j.status == "error":  # drop it so the next request retries
             JOBS.pop(k)
             return 200, {"status": "error", "message": j.message}
-        if j.status == "ready":
-            JOBS.pop(k)
-            return 200, j.result
         if now - j.created > float(os.environ.get("MAX_JOB_SECONDS", "1800")):
             raise ApiError(503, "timeout", "Задача превысила время ожидания; загрузки ещё завершаются. Повторите запрос позже")
         return 202, {"status": "running", "job_id": j.id, "stage": j.stage if j.started else "queued", "done": j.done, "total": j.total,
@@ -184,6 +183,8 @@ def _processing(p):
     from processing.frames import DIFF_METHOD
 
     return {"epochs": epoch_limits(), "background": BACKGROUND_METHOD,
+            "registration": {"name": "header_wcs_reprojection", "independently_verified": False,
+                             "astrometric_precision_arcsec": None},
             "difference": DIFF_METHOD if p.mode in ("diff", "trail") else None,
             "measurement": centroid.METHOD}
 
@@ -208,6 +209,8 @@ def _pipeline(j, p, r):
 
     _stage(j, "query", "Поиск снимков")
     meta = irsa.exposures(ra, dec, p.det)
+    res["archive_source"] = getattr(meta, "source", "tables" if irsa.selection_token() != "archive" else "tap")
+    res["warnings"].extend(getattr(meta, "warnings", []))
     if not meta:
         res["warnings"].append("По этим параметрам нет доступных кадров в ответе архива")
         return res
@@ -270,6 +273,17 @@ def _pipeline(j, p, r):
         res["warnings"].append(f"Отброшено непригодных экспозиций: {res['exposure_counts']['rejected']}")
     if len(frames) == 1:
         res["warnings"].append("Доступна одна эпоха: последовательность разных дат пока недоступна")
+    if frames:
+        res["warnings"].extend([
+            "Независимая регистрация по опорным звёздам не проверена; точность измеренного движения не подтверждена",
+            "Центроиды — кандидаты, не подтверждённые положения цели; ошибки центроидов не включают все систематические эффекты",
+        ])
+    if len(frames) > 1:
+        # Even a <5% change can select a different narrow LVF band. The average wavelength
+        # and detector ID cannot certify matching bandpasses, PSFs or photometric response.
+        res["warnings"].append(
+            "Различия яркости и разностные остатки не подтверждают переменность или движение: "
+            "нужны сопоставимые полосы/отклики, проверка масок и точности совмещения")
     diffs = template = scales = None
     if p.mode in ("diff", "trail"):
         if len(frames) < 2:
@@ -296,14 +310,27 @@ def _pipeline(j, p, r):
         else:
             prender.save_gray(arr, d / f"f{i}.png", vmin, vmax, saturated=f.contam)
         prender.save_mask(f.contam, d / f"f{i}_flags.png")  # bad and contaminated pixels; never SOURCE
-        pred = None
+        pred = pred_fits = None
         if r["motion"]:  # where the object should be on the frame date
             x, y = wcs.world_to_pixel(_sky(r, f.mjd))
             if np.isfinite([x, y]).all() and 0 <= x < shape[1] and 0 <= y < h:
                 pred = prender.fits_to_png_xy(x, y, h)
+                pred_fits = (float(x), float(y))
             else:
                 res["warnings"].append(f"Эпоха {i + 1}: прогноз вне поля; маркер скрыт")
         m = centroid.measure(arr, signed, saturated=f.contam)
+        # Suppress a clearly discrepant candidate in the legacy single-marker field. Agreement alone does
+        # not identify the target (WISE 0855 at 4.42 um had a candidate 17 px from its prediction).
+        if not r["motion"]:
+            assoc = "no_prediction"
+        elif pred_fits is None:  # the model puts the target outside this frame: no object here is the target
+            assoc = "prediction_outside_field"
+        else:
+            assoc = "no_measurement"
+        offset = None
+        if m["xy"] is not None and pred_fits is not None:
+            offset = float(np.hypot(m["xy"][0] - pred_fits[0], m["xy"][1] - pred_fits[1]))
+            assoc = "far_from_prediction" if offset > ASSOC_PX else "consistent_with_prediction"
         cands = [{"kind": c["kind"], "sign": c["sign"], "xy": prender.fits_to_png_xy(c["xy"][0], c["xy"][1], h),
                   "err_px": [round(e, 3) for e in c["err_px"]], "area_px": c["area"], "snr": round(c["snr"], 1),
                   "quality": c["quality"], "flags": c["flags"]}
@@ -330,11 +357,14 @@ def _pipeline(j, p, r):
             # measured_px: the centre when the choice is unambiguous (status ok); null when nothing is found or
             # when the largest and the central object differ (both are listed, nothing is guessed). In diff mode
             # only the "+" residual (where the object is in this frame) gives the position.
-            "measured_px": prender.fits_to_png_xy(m["xy"][0], m["xy"][1], h) if m["status"] == "ok" and m["quality"] != "poor" else None,
+            "measured_px": prender.fits_to_png_xy(m["xy"][0], m["xy"][1], h)
+            if m["status"] == "ok" and m["quality"] != "poor"
+            and assoc not in ("far_from_prediction", "prediction_outside_field") else None,
             "measured_candidates": cands,
             "measurement": {"status": m["status"], "reason": m["reason"], "quality": m["quality"],
                             "flags": m["flags"], "n_rejected_hot": m["n_rejected_hot"],
-                            "n_low_snr": m["n_low_snr"],
+                            "n_low_snr": m["n_low_snr"], "target_association": assoc,
+                            "offset_from_prediction_px": None if offset is None else round(offset, 3),
                             "err_px": None if m["err_px"] is None else [round(e, 3) for e in m["err_px"]]},
             "quality": {"status": "limited" if limitations else "unchecked", "verified": False,
                         "coverage_fraction": round(coverage, 5), "reasons": limitations},
@@ -350,10 +380,12 @@ def _pipeline(j, p, r):
         prender.save_rgb(trail(diffs), d / "trail.png", background=template, vmin=vmin, vmax=vmax)
         res["trail_url"] = f"/cache/{j.key}/trail.png"
 
-    waves = [f.wave_um for f in frames if np.isfinite(f.wave_um)]
-    if len(waves) > 1 and (max(waves) - min(waves)) / np.mean(waves) > WAVE_SPREAD_WARN:
-        res["warnings"].append(f"λ в точке цели меняется между эпохами ({min(waves):.2f}-{max(waves):.2f} мкм): "
-                               "у объектов с крутым спектром остатки в разностном кадре могут быть не движением")
+    ss = res["spectral_sampling"] = spectral_sampling(frames)
+    if ss["different_channels"]:
+        width = f", ширина канала ≈ {ss['channel_width_um']:.3f} мкм" if ss["channel_width_um"] else ""
+        res["warnings"].append(f"Цель снята в разных спектральных каналах ({ss['wave_min_um']:.2f}-{ss['wave_max_um']:.2f} мкм"
+                               f"{width}): разница яркости может быть связана с формой спектра; "
+                               "переменность и движение по этим остаткам не подтверждены")
     c = (h // 2, shape[1] // 2)
     if any(f.contam[c[0] - 1:c[0] + 2, c[1] - 1:c[1] + 2].any() for f in frames):
         res["warnings"].append("В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)")
@@ -376,7 +408,12 @@ def _spectrum_job(j, r):
     def progress(stage, done, total, msg):
         _stage(j, stage, msg, done, total)
 
-    res = build_spectrum(center, lambda mjd: _sky(r, mjd), progress=progress)
+    from Exposure.irsa import ArchiveQueryError
+
+    try:
+        res = build_spectrum(center, lambda mjd: _sky(r, mjd), progress=progress)
+    except ArchiveQueryError as error:
+        raise ApiError(502, "upstream", str(error)) from error
     res["query"] = {"ra": ra, "dec": dec, "target": r["label"]}
     res["target_info"] = r.get("motion")
     res["center_mjd"] = r.get("center_mjd")
@@ -405,6 +442,7 @@ def lightcurve_view(p: Params, wave_min: float, wave_max: float):
     res["query"] = payload.get("query")
     res["target_info"] = payload.get("target_info")
     res["warnings"] = list(payload.get("warnings", []))  # copy: never mutate the cached spectrum
+    res["warnings"] += res.pop("lightcurve_warnings", [])  # points from different spectral channels
     if not res["flux"]:
         res["warnings"].append(f"В окне {wave_min:.3f}–{wave_max:.3f} мкм нет надёжных точек спектра; "
                                "задайте wave_min и wave_max шире или на другом детекторе")

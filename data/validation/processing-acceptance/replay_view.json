@@ -1,0 +1,654 @@
+{
+ "barnard": {
+  "stored_obs": [
+   "2025W33_2C_0321_1",
+   "2026W12_1A_0598_1",
+   "2026W15_2A_0137_1",
+   "2026W19_1A_0046_1",
+   "2026W33_2A_0594_4"
+  ],
+  "replayed_obs": [
+   "2025W33_2C_0321_1",
+   "2026W12_1A_0598_1",
+   "2026W15_2A_0137_1",
+   "2026W19_1A_0046_1",
+   "2026W33_2A_0594_4"
+  ],
+  "http": 200,
+  "spectral_sampling": {
+   "wave_min_um": 1.6504,
+   "wave_max_um": 2.3074,
+   "channel_width_um": 0.0442,
+   "different_channels": true,
+   "n_samples": 5
+  },
+  "warnings": [
+   "Цель снята в разных спектральных каналах (1.65-2.31 мкм, ширина канала ≈ 0.044 мкм): разница яркости между кадрами — это смесь переменности и формы спектра, а остатки в разностном кадре могут быть не движением",
+   "В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)"
+  ],
+  "frames": [
+   {
+    "obs_id": "2025W33_2C_0321_1",
+    "date": "2025-08-15",
+    "wave_um": 2.3074,
+    "coverage": 0.94858,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     28.855,
+     31.044
+    ],
+    "status": "ok",
+    "quality": "poor",
+    "association": "far_from_prediction",
+    "offset_px": 4.512,
+    "flags": [
+     "masked_pixels",
+     "saturated_core",
+     "touches_nodata",
+     "touches_edge",
+     "elongated"
+    ],
+    "candidates": [
+     [
+      "largest+central",
+      null,
+      [
+       29.045,
+       26.536
+      ],
+      "poor"
+     ]
+    ]
+   },
+   {
+    "obs_id": "2026W12_1A_0598_1",
+    "date": "2026-03-19",
+    "wave_um": 1.7935,
+    "coverage": 0.81528,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     28.771,
+     30.076
+    ],
+    "status": "ok",
+    "quality": "poor",
+    "association": "far_from_prediction",
+    "offset_px": 2.324,
+    "flags": [
+     "masked_pixels",
+     "saturated_core",
+     "touches_nodata",
+     "elongated"
+    ],
+    "candidates": [
+     [
+      "largest+central",
+      null,
+      [
+       28.856,
+       27.753
+      ],
+      "poor"
+     ]
+    ]
+   },
+   {
+    "obs_id": "2026W15_2A_0137_1",
+    "date": "2026-04-10",
+    "wave_um": 1.7932,
+    "coverage": 0.51853,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     28.784,
+     29.96
+    ],
+    "status": "ok",
+    "quality": "poor",
+    "association": "far_from_prediction",
+    "offset_px": 3.811,
+    "flags": [
+     "masked_pixels",
+     "saturated_core",
+     "touches_nodata",
+     "elongated"
+    ],
+    "candidates": [
+     [
+      "largest+central",
+      null,
+      [
+       28.985,
+       26.155
+      ],
+      "poor"
+     ]
+    ]
+   },
+   {
+    "obs_id": "2026W19_1A_0046_1",
+    "date": "2026-05-04",
+    "wave_um": 2.1062,
+    "coverage": 0.51767,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     28.811,
+     29.834
+    ],
+    "status": "ok",
+    "quality": "fair",
+    "association": "far_from_prediction",
+    "offset_px": 1.476,
+    "flags": [
+     "masked_pixels",
+     "saturated_core",
+     "elongated"
+    ],
+    "candidates": [
+     [
+      "largest+central",
+      null,
+      [
+       29.163,
+       28.401
+      ],
+      "fair"
+     ]
+    ]
+   },
+   {
+    "obs_id": "2026W33_2A_0594_4",
+    "date": "2026-08-16",
+    "wave_um": 1.6504,
+    "coverage": 0.95317,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     28.986,
+     29.355
+    ],
+    "status": "ok",
+    "quality": "poor",
+    "association": "far_from_prediction",
+    "offset_px": 5.543,
+    "flags": [
+     "masked_pixels",
+     "saturated_core",
+     "touches_nodata",
+     "touches_edge",
+     "elongated"
+    ],
+    "candidates": [
+     [
+      "largest+central",
+      null,
+      [
+       28.903,
+       23.813
+      ],
+      "poor"
+     ]
+    ]
+   }
+  ]
+ },
+ "epsindib": {
+  "stored_obs": [
+   "2025W18_1B_0081_2",
+   "2025W21_1B_0227_1",
+   "2025W24_1A_0245_2",
+   "2025W39_2A_0693_3",
+   "2025W44_2B_0494_1",
+   "2026W18_1A_0444_1",
+   "2026W39_1A_0276_1"
+  ],
+  "replayed_obs": [
+   "2025W18_1B_0081_2",
+   "2025W21_1B_0227_1",
+   "2025W24_1A_0245_2",
+   "2025W39_2A_0693_3",
+   "2025W44_2B_0494_1",
+   "2026W18_1A_0444_1",
+   "2026W39_1A_0276_1"
+  ],
+  "http": 200,
+  "spectral_sampling": {
+   "wave_min_um": 1.6383,
+   "wave_max_um": 1.8475,
+   "channel_width_um": 0.0418,
+   "different_channels": true,
+   "n_samples": 7
+  },
+  "warnings": [
+   "Цель снята в разных спектральных каналах (1.64-1.85 мкм, ширина канала ≈ 0.042 мкм): разница яркости между кадрами — это смесь переменности и формы спектра, а остатки в разностном кадре могут быть не движением"
+  ],
+  "frames": [
+   {
+    "obs_id": "2025W18_1B_0081_2",
+    "date": "2025-04-29",
+    "wave_um": 1.647,
+    "coverage": 0.96869,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     29.92,
+     28.345
+    ],
+    "status": "ambiguous",
+    "quality": null,
+    "association": "no_measurement",
+    "offset_px": null,
+    "flags": [],
+    "candidates": [
+     [
+      "largest",
+      null,
+      [
+       54.24,
+       31.677
+      ],
+      "poor"
+     ],
+     [
+      "central",
+      null,
+      [
+       29.886,
+       28.459
+      ],
+      "poor"
+     ]
+    ]
+   },
+   {
+    "obs_id": "2025W21_1B_0227_1",
+    "date": "2025-05-20",
+    "wave_um": 1.7637,
+    "coverage": 0.97443,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     29.88,
+     28.378
+    ],
+    "status": "ambiguous",
+    "quality": null,
+    "association": "no_measurement",
+    "offset_px": null,
+    "flags": [],
+    "candidates": [
+     [
+      "largest",
+      null,
+      [
+       53.465,
+       33.068
+      ],
+      "poor"
+     ],
+     [
+      "central",
+      null,
+      [
+       29.803,
+       28.425
+      ],
+      "good"
+     ]
+    ]
+   },
+   {
+    "obs_id": "2025W24_1A_0245_2",
+    "date": "2025-06-10",
+    "wave_um": 1.8475,
+    "coverage": 0.93565,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     29.845,
+     28.413
+    ],
+    "status": "ambiguous",
+    "quality": null,
+    "association": "no_measurement",
+    "offset_px": null,
+    "flags": [],
+    "candidates": [
+     [
+      "largest",
+      null,
+      [
+       53.915,
+       31.699
+      ],
+      "poor"
+     ],
+     [
+      "central",
+      null,
+      [
+       29.868,
+       28.389
+      ],
+      "good"
+     ]
+    ]
+   },
+   {
+    "obs_id": "2025W39_2A_0693_3",
+    "date": "2025-09-28",
+    "wave_um": 1.6383,
+    "coverage": 0.91238,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     29.713,
+     28.565
+    ],
+    "status": "ambiguous",
+    "quality": null,
+    "association": "no_measurement",
+    "offset_px": null,
+    "flags": [],
+    "candidates": [
+     [
+      "largest",
+      null,
+      [
+       52.524,
+       34.407
+      ],
+      "poor"
+     ],
+     [
+      "central",
+      null,
+      [
+       29.749,
+       28.662
+      ],
+      "good"
+     ]
+    ]
+   },
+   {
+    "obs_id": "2025W44_2B_0494_1",
+    "date": "2025-11-01",
+    "wave_um": 1.7401,
+    "coverage": 0.95116,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     29.667,
+     28.591
+    ],
+    "status": "ambiguous",
+    "quality": null,
+    "association": "no_measurement",
+    "offset_px": null,
+    "flags": [],
+    "candidates": [
+     [
+      "largest",
+      null,
+      [
+       52.147,
+       34.55
+      ],
+      "poor"
+     ],
+     [
+      "central",
+      null,
+      [
+       29.613,
+       28.711
+      ],
+      "good"
+     ]
+    ]
+   },
+   {
+    "obs_id": "2026W18_1A_0444_1",
+    "date": "2026-04-29",
+    "wave_um": 1.805,
+    "coverage": 0.91152,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     29.273,
+     28.746
+    ],
+    "status": "ambiguous",
+    "quality": null,
+    "association": "no_measurement",
+    "offset_px": null,
+    "flags": [],
+    "candidates": [
+     [
+      "largest",
+      null,
+      [
+       54.869,
+       33.709
+      ],
+      "poor"
+     ],
+     [
+      "central",
+      null,
+      [
+       29.193,
+       28.864
+      ],
+      "poor"
+     ]
+    ]
+   },
+   {
+    "obs_id": "2026W39_1A_0276_1",
+    "date": "2026-09-22",
+    "wave_um": 1.7215,
+    "coverage": 0.93508,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     29.074,
+     28.96
+    ],
+    "status": "ambiguous",
+    "quality": null,
+    "association": "no_measurement",
+    "offset_px": null,
+    "flags": [],
+    "candidates": [
+     [
+      "largest",
+      null,
+      [
+       54.448,
+       35.476
+      ],
+      "poor"
+     ],
+     [
+      "central",
+      null,
+      [
+       29.1,
+       29.059
+      ],
+      "good"
+     ]
+    ]
+   }
+  ]
+ },
+ "wise0855": {
+  "stored_obs": [
+   "2025W19_1B_0116_1",
+   "2025W46_1A_0075_4",
+   "2025W50_2A_0232_1",
+   "2026W17_1B_0227_2"
+  ],
+  "replayed_obs": [
+   "2025W19_1B_0116_1",
+   "2025W46_1A_0075_4",
+   "2025W50_2A_0232_1",
+   "2026W17_1B_0227_2"
+  ],
+  "http": 200,
+  "spectral_sampling": {
+   "wave_min_um": 4.4178,
+   "wave_max_um": 4.9674,
+   "channel_width_um": 0.0369,
+   "different_channels": true,
+   "n_samples": 4
+  },
+  "warnings": [
+   "Цель снята в разных спектральных каналах (4.42-4.97 мкм, ширина канала ≈ 0.037 мкм): разница яркости между кадрами — это смесь переменности и формы спектра, а остатки в разностном кадре могут быть не движением"
+  ],
+  "frames": [
+   {
+    "obs_id": "2025W19_1B_0116_1",
+    "date": "2025-05-05",
+    "wave_um": 4.9674,
+    "coverage": 0.49785,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     27.121,
+     29.125
+    ],
+    "status": "ok",
+    "quality": "fair",
+    "association": "far_from_prediction",
+    "offset_px": 16.952,
+    "flags": [
+     "elongated"
+    ],
+    "candidates": [
+     [
+      "largest+central",
+      null,
+      [
+       32.22,
+       45.291
+      ],
+      "fair"
+     ]
+    ]
+   },
+   {
+    "obs_id": "2025W46_1A_0075_4",
+    "date": "2025-11-10",
+    "wave_um": 4.4178,
+    "coverage": 0.52772,
+    "old_measured_px": [
+     32.202,
+     45.36
+    ],
+    "new_measured_px": null,
+    "predicted_px": [
+     27.666,
+     29.109
+    ],
+    "status": "ok",
+    "quality": "fair",
+    "association": "far_from_prediction",
+    "offset_px": 16.899,
+    "flags": [
+     "elongated"
+    ],
+    "candidates": [
+     [
+      "largest+central",
+      null,
+      [
+       32.211,
+       45.385
+      ],
+      "fair"
+     ]
+    ]
+   },
+   {
+    "obs_id": "2025W50_2A_0232_1",
+    "date": "2025-12-12",
+    "wave_um": 4.6336,
+    "coverage": 0.51508,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     27.797,
+     29.111
+    ],
+    "status": "ambiguous",
+    "quality": null,
+    "association": "no_measurement",
+    "offset_px": null,
+    "flags": [],
+    "candidates": [
+     [
+      "largest",
+      null,
+      [
+       32.348,
+       45.402
+      ],
+      "poor"
+     ],
+     [
+      "central",
+      null,
+      [
+       27.885,
+       29.014
+      ],
+      "good"
+     ]
+    ]
+   },
+   {
+    "obs_id": "2026W17_1B_0227_2",
+    "date": "2026-04-21",
+    "wave_um": 4.4237,
+    "coverage": 0.53605,
+    "old_measured_px": null,
+    "new_measured_px": null,
+    "predicted_px": [
+     28.387,
+     29.027
+    ],
+    "status": "ambiguous",
+    "quality": null,
+    "association": "no_measurement",
+    "offset_px": null,
+    "flags": [],
+    "candidates": [
+     [
+      "largest",
+      null,
+      [
+       32.218,
+       45.277
+      ],
+      "poor"
+     ],
+     [
+      "central",
+      null,
+      [
+       28.6,
+       29.084
+      ],
+      "good"
+     ]
+    ]
+   }
+  ]
+ }
+}

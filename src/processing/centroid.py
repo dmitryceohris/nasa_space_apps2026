@@ -34,6 +34,8 @@ ELONGATED_AXIS_RATIO = 1.5  # second-moment axis ratio above which an object is 
 ELONGATED_MIN_SNR = 10.0  # the shape of fainter objects is noise, they are not tested
 LOW_SNR = 5.0  # objects below this S/N are listed nowhere and never chosen: noise gives such blobs at 3 sigma
 TIE_PX = 0.5  # two objects whose distances to the centre differ by less than this are equally "central"
+DIPOLE_OVERLAP_PX = 5.0  # in a difference frame a "-" part closer than this eats the facing wing of the "+":
+# a true 1.3 px shift gave "+" and "-" centres 3.0 px apart, each ~0.9 px off; at 5.9 px the bias is < 0.4 px
 
 METHOD = {
     "name": "threshold_moment_centroid",
@@ -52,6 +54,8 @@ METHOD = {
         "соприкасающиеся объекты сливаются в один (флаг elongated), разделения нет",
         "у объекта, касающегося маски или края кадра, центр смещён внутрь видимой части",
         "одиночный горячий пиксель отбрасывается только если он ярче ~10σ и соседи почти пустые",
+        "в разностном кадре «+» ближе 5 пикс. к «−» смещён от него (при сдвиге 1.3 пикс. на 0.9 пикс.): "
+        "такой центр помечается overlaps_negative_residual и не считается положением",
         "объекты с S/N < 5 не выбираются (на чистом шуме порог 3σ даёт такие пятна), только считаются",
         "погрешность учитывает только шум, а не форму PSF и пиксельную дискретизацию",
     ],
@@ -195,10 +199,11 @@ def measure(img, signed=False, saturated=None, k=K_SIGMA, min_area=MIN_AREA, smo
     a = np.asarray(img, float)
     sat = None if saturated is None else np.asarray(saturated, bool)
     signs = (1, -1) if signed else (1,)
-    per_sign, hot, faint = {}, 0, {}
+    per_sign, hot, faint, found = {}, 0, {}, {}
     for sg in signs:
         objs, h, lab = _detect(sg * a, k, min_area, smooth, sat, sg if signed else None)
         objs, faint[sg] = _split_faint(objs)
+        found[sg] = objs
         hot += h
         per_sign[sg] = _choose(objs, lab, a.shape)
     pos, reason = per_sign[1]
@@ -218,7 +223,12 @@ def measure(img, signed=False, saturated=None, k=K_SIGMA, min_area=MIN_AREA, smo
         out.update(status="ambiguous", reason=reason)
         return out
     c = pos[0]
-    out.update(status="ok", xy=c["xy"], err_px=c["err_px"], quality=c["quality"], flags=c["flags"])
+    flags, quality = list(c["flags"]), c["quality"]
+    if signed and any(np.hypot(n["xy"][0] - c["xy"][0], n["xy"][1] - c["xy"][1]) < DIPOLE_OVERLAP_PX
+                      for n in found[-1]):  # every '-' object, not only the listed largest/central ones
+        flags.append("overlaps_negative_residual")
+        quality = "poor"
+    out.update(status="ok", xy=c["xy"], err_px=c["err_px"], quality=quality, flags=flags)
     return out
 
 

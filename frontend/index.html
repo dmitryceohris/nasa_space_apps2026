@@ -22,6 +22,7 @@
   #method { margin: 6px 0; font-size: 13px; color: #aaa; }
   #method ul { margin: 4px 0; padding-left: 18px; }
   #aladin { width: 100%; height: 340px; margin: 0 0 12px; border-radius: 6px; overflow: hidden; background: #000; }
+  #target-info, #field-center, #frame-quality, #warnings, #method { overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -120,11 +121,11 @@ async function pollJson(path, isCurrent, onProgress) {
   }
 }
 // What the graphs are about: a named object (the API then follows its proper motion), else the coordinates.
-const PER_EPOCH = 3;  // exposures per epoch and detector: one job serves both graphs; more = more light-curve points
+// One /api/spectrum job serves both graphs; the server chooses 2 exposures per epoch and detector.
 function graphQuery() {
   const t = $("target").value.trim(), ra = $("ra").value.trim(), dec = $("dec").value.trim();
   if (Boolean(ra) !== Boolean(dec)) throw new Error("Please enter both RA and Dec coordinates.");
-  const q = new URLSearchParams({per_epoch: PER_EPOCH});
+  const q = new URLSearchParams();
   if (ra && dec) { q.set("ra", ra); q.set("dec", dec); }
   else if (t) q.set("target", t);
   else if (lastGrid) { const c = center(); q.set("ra", c.ra); q.set("dec", c.dec); }
@@ -251,6 +252,10 @@ function measuredText(f) {
       return f.candidates.length ? `  |  ${f.candidates.length} candidates, no single centre` : "  |  no source found";
     return "";
   }
+  if (m.target_association === "far_from_prediction")
+    return `  |  candidate ${m.offset_from_prediction_px} px from prediction; target identity unverified`;
+  if (m.target_association === "prediction_outside_field")
+    return "  |  target prediction outside field; visible sources remain unassociated candidates";
   if (m.quality === "poor") return `  |  candidate only: poor quality (${(m.flags || []).join(", ")})`;
   if (m.status === "ok") {
     const err = m.err_px ? ` ±${Math.max(...m.err_px).toFixed(2)} px` : "";
@@ -273,7 +278,8 @@ function show(n) {
   $("frame-date").textContent = `${f.trail ? "Observation dates" : "Observation date"} (UTC): ${f.displayDate || f.date}`;
   $("date-step").textContent = f.trail ? `All ${f.epochs} epochs combined` : `Date ${i + 1} of ${frames.length}`;
   const quality = f.quality;
-  const details = ["Source: NASA SPHEREx via NASA/IPAC IRSA."];
+  const details = ["Source: NASA SPHEREx via NASA/IPAC IRSA.",
+    "Violet pixels have no usable data. White fill in masked bright regions is not a flux measurement."];
   const reasonText = {incomplete_pixel_coverage:"some pixels have no usable data",contaminated_pixels:"saturated or contaminated pixels",approximate_wavelength:"wavelength is approximate",invalid_wavelength:"spectral calibration is unavailable here",time_assumptions:"observation time includes assumptions"};
   if (quality) details.push(`Useful pixel coverage: ${(quality.coverage_fraction * 100).toFixed(1)}%. Quality: ${quality.status}; scientific verification: ${quality.verified ? "verified" : "pending"}. ${(quality.reasons || []).map(r=>reasonText[r] || r).join("; ")}`);
   if (f.predictionStatus === "no_model") details.push("No motion prediction for this fixed field.");
