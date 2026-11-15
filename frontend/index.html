@@ -27,7 +27,7 @@
 <link rel="stylesheet" href="design.css">
 </head>
 <body>
-<h2>SPHEREx Sky Viewer</h2>
+<h2>SPHEREx Blink</h2>
 <div id="layout"><div id="col-left">
 <p><a style="color:#8fd7ff" href="/challenge-demo/">Five targets · saved GIF gallery</a></p>
 
@@ -427,7 +427,7 @@ function syncUrl() {
   history.replaceState(null, "", "?" + p.toString());
   const iframe = document.createElement("iframe");
   iframe.src = location.href;
-  iframe.title = "SPHEREx Sky Viewer";
+  iframe.title = "SPHEREx Blink";
   iframe.style.cssText = "width:100%;height:800px;border:0";
   iframe.loading = "lazy";
   $("share-url").value = iframe.src;
