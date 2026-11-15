@@ -1,0 +1,44 @@
+{
+  "source": {
+    "evidence_path": "data/validation/science-acceptance/evidence.json",
+    "sha256": "f78b8aa832bf228dddca5b93cdf9805ffab2bc6eed49722dba4397153c50d243"
+  },
+  "inputs": [
+    {
+      "obs_id": "2025W19_1B_0116_1",
+      "detector": 6,
+      "mjd_utc": 60800.70069465,
+      "date_utc": "2025-05-05T16:49:00.018",
+      "product_url": "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/level2/2025W19_1B/l2b-v27-2026-197/6/level2_2025W19_1B_0116_1D6_spx_l2b-v27-2026-197.fits",
+      "sha256": "35662f0769b171d33193c9182773c9f9f13ae6957535c629bcf4a18134bd636a",
+      "path": "cache/cut_8e076763a75ec62c060df0601ff7cc78.fits"
+    },
+    {
+      "obs_id": "2025W46_1A_0075_4",
+      "detector": 6,
+      "mjd_utc": 60989.297473643,
+      "date_utc": "2025-11-10T07:08:21.723",
+      "product_url": "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/level2/2025W46_1A/l2b-v27-2026-206/6/level2_2025W46_1A_0075_4D6_spx_l2b-v27-2026-206.fits",
+      "sha256": "4eb26ab8b8f33eac89b7404b6a3b5f7ad01ca5998eaeb4d8d35c7acc04f8dc89",
+      "path": "cache/cut_4d4ba21b8e0753d0accc6776fd440a51.fits"
+    },
+    {
+      "obs_id": "2025W50_2A_0232_1",
+      "detector": 6,
+      "mjd_utc": 61021.283493666,
+      "date_utc": "2025-12-12T06:48:13.853",
+      "product_url": "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/level2/2025W50_2A/l2b-v27-2026-210/6/level2_2025W50_2A_0232_1D6_spx_l2b-v27-2026-210.fits",
+      "sha256": "0728cdf142f7c553b7fc2369f1eac905cbcb817633a3b2a0390ee697f326cce7",
+      "path": "cache/cut_45c3a303fdf05286a3ec1bf45138179b.fits"
+    },
+    {
+      "obs_id": "2026W17_1B_0227_2",
+      "detector": 6,
+      "mjd_utc": 61151.198599395,
+      "date_utc": "2026-04-21T04:45:58.988",
+      "product_url": "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/level2/2026W17_1B/l2b-v27-2026-242/6/level2_2026W17_1B_0227_2D6_spx_l2b-v27-2026-242.fits",
+      "sha256": "526dbc5d20a63e016b1ef6cce46ef01de99b5d0d76eb338c448c944a000cb8f2",
+      "path": "cache/cut_c4bcb199a3489e76175e6f0da5ef35dc.fits"
+    }
+  ]
+}

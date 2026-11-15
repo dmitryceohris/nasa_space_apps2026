@@ -189,10 +189,10 @@ def center_mjd() -> float:
     return float(os.environ["CENTER_MJD"]) if os.environ.get("CENTER_MJD") else float(Time.now().mjd)
 
 
-def for_params(p: Params) -> dict:
+def for_params(p: Params, *, epoch=None) -> dict:
     """-> {center:(ra,dec) used for the IRSA query and the grid, motion: SIMBAD record or None, label}."""
     if p.ra is not None:  # explicit coordinates: no proper motion is known, so no predicted position either
         return {"center": (p.ra, p.dec), "motion": None, "label": p.target}
     o = resolve(p.target)
-    mjd = center_mjd()
+    mjd = center_mjd() if epoch is None else epoch
     return {"center": propagate(o, mjd), "motion": o, "label": o["name"], "center_mjd": mjd}

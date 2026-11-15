@@ -1,0 +1,362 @@
+{
+  "created_at_utc": "2026-11-15T06:53:26.397",
+  "source": "Application /api/view and /api/export.gif with saved real archive inputs",
+  "network_requests": 0,
+  "cache_version": 12,
+  "center_mjd": 61358,
+  "credits": "NASA SPHEREx via NASA/IPAC IRSA",
+  "total_frames": 24,
+  "total_exposures": 121,
+  "targets": [
+    {
+      "id": "barnard",
+      "name": "Звезда Барнарда",
+      "detector": 3,
+      "fov_arcmin": 3.0,
+      "mode": "coadd",
+      "frames": 5,
+      "exposures": 23,
+      "exposure_counts": {
+        "selected": 23,
+        "failed": 0,
+        "used": 23,
+        "rejected": 0
+      },
+      "first_exposure_utc": "2025-08-15T20:46:08.897",
+      "last_exposure_utc": "2026-08-20T21:45:51.099",
+      "exposure_baseline_days": 370.041461,
+      "first_frame_date": "2025-08-20",
+      "last_frame_date": "2026-08-18",
+      "frame_wavelength_range_um": [
+        1.7928,
+        2.1799
+      ],
+      "min_coverage_fraction": 0.8799,
+      "max_coverage_fraction": 0.95006,
+      "candidate_display_markers": 3,
+      "validated_astrometry_frames": 0,
+      "measured_motion_arcsec_yr": null,
+      "warnings": [
+        "Сохранённая выборка IRSA, повторно обработанная локально; новый поиск архива не выполнялся",
+        "Независимая регистрация по опорным звёздам не проверена; точность измеренного движения не подтверждена",
+        "Центроиды — кандидаты, не подтверждённые положения цели; ошибки центроидов не включают все систематические эффекты",
+        "Различия яркости и разностные остатки не подтверждают переменность или движение: нужны сопоставимые полосы/отклики, проверка масок и точности совмещения",
+        "Цель снята в разных спектральных каналах (1.62-2.33 мкм, ширина канала ≈ 0.052 мкм): разница яркости может быть связана с формой спектра; переменность и движение по этим остаткам не подтверждены",
+        "В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)"
+      ],
+      "gif": "barnard/blink.gif",
+      "api_gif": "barnard/api.gif",
+      "api_response": "barnard/api_response.json"
+    },
+    {
+      "id": "epsindib",
+      "name": "Epsilon Indi B",
+      "detector": 3,
+      "fov_arcmin": 5.0,
+      "mode": "coadd",
+      "frames": 7,
+      "exposures": 32,
+      "exposure_counts": {
+        "selected": 32,
+        "failed": 0,
+        "used": 32,
+        "rejected": 0
+      },
+      "first_exposure_utc": "2025-04-29T01:34:17.378",
+      "last_exposure_utc": "2026-09-28T08:05:41.877",
+      "exposure_baseline_days": 517.271811,
+      "first_frame_date": "2025-05-01",
+      "last_frame_date": "2026-09-25",
+      "frame_wavelength_range_um": [
+        1.7633,
+        2.0608
+      ],
+      "min_coverage_fraction": 0.98667,
+      "max_coverage_fraction": 1.0,
+      "candidate_display_markers": 0,
+      "validated_astrometry_frames": 0,
+      "measured_motion_arcsec_yr": null,
+      "warnings": [
+        "Сохранённая выборка IRSA, повторно обработанная локально; новый поиск архива не выполнялся",
+        "Независимая регистрация по опорным звёздам не проверена; точность измеренного движения не подтверждена",
+        "Центроиды — кандидаты, не подтверждённые положения цели; ошибки центроидов не включают все систематические эффекты",
+        "Различия яркости и разностные остатки не подтверждают переменность или движение: нужны сопоставимые полосы/отклики, проверка масок и точности совмещения",
+        "Цель снята в разных спектральных каналах (1.64-2.37 мкм, ширина канала ≈ 0.046 мкм): разница яркости может быть связана с формой спектра; переменность и движение по этим остаткам не подтверждены",
+        "В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)"
+      ],
+      "gif": "epsindib/blink.gif",
+      "api_gif": "epsindib/api.gif",
+      "api_response": "epsindib/api_response.json"
+    },
+    {
+      "id": "wise0855",
+      "name": "WISE 0855",
+      "detector": 6,
+      "fov_arcmin": 3.0,
+      "mode": "coadd",
+      "frames": 4,
+      "exposures": 18,
+      "exposure_counts": {
+        "selected": 18,
+        "failed": 0,
+        "used": 18,
+        "rejected": 0
+      },
+      "first_exposure_utc": "2025-05-05T16:49:00.018",
+      "last_exposure_utc": "2026-05-11T02:19:42.221",
+      "exposure_baseline_days": 370.396322,
+      "first_frame_date": "2025-05-05",
+      "last_frame_date": "2026-04-28",
+      "frame_wavelength_range_um": [
+        4.6908,
+        4.9436
+      ],
+      "min_coverage_fraction": 0.99881,
+      "max_coverage_fraction": 1.0,
+      "candidate_display_markers": 3,
+      "validated_astrometry_frames": 0,
+      "measured_motion_arcsec_yr": null,
+      "warnings": [
+        "Сохранённая выборка IRSA, повторно обработанная локально; новый поиск архива не выполнялся",
+        "Независимая регистрация по опорным звёздам не проверена; точность измеренного движения не подтверждена",
+        "Центроиды — кандидаты, не подтверждённые положения цели; ошибки центроидов не включают все систематические эффекты",
+        "Различия яркости и разностные остатки не подтверждают переменность или движение: нужны сопоставимые полосы/отклики, проверка масок и точности совмещения",
+        "Цель снята в разных спектральных каналах (4.42-5.00 мкм, ширина канала ≈ 0.037 мкм): разница яркости может быть связана с формой спектра; переменность и движение по этим остаткам не подтверждены",
+        "В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)"
+      ],
+      "gif": "wise0855/blink.gif",
+      "api_gif": "wise0855/api.gif",
+      "api_response": "wise0855/api_response.json"
+    },
+    {
+      "id": "rwaur",
+      "name": "RW Aurigae",
+      "detector": 2,
+      "fov_arcmin": 3.0,
+      "mode": "coadd",
+      "frames": 3,
+      "exposures": 18,
+      "exposure_counts": {
+        "selected": 18,
+        "failed": 0,
+        "used": 18,
+        "rejected": 0
+      },
+      "first_exposure_utc": "2025-09-08T06:37:09.280",
+      "last_exposure_utc": "2026-09-15T08:05:44.142",
+      "exposure_baseline_days": 372.061515,
+      "first_frame_date": "2025-09-09",
+      "last_frame_date": "2026-09-12",
+      "frame_wavelength_range_um": [
+        1.3683,
+        1.4473
+      ],
+      "min_coverage_fraction": 0.99524,
+      "max_coverage_fraction": 0.99881,
+      "candidate_display_markers": 2,
+      "validated_astrometry_frames": 0,
+      "measured_motion_arcsec_yr": null,
+      "warnings": [
+        "Сохранённая выборка IRSA, повторно обработанная локально; новый поиск архива не выполнялся",
+        "Независимая регистрация по опорным звёздам не проверена; точность измеренного движения не подтверждена",
+        "Центроиды — кандидаты, не подтверждённые положения цели; ошибки центроидов не включают все систематические эффекты",
+        "Различия яркости и разностные остатки не подтверждают переменность или движение: нужны сопоставимые полосы/отклики, проверка масок и точности совмещения",
+        "Цель снята в разных спектральных каналах (1.15-1.65 мкм, ширина канала ≈ 0.034 мкм): разница яркости может быть связана с формой спектра; переменность и движение по этим остаткам не подтверждены",
+        "В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)"
+      ],
+      "gif": "rwaur/blink.gif",
+      "api_gif": "rwaur/api.gif",
+      "api_response": "rwaur/api_response.json"
+    },
+    {
+      "id": "rdra",
+      "name": "R Draconis",
+      "detector": 2,
+      "fov_arcmin": 3.0,
+      "mode": "coadd",
+      "frames": 5,
+      "exposures": 30,
+      "exposure_counts": {
+        "selected": 30,
+        "failed": 0,
+        "used": 30,
+        "rejected": 0
+      },
+      "first_exposure_utc": "2025-06-08T18:55:19.221",
+      "last_exposure_utc": "2026-06-23T10:54:15.217",
+      "exposure_baseline_days": 379.665926,
+      "first_frame_date": "2025-06-16",
+      "last_frame_date": "2026-06-22",
+      "frame_wavelength_range_um": [
+        1.2335,
+        1.3714
+      ],
+      "min_coverage_fraction": 0.87872,
+      "max_coverage_fraction": 0.93222,
+      "candidate_display_markers": 5,
+      "validated_astrometry_frames": 0,
+      "measured_motion_arcsec_yr": null,
+      "warnings": [
+        "Сохранённая выборка IRSA, повторно обработанная локально; новый поиск архива не выполнялся",
+        "Независимая регистрация по опорным звёздам не проверена; точность измеренного движения не подтверждена",
+        "Центроиды — кандидаты, не подтверждённые положения цели; ошибки центроидов не включают все систематические эффекты",
+        "Различия яркости и разностные остатки не подтверждают переменность или движение: нужны сопоставимые полосы/отклики, проверка масок и точности совмещения",
+        "Цель снята в разных спектральных каналах (1.09-1.62 мкм, ширина канала ≈ 0.032 мкм): разница яркости может быть связана с формой спектра; переменность и движение по этим остаткам не подтверждены",
+        "В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)"
+      ],
+      "gif": "rdra/blink.gif",
+      "api_gif": "rdra/api.gif",
+      "api_response": "rdra/api_response.json"
+    }
+  ],
+  "wise_objective_coordinate_test": {
+    "id": "wise0855",
+    "name": "WISE 0855",
+    "detector": 6,
+    "fov_arcmin": 6,
+    "mode": "single",
+    "frames": 4,
+    "exposures": 4,
+    "exposure_counts": {
+      "selected": 4,
+      "failed": 0,
+      "used": 4,
+      "rejected": 0
+    },
+    "first_exposure_utc": "2025-05-05T16:49:00.018",
+    "last_exposure_utc": "2026-04-21T04:45:58.988",
+    "exposure_baseline_days": 350.497905,
+    "first_frame_date": "2025-05-05",
+    "last_frame_date": "2026-04-21",
+    "frame_wavelength_range_um": [
+      4.4157,
+      4.9674
+    ],
+    "min_coverage_fraction": 0.90577,
+    "max_coverage_fraction": 0.93479,
+    "candidate_display_markers": 0,
+    "validated_astrometry_frames": 0,
+    "measured_motion_arcsec_yr": null,
+    "warnings": [
+      "Сохранённая выборка IRSA, повторно обработанная локально; новый поиск архива не выполнялся",
+      "Независимая регистрация по опорным звёздам не проверена; точность измеренного движения не подтверждена",
+      "Центроиды — кандидаты, не подтверждённые положения цели; ошибки центроидов не включают все систематические эффекты",
+      "Различия яркости и разностные остатки не подтверждают переменность или движение: нужны сопоставимые полосы/отклики, проверка масок и точности совмещения",
+      "Цель снята в разных спектральных каналах (4.42-4.97 мкм, ширина канала ≈ 0.035 мкм): разница яркости может быть связана с формой спектра; переменность и движение по этим остаткам не подтверждены"
+    ],
+    "gif": "wise0855-coordinates/blink.gif",
+    "api_gif": "wise0855-coordinates/api.gif",
+    "api_response": "wise0855-coordinates/api_response.json"
+  },
+  "science_audit": {
+    "source": "data/validation/science-remediation/measurements.json",
+    "source_sha256": "375c3353f6bb99c05159e78397918acb7a2f7ad36076919d4cc9f3a30040d318",
+    "checked_at_utc": "2026-11-15T06:32:14.701",
+    "scope": "Separate multi-detector science audit; not the GIF exposure subset",
+    "deduplication": "Full physical product_url, including release and detector; repeated cutouts counted once",
+    "targets": [
+      {
+        "id": "barnard",
+        "name": "Звезда Барнарда",
+        "unique_products": 42,
+        "accepted": 0,
+        "rejected": 39,
+        "unavailable": 3,
+        "attempts": 47,
+        "validated_motion": false,
+        "validated_lightcurve": false
+      },
+      {
+        "id": "epsindib",
+        "name": "Epsilon Indi B",
+        "unique_products": 45,
+        "accepted": 0,
+        "rejected": 40,
+        "unavailable": 5,
+        "attempts": 46,
+        "validated_motion": false,
+        "validated_lightcurve": false
+      },
+      {
+        "id": "wise0855",
+        "name": "WISE 0855",
+        "unique_products": 41,
+        "accepted": 6,
+        "rejected": 28,
+        "unavailable": 7,
+        "attempts": 47,
+        "validated_motion": false,
+        "validated_lightcurve": false
+      },
+      {
+        "id": "rwaur",
+        "name": "RW Aurigae",
+        "unique_products": 38,
+        "accepted": 0,
+        "rejected": 37,
+        "unavailable": 1,
+        "attempts": 42,
+        "validated_motion": false,
+        "validated_lightcurve": false
+      },
+      {
+        "id": "rdra",
+        "name": "R Draconis",
+        "unique_products": 48,
+        "accepted": 0,
+        "rejected": 44,
+        "unavailable": 4,
+        "attempts": 50,
+        "validated_motion": false,
+        "validated_lightcurve": false
+      }
+    ]
+  },
+  "source_sha256": {
+    "api/params.py": "9a6ad396f12997c12f80a0680a6d74c651bda68de72031dbd9d71ca4c3ef0a3a",
+    "api/resolve.py": "1d05f125d416607750e206c78d24fdb06f530405d3351779f4dfb2627cb9715f",
+    "api/irsa.py": "6f2e2f9627fc82fa9b5cbe293ab82b491a61e45819447b693137b4adb8d40018",
+    "api/limits.py": "f69a6c64a3d029a4f3750a695f02f723b14dd76872810adc1a17406ff566ac2f",
+    "api/render.py": "752fc039f391a50af8ed209e081f9d75cdb1e5eb724da63ef5edeb07d58952d7",
+    "api/centroid.py": "ce5116255caa884947f37adc9c13295994abdc162f56ab152c6cac6e13ef3bb9",
+    "api/cache.py": "6c28a4dec499eb0fb736c60de72ef17e3e33abff93b80d357674043882ab6ac9",
+    "api/__init__.py": "68e84a98808663fe1b650b0a5b914cdb5252b9c6418892c12d4278fad3e6afac",
+    "api/jobs.py": "a2ad1279999f8bdf79b100ec9d68bfcdc1c678dbf4f25791b23e7398ec7478cc",
+    "api/errors.py": "474d6a2bec157fd2609a8bfde981466c5fc04b1c34b64b2c53e58a4a7403b857",
+    "api/main.py": "9bb76880a565a1906959ac541e74f5c367fcb4c8dc60f39086a71f964f442485",
+    "src/Exposure/irsa.py": "2d63304a9e000851368a28871dbd68079be1f11da7f3ed28172deaf4aeb8a5eb",
+    "src/Exposure/exposure.py": "7c3fb2713ae3873ba63a3e560628e29e121d82a5258d5e3e0624c858ff2d96b0",
+    "src/Exposure/__init__.py": "4ed3cc7ca631f8c109ec813a5b1f9acd92c878adf86f5e1922a63457a979b891",
+    "src/Exposure/loader.py": "2119698b5f722899224c6ce1fd56ee6a2c31b3108e3cac160b6b85bd778a6e51",
+    "src/Exposure/calibration.py": "528696b00f6e6190b2a711e55cdadb5f8a9f4be9bf2cb2efd1cc1f44b4d38ce5",
+    "src/processing/observer.py": "2f6fc368098ed4a48995e762c36c8a11b2d34fdbaeb3cf48c806260a35b5645e",
+    "src/processing/targets.py": "c472bd0717d4298d9c68c0f8d3faaa300f846bb35dbe825c91cc948d0cc5fe4d",
+    "src/processing/epochs.py": "a8bc5c1637b9c569f8aada2899866251c3e16de22823882be3755eb7efb7e5ea",
+    "src/processing/references.py": "98d234f52f1b38a2f0f0e05ed336688c76ace486c6ee6d85de8fdcc77c773027",
+    "src/processing/render.py": "a47bfba099211c90447e9e720aa1b774242abd6b1a6f34cbfaf64bfc76c090f1",
+    "src/processing/observations.py": "833a4e73c9e8282b2481d6e6e6ba53a8b5521138f00b498d45a8fff7f8db5a6e",
+    "src/processing/centroid.py": "2425917370cdd96355701d02c25d5d90178d65094c81929b8a6542cdd54a62a1",
+    "src/processing/__init__.py": "1799c9f9da263ad35c7334ccc6ce8d12ffb87890bbcc3121c11747f230de294c",
+    "src/processing/psf.py": "6771b1fbea98c5d10785d10fe0632c5652059a1e8ef5d016b601a232f3ea7757",
+    "src/processing/astrometry.py": "4b66f6f340f496c8e4b9d70d5b8ee526478691cc4d23ee7e1f3eee9ba4763f7f",
+    "src/processing/frames.py": "f22d55822c9bfb6027ddad8fabcb5cba083a42d3eff386278f94af8a67709db9",
+    "src/processing/pipeline.py": "a346f5380970a49072faf8bc2f42f832723faa4963473fdcae0d4d4e10e808a0",
+    "src/processing/spectral.py": "4894624f42d4e61ff5c41367618869f86686330109b465efd77b4fd49fb51195",
+    "src/processing/statistics.py": "9dc3389c4c04f6edd768b4701a1c89cc83f5251533e965419c4b7d547ef0b83c",
+    "src/processing/photometry.py": "93608fb9fd579961b0df5bf4f40ef1e78cd16ec3b07766f2cec5f9dd7ed96b32",
+    "src/processing/validation.py": "d6de6b746f572b652ee6981ae5aa2a61c0272f8ce977f7adf8163f46c3de2c38",
+    "src/spxhack/measure.py": "fefff2bd72690c7d909a1c922bf0d44c602a43c5b06c2d5e495bf26b83863fc5",
+    "src/spxhack/show.py": "e46e0c7a30450a0144df30c807b56ab414c8ed29bbf13a1afe393b7c6d9c4392",
+    "src/spxhack/__init__.py": "2c7bf8d4f59f72faee7d9fbf9cb4c3b0492298fbff8d3b03cafd24832f5dbc53",
+    "src/spxhack/native.py": "20d880815a528adeab275b06affc4b969fd98a60b3ec07e7bdd01589092169db",
+    "src/spxhack/stack.py": "dea268ef87d6f425a0eab9baf2f3c06332adc4e6520071e0f5f1f2e35b2583c1",
+    "src/spxhack/data.py": "01a90b80f5309a0265005b5fde97b2b8e70f6fc1b0e98dc983735ad467dd95b4"
+  },
+  "limitations": [
+    "Saved bounded archive sample, not a fresh archive-wide census",
+    "GIF ring is a catalogue prediction, not an independently measured position",
+    "Coadds can combine different narrow spectral channels; brightness changes do not establish variability",
+    "Native sky resolution is 6.15 arcsec/pixel; GIFs are enlarged with nearest-neighbour sampling",
+    "Validated photometry does not validate astrometry, motion, or a light curve"
+  ]
+}

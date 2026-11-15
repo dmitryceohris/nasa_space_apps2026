@@ -30,12 +30,15 @@ def read(k: str):
         return None
     if not isinstance(res, dict) or res.pop("v", None) != VERSION:
         return None
+    return res if time.time() - modified < ttl(res) else None
+
+
+def ttl(res):
     empty = ("frames" in res and not res["frames"]) or ("points" in res and not res["points"])
     # Any state that may come from failed downloads is retried soon (spectrum: unusable_data can keep points).
     retry = res.get("data_status") in ("partial", "download_failed", "unusable_data")
     setting = "EMPTY_CACHE_TTL" if empty else "PARTIAL_CACHE_TTL" if retry else "RESULT_CACHE_TTL"
-    ttl = float(os.environ.get(setting, "60" if setting != "RESULT_CACHE_TTL" else "3600"))
-    return res if time.time() - modified < ttl else None
+    return float(os.environ.get(setting, "60" if setting != "RESULT_CACHE_TTL" else "3600"))
 
 
 def write(k: str, obj: dict):

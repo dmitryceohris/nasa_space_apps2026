@@ -10,3 +10,7 @@ cache/
 server.log
 
 .playwright-cli/
+.vercel
+.env*
+
+supabase/.temp/
