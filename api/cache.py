@@ -14,7 +14,7 @@ def key(ra, dec, fov, det, mode, max_per_epoch) -> str:
     return hashlib.sha1(s.encode()).hexdigest()[:16]
 
 
-VERSION = 9  # 9: B1 acceptance (spike mask, far-from-prediction, channels, nodata colour, sky error)
+VERSION = 11  # Combined acceptance and outside-field association; FITS remain reusable.
 
 
 def key_spectrum(ra, dec) -> str:

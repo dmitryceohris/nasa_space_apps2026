@@ -37,9 +37,9 @@ POOL = ThreadPoolExecutor(max_workers=4)
 JOBS = {}
 LOCK = threading.Lock()
 SMEAR_WARN_PX = 0.5  # known proper motion moves the object more than this within one epoch -> warning
-ASSOC_PX = 1.0  # a measured centre farther than this from the prediction is not the target's position.
-# Empirical registration against Gaia DR3 (docs/reviews/processing-acceptance.md): WCS offset per exposure median
-# 0.14 px, max 0.40 px; star-to-star scatter 0.1 px. 1 px is 2.5x the worst offset seen.
+ASSOC_PX = 1.0  # Conservative display gate for candidate disagreement; NOT a calibrated association radius.
+# A match within this radius does not establish identity or registration accuracy, especially for blends
+# and fields without usable reference stars. All candidates remain available separately.
 warnings.filterwarnings("ignore")
 
 
@@ -183,6 +183,8 @@ def _processing(p):
     from processing.frames import DIFF_METHOD
 
     return {"epochs": epoch_limits(), "background": BACKGROUND_METHOD,
+            "registration": {"name": "header_wcs_reprojection", "independently_verified": False,
+                             "astrometric_precision_arcsec": None},
             "difference": DIFF_METHOD if p.mode in ("diff", "trail") else None,
             "measurement": centroid.METHOD}
 
@@ -207,6 +209,8 @@ def _pipeline(j, p, r):
 
     _stage(j, "query", "Поиск снимков")
     meta = irsa.exposures(ra, dec, p.det)
+    res["archive_source"] = getattr(meta, "source", "tables" if irsa.selection_token() != "archive" else "tap")
+    res["warnings"].extend(getattr(meta, "warnings", []))
     if not meta:
         res["warnings"].append("По этим параметрам нет доступных кадров в ответе архива")
         return res
@@ -269,6 +273,17 @@ def _pipeline(j, p, r):
         res["warnings"].append(f"Отброшено непригодных экспозиций: {res['exposure_counts']['rejected']}")
     if len(frames) == 1:
         res["warnings"].append("Доступна одна эпоха: последовательность разных дат пока недоступна")
+    if frames:
+        res["warnings"].extend([
+            "Независимая регистрация по опорным звёздам не проверена; точность измеренного движения не подтверждена",
+            "Центроиды — кандидаты, не подтверждённые положения цели; ошибки центроидов не включают все систематические эффекты",
+        ])
+    if len(frames) > 1:
+        # Even a <5% change can select a different narrow LVF band. The average wavelength
+        # and detector ID cannot certify matching bandpasses, PSFs or photometric response.
+        res["warnings"].append(
+            "Различия яркости и разностные остатки не подтверждают переменность или движение: "
+            "нужны сопоставимые полосы/отклики, проверка масок и точности совмещения")
     diffs = template = scales = None
     if p.mode in ("diff", "trail"):
         if len(frames) < 2:
@@ -304,8 +319,8 @@ def _pipeline(j, p, r):
             else:
                 res["warnings"].append(f"Эпоха {i + 1}: прогноз вне поля; маркер скрыт")
         m = centroid.measure(arr, signed, saturated=f.contam)
-        # A centre is the target's only if it agrees with the prediction: the frame may hold just another star
-        # (WISE 0855 at 4.42 um: the only object, 17 px from the target, was returned as measured_px before).
+        # Suppress a clearly discrepant candidate in the legacy single-marker field. Agreement alone does
+        # not identify the target (WISE 0855 at 4.42 um had a candidate 17 px from its prediction).
         if not r["motion"]:
             assoc = "no_prediction"
         elif pred_fits is None:  # the model puts the target outside this frame: no object here is the target
@@ -369,8 +384,8 @@ def _pipeline(j, p, r):
     if ss["different_channels"]:
         width = f", ширина канала ≈ {ss['channel_width_um']:.3f} мкм" if ss["channel_width_um"] else ""
         res["warnings"].append(f"Цель снята в разных спектральных каналах ({ss['wave_min_um']:.2f}-{ss['wave_max_um']:.2f} мкм"
-                               f"{width}): разница яркости между кадрами — это смесь переменности и формы спектра, "
-                               "а остатки в разностном кадре могут быть не движением")
+                               f"{width}): разница яркости может быть связана с формой спектра; "
+                               "переменность и движение по этим остаткам не подтверждены")
     c = (h // 2, shape[1] // 2)
     if any(f.contam[c[0] - 1:c[0] + 2, c[1] - 1:c[1] + 2].any() for f in frames):
         res["warnings"].append("В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)")
@@ -393,7 +408,12 @@ def _spectrum_job(j, r):
     def progress(stage, done, total, msg):
         _stage(j, stage, msg, done, total)
 
-    res = build_spectrum(center, lambda mjd: _sky(r, mjd), progress=progress)
+    from Exposure.irsa import ArchiveQueryError
+
+    try:
+        res = build_spectrum(center, lambda mjd: _sky(r, mjd), progress=progress)
+    except ArchiveQueryError as error:
+        raise ApiError(502, "upstream", str(error)) from error
     res["query"] = {"ra": ra, "dec": dec, "target": r["label"]}
     res["target_info"] = r.get("motion")
     res["center_mjd"] = r.get("center_mjd")

@@ -1,0 +1,28 @@
+{
+  "provenance": "controlled synthetic browser fixtures; integrated frontend with outside-field association",
+  "passed": [
+    "far candidate labelled without identity claim",
+    "violet no-data legend",
+    "candidate retained",
+    "date switch",
+    "persistent warnings",
+    "outside-field label",
+    "outside-field candidates retained",
+    "outside-field target markers hidden",
+    "page fits desktop and mobile"
+  ],
+  "widths": [
+    {
+      "viewport": 1440,
+      "image_width": 560
+    },
+    {
+      "viewport": 768,
+      "image_width": 560
+    },
+    {
+      "viewport": 375,
+      "image_width": 351
+    }
+  ]
+}

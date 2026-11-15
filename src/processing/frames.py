@@ -49,8 +49,9 @@ def lone_spike_mask(exp: Exposure, sub: np.ndarray | None = None, bad: np.ndarra
 
     Must be applied before interpolation: bilinear reprojection spreads one pixel over 2x2 grid pixels, after
     which it looks like a compact star (one such pixel became a S/N 279 "object" in an empty field).
-    Needs at least 6 valid neighbours, so pixels next to masked (e.g. saturated) regions are never removed.
-    sub / bad: exp.background_subtracted() / exp.bad_mask() when the caller already has them."""
+    Needs at least 6 valid neighbours. SOURCE-only pixels are preserved: a sharp known source is not a
+    proven detector defect. A hard-bad bit still excludes it through bad_mask, independently of SOURCE.
+    sub / bad reuse the caller's background-subtracted image and bad mask."""
     from scipy import ndimage as ndi
 
     bad = exp.bad_mask() if bad is None else bad
@@ -65,7 +66,8 @@ def lone_spike_mask(exp: Exposure, sub: np.ndarray | None = None, bad: np.ndarra
     nb_max = ndi.maximum_filter(np.where(fin, a, -np.inf), footprint=ring, mode="constant", cval=-np.inf)
     nb_count = ndi.convolve(fin.astype(int), ring, mode="constant", cval=0)
     with np.errstate(invalid="ignore", divide="ignore"):
-        return fin & (a > SPIKE_SNR * sig) & (nb_count >= 6) & (nb_max < SPIKE_NEIGHBOUR_RATIO * a)
+        return (fin & ~exp.flag_mask(("SOURCE",)) & (a > SPIKE_SNR * sig)
+                & (nb_count >= 6) & (nb_max < SPIKE_NEIGHBOUR_RATIO * a))
 
 
 def reproject_exposure(exp: Exposure, wcs: WCS, shape):
@@ -237,7 +239,7 @@ def _robust_std(d: np.ndarray) -> float | None:
 
 
 def difference_details(frames: list[Frame], renorm: bool = True) -> dict:
-    """Разностные кадры в единицах σ и сведения о нормировке.
+    """Разностные кадры в относительной робастной шкале и сведения о нормировке.
 
     Шаблон для кадра i — медиана ОСТАЛЬНЫХ эпох: если включать в него сам кадр, при двух эпохах
     шаблон равен среднему и остаток вдвое слабее, а шум кадра и шаблона коррелирован.
@@ -277,7 +279,7 @@ def difference_details(frames: list[Frame], renorm: bool = True) -> dict:
 
 
 def difference(frames: list[Frame], renorm: bool = True) -> tuple[list[np.ndarray], np.ndarray]:
-    """Разностные кадры в единицах σ и шаблон (см. difference_details)."""
+    """Относительные разностные остатки и шаблон (см. difference_details)."""
     r = difference_details(frames, renorm)
     return r["diffs"], r["template"]
 
@@ -302,7 +304,7 @@ def trail(diff_sigma: list[np.ndarray], clip: float = 8.0, floor: float = 2.0) -
     for i, d in enumerate(diff_sigma):
         t = i / max(n - 1, 1)
         alpha = 0.55 + 0.45 * t
-        # остатки ниже floor σ — шум: без порога каждая эпоха даёт цветную «рябь» по всему кадру
+        # остатки ниже порога визуализации floor подавляем: без порога каждая эпоха даёт цветную «рябь» по всему кадру
         pos = np.clip(np.nan_to_num(d) - floor, 0, clip - floor) / (clip - floor)
         rgb += alpha * pos[..., None] * np.array(cmap(t)[:3])
     return np.clip(rgb, 0, 1)

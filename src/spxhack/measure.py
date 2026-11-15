@@ -18,8 +18,8 @@ from processing.photometry import spectrum as _spectrum
 from .data import target as _target
 from .stack import Stack
 
-ASSOC_PX = 1.0  # same rule as /api/view: a centre farther than this from the prediction is not the target's
-# position (Gaia DR3 registration: WCS offset per exposure up to 0.40 px, docs/reviews/processing-acceptance.md)
+ASSOC_PX = 1.0  # Same conservative display gate as /api/view, not a calibrated association radius.
+# Agreement with the prediction does not establish target identity or registration accuracy.
 ASSIST_PX = 3.0  # with assist=True: how far from the prediction a candidate may be picked or a window started
 ASSISTED = ("nearest_to_prediction", "windowed_at_prediction")
 WINDOW_R = 2.5  # radius (px) of the windowed centroid used at the predicted position

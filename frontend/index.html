@@ -21,6 +21,8 @@
   #info { margin: 6px 0; font-size: 14px; color: #bbb; }
   #method { margin: 6px 0; font-size: 13px; color: #aaa; }
   #method ul { margin: 4px 0; padding-left: 18px; }
+  #aladin { width: 100%; height: 340px; margin: 0 0 12px; border-radius: 6px; overflow: hidden; background: #000; }
+  #target-info, #field-center, #frame-quality, #warnings, #method { overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -80,6 +82,7 @@
   <label><input type="checkbox" id="ms"> Show centroid / candidates</label>
 </div>
 
+<div id="aladin"></div>
 <!-- GRAPHS -->
 <div class="row">
   <button id="tab-spec" class="active">Spectrum</button>
@@ -249,6 +252,10 @@ function measuredText(f) {
       return f.candidates.length ? `  |  ${f.candidates.length} candidates, no single centre` : "  |  no source found";
     return "";
   }
+  if (m.target_association === "far_from_prediction")
+    return `  |  candidate ${m.offset_from_prediction_px} px from prediction; target identity unverified`;
+  if (m.target_association === "prediction_outside_field")
+    return "  |  target prediction outside field; visible sources remain unassociated candidates";
   if (m.quality === "poor") return `  |  candidate only: poor quality (${(m.flags || []).join(", ")})`;
   if (m.status === "ok") {
     const err = m.err_px ? ` ±${Math.max(...m.err_px).toFixed(2)} px` : "";
@@ -271,7 +278,8 @@ function show(n) {
   $("frame-date").textContent = `${f.trail ? "Observation dates" : "Observation date"} (UTC): ${f.displayDate || f.date}`;
   $("date-step").textContent = f.trail ? `All ${f.epochs} epochs combined` : `Date ${i + 1} of ${frames.length}`;
   const quality = f.quality;
-  const details = ["Source: NASA SPHEREx via NASA/IPAC IRSA."];
+  const details = ["Source: NASA SPHEREx via NASA/IPAC IRSA.",
+    "Violet pixels have no usable data. White fill in masked bright regions is not a flux measurement."];
   const reasonText = {incomplete_pixel_coverage:"some pixels have no usable data",contaminated_pixels:"saturated or contaminated pixels",approximate_wavelength:"wavelength is approximate",invalid_wavelength:"spectral calibration is unavailable here",time_assumptions:"observation time includes assumptions"};
   if (quality) details.push(`Useful pixel coverage: ${(quality.coverage_fraction * 100).toFixed(1)}%. Quality: ${quality.status}; scientific verification: ${quality.verified ? "verified" : "pending"}. ${(quality.reasons || []).map(r=>reasonText[r] || r).join("; ")}`);
   if (f.predictionStatus === "no_model") details.push("No motion prediction for this fixed field.");
@@ -420,6 +428,7 @@ async function update() {
     const f = await getFrames(ra, dec, $("fov").value, $("det").value, mode, my);
     if (f === null || my !== reqId) return;      // a newer request replaced this one
     frames = f; show(0);
+    syncAladin();
   } catch (err) {
     if (my === reqId) $("info").textContent = "Could not load frames: " + err.message;
   }
@@ -448,6 +457,49 @@ async function loadPresets() {
   } catch (e) { console.warn("presets failed", e); }
 }
 
+// ================= ALADIN (sky map next to the player) =================
+let aladin = null;
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = src; s.charset = "utf-8";
+    s.onload = res; s.onerror = () => rej(new Error("script failed: " + src));
+    document.head.appendChild(s);
+  });
+}
+async function getAladinLib() {
+  if (window.A) return window.A;
+  try {                                            // first choice: the CDS server (15 second limit)
+    await Promise.race([
+      loadScript("https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js"),
+      sleep(15000).then(() => { throw new Error("CDS timeout"); })
+    ]);
+    if (window.A) return window.A;
+  } catch (e) { console.warn("Aladin from CDS failed, trying the backup copy", e); }
+  const m = await import("https://cdn.jsdelivr.net/npm/aladin-lite@3.8.2/dist/aladin.js");
+  return m.default;                                // the backup copy has no global A, it exports it
+}
+async function initAladin() {
+  try {
+    const Lib = await getAladinLib();
+    await Lib.init;
+    aladin = Lib.aladin("#aladin", {survey: "https://irsa.ipac.caltech.edu/data/hips/CDS/DSS2/color", target: "269.452 4.693", fov: 0.15});
+    syncAladin();                                  // frames may have loaded before the map was ready
+  } catch (e) {
+    console.warn("Aladin could not be loaded", e);
+    $("aladin").textContent = "Sky map unavailable right now (Aladin Lite could not be loaded).";
+  }
+}
+function syncAladin() {
+  if (!aladin || !lastGrid) return;                // demo data has no real sky position
+  try {
+    const ra = lastGrid.wcs.CRVAL1, dec = lastGrid.wcs.CRVAL2;
+    aladin.gotoRaDec(ra, dec);
+    const fovDeg = Math.max(0.05, (+$("fov").value / 60) * 1.5);   // arcmin to degrees, a bit wider than the picture
+    (aladin.setFoV || aladin.setFov).call(aladin, fovDeg);
+  } catch (e) { console.warn("Aladin sync failed", e); }
+}
+initAladin();
 loadPresets(); loadUrl(); highlight(); update();
 </script>
 </body>

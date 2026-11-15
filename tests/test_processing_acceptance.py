@@ -97,6 +97,29 @@ def test_single_bad_native_pixel_never_becomes_the_target(serve, flagged):
         assert f["measured_px"] is None and f["measured_candidates"] == []
 
 
+def test_source_flag_survives_the_native_spike_heuristic_through_http(serve, monkeypatch):
+    import reproject
+    original = reproject.reproject_interp
+    seen = []
+
+    def project(input_data, *args, **kwargs):
+        arr, _ = input_data
+        if kwargs.get("order") == "bilinear":
+            assert np.isfinite(arr[24, 27]), "SOURCE alone must not become a missing pixel"
+            seen.append(True)
+        return original(input_data, *args, **kwargs)
+
+    monkeypatch.setattr(reproject, "reproject_interp", project)
+    exps = []
+    for seed, mjd in enumerate([61000., 61200.]):
+        exp = fake_exposure(None, mjd, seed=seed)
+        exp.image[24, 27] += 50
+        exp.flags[24, 27] = SOURCE
+        exps.append(exp)
+    result = serve(exps)
+    assert len(result["frames"]) == 2 and len(seen) == 4
+
+
 def test_source_is_kept_and_no_data_has_its_own_colour(serve):
     """SOURCE marks the object, it is never masked; pixels without coverage are not painted as dark sky."""
     star = offset(CENTER, 0, 0)
@@ -116,6 +139,19 @@ def test_source_is_kept_and_no_data_has_its_own_colour(serve):
     grey = (rgb[..., 0] == rgb[..., 1]) & (rgb[..., 1] == rgb[..., 2])
     assert nodata.any() and grey.any()
     assert np.all(nodata | grey)  # every pixel is either sky/source (grey) or explicitly "no data"
+
+
+@pytest.mark.parametrize("mode", ["coadd", "diff", "trail"])
+def test_missing_pixels_keep_their_colour_in_each_view_mode(serve, mode):
+    exps = [fake_exposure(CENTER, mjd, seed=i, shift_px=(9.0, .3))
+            for i, mjd in enumerate([61000., 61200.])]
+    result = serve(exps, mode)
+    rgb = png(result, 0, result["_dir"])
+    assert np.all(rgb == NODATA_RGB, axis=2).any()
+    if mode in ("diff", "trail"):
+        path = result["_dir"] / result["trail_url"].removeprefix("/cache/")
+        rgb = np.asarray(Image.open(path).convert("RGB"))
+        assert np.all(rgb == NODATA_RGB, axis=2).any()
 
 
 # ------------------------------------------------------------------ 2. background and NaN edge
@@ -338,7 +374,8 @@ def test_dipole_overlap_found_even_when_the_minus_part_is_not_listed():
     assert "overlaps_negative_residual" in m["flags"] and m["quality"] == "poor"
 
 
-def test_irsa_rejection_is_not_retried_as_an_outage(monkeypatch):
+@pytest.mark.parametrize("status", [400, 403, 404])
+def test_irsa_rejection_is_not_retried_as_an_outage(monkeypatch, status):
     import httpx
 
     from api.errors import ApiError
@@ -346,9 +383,29 @@ def test_irsa_rejection_is_not_retried_as_an_outage(monkeypatch):
 
     def answer(method, url, **kw):
         calls.append(url)
-        return httpx.Response(404, request=httpx.Request(method, url))
+        return httpx.Response(status, request=httpx.Request(method, url))
     monkeypatch.setattr(httpx, "request", answer)
-    monkeypatch.setattr(irsa.time, "sleep", lambda s: pytest.fail("a 404 must not be retried"))
+    monkeypatch.setattr(irsa.time, "sleep", lambda s: pytest.fail("a permanent 4xx must not be retried"))
     with pytest.raises(ApiError) as e:
         irsa._send("GET", "https://irsa.example/cutout")
-    assert len(calls) == 1 and "404" in e.value.message and "отклонил" in e.value.message
+    assert len(calls) == 1 and str(status) in e.value.message and "отклонил" in e.value.message
+
+
+@pytest.mark.parametrize("status", [408, 429, 500, 502, 503])
+def test_irsa_transient_failure_keeps_retrying(monkeypatch, status):
+    import httpx
+    from api.errors import ApiError
+
+    calls, pauses = [], []
+
+    def answer(method, url, **kw):
+        calls.append(url)
+        return httpx.Response(status, request=httpx.Request(method, url))
+
+    monkeypatch.setattr(httpx, "request", answer)
+    monkeypatch.setattr(irsa.time, "sleep", pauses.append)
+    with pytest.raises(ApiError) as error:
+        irsa._send("GET", "https://irsa.example/cutout")
+    assert len(calls) == 3 and pauses == [5, 10]
+    assert error.value.status == 502 and error.value.code == "upstream"
+    assert str(status) in error.value.message

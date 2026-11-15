@@ -59,7 +59,7 @@ def save_diff(sig: np.ndarray, path: Path, lim: float = 6.0) -> None:
 
     x = np.clip(np.nan_to_num(sig) / lim, -1, 1) * 0.5 + 0.5
     rgb = (colormaps["RdBu_r"](x)[..., :3] * 255).astype(np.uint8)
-    rgb[~np.isfinite(sig)] = (40, 40, 40)
+    rgb[~np.isfinite(sig)] = NODATA_RGB
     _save(rgb, path)
 
 
@@ -69,10 +69,11 @@ def save_rgb(rgb01: np.ndarray, path: Path, background: np.ndarray | None = None
     base = np.zeros_like(rgb01)
     if background is not None:
         base = 0.35 * _asinh(background, vmin, vmax)[..., None] * np.ones(3)
-    out = (np.clip(base + rgb01, 0, 1) * 255).astype(np.uint8)
-    if background is not None:  # no data in any epoch: the same colour as in the coadd frames, not black sky
-        out[~np.isfinite(background)] = NODATA_RGB
-    _save(out, path)
+    out = np.clip(base + rgb01, 0, 1)
+    rgb = (out * 255).astype(np.uint8)
+    if background is not None:
+        rgb[~np.isfinite(background)] = NODATA_RGB
+    _save(rgb, path)
 
 
 def save_mask(mask: np.ndarray, path: Path, color=(255, 80, 0), alpha: int = 140) -> None:

@@ -6,17 +6,47 @@
 from __future__ import annotations
 
 import warnings
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
+import requests
+from pyvo.dal import SIA2Service
+from pyvo.dal.exceptions import DALServiceError
 
 from .exposure import Exposure
 from .loader import load_exposure
 
 # Порядок важен: при дублях одной экспозиции в разных релизах берём первый (самый новый).
 DEFAULT_COLLECTIONS = ("spherex_dr1", "spherex_qr3")
+
+
+class ArchiveQueryError(RuntimeError):
+    """Archive transport failed; this is distinct from local processing errors."""
+
+
+class _ArchiveSession(requests.Session):
+    def request(self, method, url, **kwargs):
+        # PyVO otherwise leaves read/connect waits unbounded, including service metadata calls.
+        kwargs["timeout"] = kwargs.get("timeout") or 45
+        return super().request(method, url, **kwargs)
+
+
+def _query_sia(coord, collections):
+    for attempt in range(3):
+        try:
+            with _ArchiveSession() as session:
+                service = SIA2Service("https://irsa.ipac.caltech.edu/SIA", session=session)
+                return service.search(pos=(coord, 1 * u.arcsec), collection=list(collections)).to_table()
+        except (DALServiceError, requests.RequestException) as error:
+            code = getattr(error, "code", None)
+            if code is None and getattr(error, "response", None) is not None:
+                code = error.response.status_code
+            if attempt == 2 or (isinstance(code, int) and 400 <= code < 500 and code not in (408, 429)):
+                raise ArchiveQueryError("IRSA SIA2 недоступен; повторите запрос позже") from error
+            time.sleep(2 ** (attempt + 1))
 
 
 def query_spherex(coord: SkyCoord, *, detector: int | None = None,
@@ -26,9 +56,7 @@ def query_spherex(coord: SkyCoord, *, detector: int | None = None,
     Возвращает astropy Table со столбцами SIA (access_url, obs_id, t_min, t_max,
     energy_bandpassname, ...) + добавленными detector и mjd, отсортированную по времени.
     """
-    from astroquery.ipac.irsa import Irsa
-
-    tbl = Irsa.query_sia(pos=(coord, 1 * u.arcsec), collection=list(collections))
+    tbl = _query_sia(coord, collections)
     if len(tbl) == 0:
         return tbl
 
