@@ -1,0 +1,104 @@
+:root {
+  --panel: rgba(18, 26, 43, .86);
+  --field: rgba(15, 22, 38, .86);
+  --line: rgba(160, 175, 255, .28);
+  --text: #e8eaf4;
+  --muted: #aab5ce;
+  --accent: #6FD3F0;
+  --accent-ink: #06202A;
+  --radius: 8px;
+}
+
+body {
+  box-sizing: border-box;
+  width: calc(100% - 48px);
+  max-width: 1140px;
+  margin: 24px auto;
+  padding: 24px;
+}
+
+h2 { margin-bottom: 20px; }
+
+input, select, button {
+  background: var(--field);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  min-height: 44px;
+  font-family: inherit;
+}
+
+input[type=range] {
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+input[type=checkbox] {
+  min-height: 0;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+button { background: var(--panel); font-weight: 600; cursor: pointer; }
+
+button.active, #play {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+#tab-spec, #tab-lc { flex: 1; }
+
+#frame { border-radius: 10px; }
+
+#info, #warnings, #field-center, #target-info,
+#frame-quality, #method, #demo-note {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Desktop layout: two columns */
+#layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+#col-left, #col-right {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#plot { min-width: 0; max-width: 100%; }
+
+#aladin {
+  height: 340px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+/* Phone layout: one column */
+@media (max-width: 900px) {
+  body {
+    width: calc(100% - 24px);
+    max-width: 462px;
+    margin: 12px auto;
+    padding: 16px;
+    border: 1px solid rgba(140, 160, 255, .16);
+    border-radius: 14px;
+  }
+  h2 { font-size: 22px; }
+  #layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  input:not([type]), select { width: 100%; }
+  #modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  #player { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 8px; }
+  #player label { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+  #speed { flex: 1; min-width: 0; }
+}
