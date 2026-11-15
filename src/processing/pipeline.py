@@ -119,7 +119,7 @@ def build_view(center: SkyCoord, fov_arcmin: float, det: int, max_per_epoch: int
 
 # ------------------------------------------------------------------ спектр и кривая блеска
 def build_spectrum(center: SkyCoord, coord_at: Callable[[float], SkyCoord], per_epoch: int = 2,
-                   progress: Progress = _noop) -> dict:
+                   progress: Progress = _noop, *, workspace=None) -> dict:
     """Спектр по всем 6 детекторам: маленькие вырезки, per_epoch снимков на эпоху и детектор."""
     progress("query", 0, 0, "Ищем снимки всех детекторов…")
     tbl = query_spherex(center)
@@ -131,29 +131,44 @@ def build_spectrum(center: SkyCoord, coord_at: Callable[[float], SkyCoord], per_
     max_offset = max((float(center.separation(coord_at(float(row["mjd"]))).arcsec) for row in rows), default=0.0)
     # Include the complete background annulus at the propagated location on every selected date.
     size_deg = max(0.035, 2 * (max_offset + PHOTOMETRY_METHOD["params"]["r_out_px"] * PIXEL_SCALE_ARCSEC) * 1.1 / 3600)
-    exps = download_rows(rows, center, size_deg,
-                         progress=lambda d, t: progress("download", d, t, f"Скачано {d} из {t} снимков"))
-    pts = spectrum(exps, coord_at)
+    if workspace is None:
+        exps = download_rows(rows, center, size_deg,
+                             progress=lambda d, t: progress("download", d, t, f"Скачано {d} из {t} снимков"))
+        pts = spectrum(exps, coord_at)
+        downloaded = len(exps)
+    else:
+        downloaded, pts = 0, []
+        ordered = sorted(rows, key=lambda row: float(row["mjd"]))
+        for start in range(0, len(ordered), 6):
+            batch = download_rows(ordered[start:start + 6], center, size_deg, workspace=workspace,
+                                  progress=lambda d, t: progress("download", start + d, len(rows),
+                                                               f"Скачано {start + d} из {len(rows)} снимков"))
+            downloaded += len(batch)
+            pts.extend(spectrum(batch, coord_at))
+            batch.clear()
+        # Match the stable wavelength sort of the original, MJD-ordered exposure list.
+        pts.sort(key=lambda p: p["mjd"])
+        pts.sort(key=lambda p: p["wave_um"] if p["wave_um"] is not None else float("inf"))
     good = _good(pts)
     warnings = []
-    if len(exps) < len(rows):
-        warnings.append(f"Не удалось загрузить {len(rows) - len(exps)} из {len(rows)} экспозиций")
-    if len(pts) < len(exps):
-        warnings.append(f"Для {len(exps) - len(pts)} экспозиций нет пригодного покрытия апертуры/фонового кольца")
+    if downloaded < len(rows):
+        warnings.append(f"Не удалось загрузить {len(rows) - downloaded} из {len(rows)} экспозиций")
+    if len(pts) < downloaded:
+        warnings.append(f"Для {downloaded - len(pts)} экспозиций нет пригодного покрытия апертуры/фонового кольца")
     if any(p["wavelength_source"] not in ("spectral_wcs", "cwave_cband") for p in pts):
         warnings.append("Длина волны части точек приблизительна: спектральный WCS недоступен")
     if not rows:
         warnings.append("По этим параметрам нет доступных кадров в ответе архива")
-    elif not exps:
+    elif not downloaded:
         warnings.append("Все загрузки выбранных экспозиций не удались")
     elif not good:
         warnings.append("Надёжных измерений для графика нет; проверьте покрытие, маски и флаги качества")
-    state = ("no_archive_results" if not rows else "download_failed" if not exps else
-             "unusable_data" if not good else "partial" if len(exps) < len(rows) else "available")
+    state = ("no_archive_results" if not rows else "download_failed" if not downloaded else
+             "unusable_data" if not good else "partial" if downloaded < len(rows) else "available")
     counts = {s:sum(p["validation"]["status"]==s for p in pts) for s in ("validated","provisional","rejected")}
     return {"status": "ready", "points": pts, "n_points": len(pts), "warnings": warnings,
             "quality_counts": counts,
-            "data_status": state, "exposure_counts": {"selected": len(rows), "downloaded": len(exps),
+            "data_status": state, "exposure_counts": {"selected": len(rows), "downloaded": downloaded,
                                                         "with_measurements": len(pts), "reliable": len(good)},
             "cutout_size_deg": size_deg, "max_prediction_offset_arcsec": max_offset,
             "n_saturated": sum(1 for p in pts if {"OVERFLOW", "NONLINEAR"} & set(p["flags"])),

@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from . import cache, irsa, jobs, params, resolve
 from .errors import ApiError, PUBLIC_INTERNAL_MESSAGE
 from .limits import RequestLimiter
+from runtime_storage import StorageFull, STORAGE_MESSAGE
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 VERSION = "0.1.0"
@@ -47,6 +48,12 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
 async def _api_error(_: Request, e: ApiError):
     headers = {"Retry-After": "5"} if e.status == 503 else None
     return _err(e.status, e.code, PUBLIC_INTERNAL_MESSAGE if e.status == 500 else e.message, headers)
+
+
+@app.exception_handler(StorageFull)
+async def _storage_full(_: Request, e: StorageFull):
+    logging.getLogger("api").warning("scratch capacity exhausted: %s", e)
+    return _err(503, "storage_full", STORAGE_MESSAGE, {"Retry-After": "5"})
 
 
 @app.exception_handler(RequestValidationError)

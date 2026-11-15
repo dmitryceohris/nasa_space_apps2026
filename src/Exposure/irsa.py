@@ -19,6 +19,7 @@ from pyvo.dal.exceptions import DALServiceError
 
 from .exposure import Exposure
 from .loader import load_exposure
+from runtime_storage import raise_if_storage_error
 
 # Порядок важен: при дублях одной экспозиции в разных релизах берём первый (самый новый).
 DEFAULT_COLLECTIONS = ("spherex_dr1", "spherex_qr3")
@@ -99,7 +100,7 @@ def cutout_url(access_url: str, coord: SkyCoord, size_deg: float) -> str:
 
 
 def download_rows(rows, coord: SkyCoord, size_deg: float, *, workers: int = 6,
-                  progress=None) -> list[Exposure]:
+                  progress=None, workspace=None) -> list[Exposure]:
     """Скачивает вырезки для выбранных строк таблицы query_spherex (параллельно).
 
     progress(done, total) вызывается после каждого файла. Сбойные загрузки пропускаются.
@@ -110,8 +111,10 @@ def download_rows(rows, coord: SkyCoord, size_deg: float, *, workers: int = 6,
     def _one(row):
         try:
             return load_exposure(cutout_url(str(row["access_url"]), coord, size_deg),
-                                 mjd_hint=float(row["mjd"]), obs_id_hint=str(row["obs_id"]))
+                                 mjd_hint=float(row["mjd"]), obs_id_hint=str(row["obs_id"]),
+                                 **({"workspace":workspace} if workspace is not None else {}))
         except Exception as e:  # noqa: BLE001 — сеть IRSA иногда рвётся, один кадр не важен
+            raise_if_storage_error(e)
             warnings.warn(f"пропущен {row['obs_id']}: {e}")
             return None
 

@@ -1,28 +1,25 @@
-# Физика пяти целей SPHEREx
+# Physics of the five SPHEREx targets
 
-Подготовлено 14 ноября 2026 года. Это предсказания по каталожной астрометрии,
-а не измеренные центроиды, потоки или доказательства обнаружения объектов.
+Prepared November 14, 2026. These are predictions from catalogue astrometry, not measured centroids or fluxes, nor evidence that the objects were detected.
 
-## Запуск из корня репозитория
+## Running from the repository root
 
-Получение метаданных и небольших вырезок **только для проверки качества**:
+Retrieve metadata and small cutouts **only for quality checks**:
 
 ```sh
 uv run --locked python sky_motion.py --prepare-observations --output data/physics_observations.csv
 ```
 
-Повторный расчёт по сохранённым временам, без сети:
+Recalculate offline using saved times:
 
 ```sh
 uv run --offline --locked python sky_motion.py --observations data/physics_observations.csv --output output/predictions.csv
 uv run --offline --locked pytest -q
 ```
 
-Новые зависимости не нужны. Исходные параметры — `OBJECT_PARAMETERS.csv`;
-их происхождение и идентичность компонентов разобраны в `OBJECT_PARAMETERS.md`.
-Прежний `barnard_motion.py`, его интерфейс, блокнот и результаты сохранены.
+No new dependencies are required. Input parameters are in `OBJECT_PARAMETERS.csv`; their provenance and component identities are discussed in `OBJECT_PARAMETERS.md`. The existing `barnard_motion.py`, its interface, notebook and results are retained.
 
-Для вызова из другого кода:
+To call from other code:
 
 ```python
 from astropy.time import Time
@@ -33,199 +30,95 @@ ra, dec = p.geocentric.ra.deg, p.geocentric.dec.deg
 print(p.assumptions)
 ```
 
-Допустимые короткие имена: `barnard`, `epsilon_indi_b`, `wise_0855`, `rw_aur`,
-`r_dra`; также принимаются точные имена из столбца `object` каталога.
+Accepted short names: `barnard`, `epsilon_indi_b`, `wise_0855`, `rw_aur`, `r_dra`; exact names from the catalogue's `object` column are also accepted.
 
-## Модель и существенные ограничения
+## Model and important limitations
 
-`coordinate_at` из `barnard_motion.py` выполняет собственное движение через
-`SkyCoord.apply_space_motion`, включая перспективный эффект при заданной RV.
-Для годичного параллакса отдельно вычисляется
-**r_geo = r_star,bary − r_Earth,bary**; положение Земли берётся из
-`get_body_barycentric("earth", time, ephemeris="builtin")`.
-RA/Dec — направление этого вектора в осях, параллельных ICRS.
-[Astropy: пространственное движение](https://docs.astropy.org/en/stable/coordinates/apply_space_motion.html),
-[эфемериды](https://docs.astropy.org/en/stable/coordinates/solarsystem.html).
+`coordinate_at` from `barnard_motion.py` propagates proper motion using `SkyCoord.apply_space_motion`, including the perspective effect when RV is supplied. Annual parallax is calculated separately as **r_geo = r_star,bary − r_Earth,bary**; Earth's position comes from `get_body_barycentric("earth", time, ephemeris="builtin")`. RA/Dec give this vector's direction in axes parallel to ICRS. [Astropy: space motion](https://docs.astropy.org/en/stable/coordinates/apply_space_motion.html), [ephemerides](https://docs.astropy.org/en/stable/coordinates/solarsystem.html).
 
-Это **геометрическое геоцентрическое направление**, а не полный видимый GCRS:
-не добавлены аберрация, гравитационное отклонение, орбита SPHEREx и дополнительные
-поправки времени распространения света. Перед точным сравнением с измерениями
-нужно проверить соглашения конкретного WCS; повторно добавлять уже исправленную
-в привязке аберрацию нельзя.
+This is a **geometric geocentric direction**, not a full apparent GCRS position: aberration, gravitational deflection, the SPHEREx orbit, and additional light-travel-time corrections are not added. Check the specific WCS conventions before precise comparison with measurements; aberration already corrected in the registration must not be added again.
 
-- Для четырёх объектов без RV применяется условная модель `RV=0`, с флагом
-  `rv_assumed_zero`. Это не измерение скорости и не оценка её ошибки.
-- Для WISE исходная эпоха MJD 57633.39 условно принята в UTC:
-  `reference_epoch_scale_assumed_utc`. Неизвестные корреляции и соглашение об
-  ошибке RA не превращаются в фиктивную точную ковариацию.
-- Координаты Epsilon Indi B описывают Gaia-источник Ba, не барицентр или
-  инфракрасный фотоцентр Ba/Bb. У RW Aur используется восточный компонент,
-  называемый A в выбранной литературе. Повышенный RUWE отмечен в `assumptions`.
-- Новый расчёт не выдаёт формальных ошибок: расширение переноса ковариации
-  отложено. Существующий расчёт ошибок Барнарда продолжает работать отдельно.
+- For four objects without RV, the conditional model `RV=0` is used with the `rv_assumed_zero` flag. This is neither a velocity measurement nor an estimate of its uncertainty.
+- WISE's reference epoch MJD 57633.39 is provisionally treated as UTC: `reference_epoch_scale_assumed_utc`. Unknown correlations and RA error convention are not turned into a fictitiously precise covariance.
+- Epsilon Indi B coordinates describe the Gaia Ba source, not the Ba/Bb barycentre or infrared photocentre. RW Aur uses the eastern component called A in the selected literature. Elevated RUWE is noted in `assumptions`.
+- The new calculation does not produce formal errors; extending covariance propagation is deferred. The existing Barnard error calculation continues to work separately.
 
-Порядки пропущенных поправок, без отдельной орбитальной реализации:
+Orders of magnitude of omitted corrections, without a separate orbital implementation:
 
-- При расстоянии SPHEREx от геоцентра около 7000 км поправка Барнарда составляет
-  не более порядка `0.547″ × 7000 / 149597870.7 = 0.000026″`, то есть около
-  **0.00003″**, или **0.000004 пикселя** при 6.15″/пиксель.
-- Для WISE различие времени порядка минуты даёт
-  `8.152″/год × 60 / 31557600 ≈ 0.000016″`, около **0.00002″**.
+- At a SPHEREx distance of about 7000 km from the geocentre, the correction for Barnard is at most on the order of `0.547″ × 7000 / 149597870.7 = 0.000026″`, or about **0.00003″**, equivalent to **0.000004 pixels** at 6.15″/pixel.
+- For WISE, a time difference of roughly one minute gives `8.152″/year × 60 / 31557600 ≈ 0.000016″`, about **0.00002″**.
 
-Для сравнения с *условной*, ещё не измеренной ошибкой центроида 0.5″ оба эффекта
-меньше примерно на четыре порядка. Геометрический **годичный** параллакс Земли
-доходит до десятых долей секунды и поэтому в расчёт включён.
+Compared with a *hypothetical*, not yet measured centroid error of 0.5″, both effects are about four orders of magnitude smaller. Earth's geometric **annual** parallax reaches tenths of an arcsecond and is therefore included.
 
-## Эпохи, качество и воспроизводимость
+## Epochs, quality and reproducibility
 
-Ответы SIA DR1/QR3 сохранены в `data/physics_evidence/`; для Барнарда использован
-уже сохранённый ответ в `data/irsa_barnard_20261114/`. Проверено отсутствие
-`QUERY_STATUS=OVERFLOW`. Запрос вокруг каталожной позиции имеет радиус 0.05°,
-который покрывает движение этих целей за доступный интервал.
+SIA DR1/QR3 responses are saved in `data/physics_evidence/`; for Barnard the already saved response in `data/irsa_barnard_20261114/` was used. Absence of `QUERY_STATUS=OVERFLOW` was checked. A 0.05° search radius around the catalogue position covers the targets' motion over the available interval.
 
-Эпохи разделяются разрывами более 30 суток. Выбирается по одному кадру на
-кластер, максимум три кластера: первый, средний, последний. При единственном
-непрерывном кластере используются три равных временных окна; это не отдельные
-обзоры. Кандидаты предпочитают DR1, затем D6 для WISE и D1 для остальных;
-сохранённые кадры Барнарда имеют приоритет внутри соответствующей эпохи.
+Epochs are separated by gaps greater than 30 days. One frame is selected per cluster, with at most three clusters: first, middle and last. For one continuous cluster, three equal time windows are used; these are not separate surveys. Candidates prefer DR1, then D6 for WISE and D1 for the others; saved Barnard frames take priority within the corresponding epoch.
 
-Граница проверяется по сферическому `s_region` на перенесённой позиции, запас
-должен превышать 10″. У выбранных 15 кадров запас составляет более 100″.
-Время берётся из `MJD-AVG`/`TIMESYS`, затем `DATE-AVG`. Для SIA используется
-середина интервала через непрерывную шкалу TAI; результат записывается как
-MJD UTC и получает `sia_time_scale_assumed_utc`, поскольку шкала отдельно
-не подтверждена. В сохранённых заголовках есть `MJD-AVG` и `TIMESYS=UTC`.
+Coverage is checked using spherical `s_region` at the propagated position, with a required margin greater than 10″. All 15 selected frames have margins greater than 100″. Time is taken from `MJD-AVG`/`TIMESYS`, then `DATE-AVG`. For SIA the interval midpoint is calculated on the continuous TAI scale; the result is stored as MJD UTC and receives `sia_time_scale_assumed_utc` because the scale has not been independently confirmed. Saved headers contain `MJD-AVG` and `TIMESYS=UTC`.
 
-Проверяется участок FLAGS 5×5 около предсказанного положения: `OVERFLOW`,
-`NONLINEAR`, `SUR_ERROR`, `NONFUNC`, `MISSING_DATA`, `HOT`, `COLD`; биты читаются
-из `MSKNnnnn` данного продукта. Дополнительно проверяется конечность IMAGE.
-При неудаче допускается ещё один кандидат, предпочтительно другого детектора.
-[IRSA: FLAGS и спектральная привязка](https://caltech-ipac.github.io/irsa-tutorials/spherex-intro/),
-[сервис небольших вырезок](https://caltech-ipac.github.io/spherex-archive-documentation/spherex-data-access/).
+A 5×5 FLAGS region near the predicted position is checked for `OVERFLOW`, `NONLINEAR`, `SUR_ERROR`, `NONFUNC`, `MISSING_DATA`, `HOT`, and `COLD`; bits are read from the product's `MSKNnnnn`. IMAGE values are also checked for finiteness. On failure one additional candidate is allowed, preferably from another detector. [IRSA: FLAGS and spectral calibration](https://caltech-ipac.github.io/irsa-tutorials/spherex-intro/), [small-cutout service](https://caltech-ipac.github.io/spherex-archive-documentation/spherex-data-access/).
 
-Статусы означают:
+Status meanings:
 
-- `usable`: пройдена именно эта быстрая проверка; не доказаны обнаружение,
-  пригодность фотометрии или отсутствие остальных видов загрязнения.
-- `flagged`: найдены плохие пиксели в области проверки. Это не обязательно
-  доказывает насыщение самой звезды: загрязнение может быть рядом.
-- `unchecked`: проверка не завершена, например, после двух ответов HTTP 503.
-- `no_coverage`: предсказанная позиция вне допустимой области покрытия.
+- `usable`: this quick check passed; detection, photometric suitability, and absence of other contamination are not established.
+- `flagged`: bad pixels were found in the checked region. This does not necessarily establish saturation of the star itself; contamination may be nearby.
+- `unchecked`: the check was not completed, for example after two HTTP 503 responses.
+- `no_coverage`: the predicted position is outside the allowed coverage region.
 
-`selection.json` сохраняет выбранные кадры и обе попытки, URL, ошибки сервиса,
-локальные значения FLAGS, расшифровку битов и координаты пикселя. Рядом сохранены
-заголовки IMAGE/FLAGS успешных загрузок. Полные изображения не скачивались;
-полученные маленькие вырезки не сохраняются. Они могут содержать общую таблицу
-ePSF, поэтому размер ответа около 4 МБ при небольшой матрице IMAGE допустим.
-Тайм-аут — 15 секунд, максимум одна повторная попытка на запрос. Общий сетевой
-этап ограничен 15 минутами; после каждой цели сохраняется частичный результат.
+`selection.json` records selected frames and both attempts, URLs, service errors, local FLAGS values, bit descriptions, and pixel coordinates. IMAGE/FLAGS headers for successful downloads are saved alongside it. Full images were not downloaded; the small cutouts obtained are not retained. They may contain a shared ePSF table, so a response of about 4 MB is possible even with a small IMAGE array. Timeout is 15 seconds, with at most one retry per request. The total network stage is limited to 15 minutes; a partial result is saved after each target.
 
-### Сохранённый результат
+### Saved result
 
-Всего **15 наблюдений: 3 usable, 4 flagged, 8 unchecked**. Восемь непроверенных
-кадров оставлены из-за HTTP 503 IRSA, с явными допущениями времени SIA.
+There are **15 observations: 3 usable, 4 flagged, 8 unchecked**. The eight unchecked frames were retained because of IRSA HTTP 503 responses, with explicit SIA time assumptions.
 
-| Цель | Даты выбранных эпох UTC | Проверка по порядку дат | Предсказанное геоцентрическое смещение первой → последней |
+| Target | Selected epoch dates UTC | Checks in date order | Predicted geocentric displacement, first → last |
 | --- | --- | --- | ---: |
-| Барнард | 2025-08-27; 2026-03-11; 2026-09-02 | flagged; unchecked; flagged | 10.549699″ ≈ 1.7154 пикселя |
-| Epsilon Indi B | 2025-05-20; 2026-04-27; 2026-09-27 | usable; usable; unchecked | 6.162287″ ≈ 1.0020 пикселя |
-| WISE 0855 | 2025-05-05; 2025-11-14; 2026-04-30 | unchecked; unchecked; unchecked | 8.031165″ ≈ 1.3059 пикселя |
-| RW Aur | 2025-09-04; 2026-03-04; 2026-09-09 | usable; flagged; flagged | 0.025383″ ≈ 0.0041 пикселя |
-| R Dra | 2025-06-06; 2025-11-20; 2026-05-13 | unchecked; unchecked; unchecked | 0.019594″ ≈ 0.0032 пикселя |
+| Barnard | 2025-08-27; 2026-03-11; 2026-09-02 | flagged; unchecked; flagged | 10.549699″ ≈ 1.7154 pixels |
+| Epsilon Indi B | 2025-05-20; 2026-04-27; 2026-09-27 | usable; usable; unchecked | 6.162287″ ≈ 1.0020 pixels |
+| WISE 0855 | 2025-05-05; 2025-11-14; 2026-04-30 | unchecked; unchecked; unchecked | 8.031165″ ≈ 1.3059 pixels |
+| RW Aur | 2025-09-04; 2026-03-04; 2026-09-09 | usable; flagged; flagged | 0.025383″ ≈ 0.0041 pixels |
+| R Dra | 2025-06-06; 2025-11-20; 2026-05-13 | unchecked; unchecked; unchecked | 0.019594″ ≈ 0.0032 pixels |
 
-Для Epsilon Indi B пригодные по быстрой проверке кадры — **разных детекторов
-D6 и D4**. Их координаты можно сопоставлять после проверки привязки, а изменение
-потока между ними не является проверкой переменности в одной полосе.
+For Epsilon Indi B, the frames passing the quick check are from **different detectors D6 and D4**. Their coordinates may be compared after checking registration, but their flux difference does not test variability in a single band.
 
-Контроль на **прежних трёх датах Барнарда**: 2025-08-27, 2025-10-01,
-2026-03-11. Предсказание без годичного параллакса — **5.594198″**, с
-геоцентрическим параллаксом — **5.454815″**. Восточная компонента меняется
-с **−0.431451″** на **+0.603501″**, северная — с **+5.577535″** на
-**+5.421328″**. Эти числа относятся к исходным датам, не к новой тройке.
+Check on the **previous three Barnard dates**: 2025-08-27, 2025-10-01, 2026-03-11. The prediction without annual parallax is **5.594198″**, and with geocentric parallax **5.454815″**. The east component changes from **−0.431451″** to **+0.603501″**, and the north component from **+5.577535″** to **+5.421328″**. These numbers refer to the original dates, not the new set of three.
 
-### Колонки `output/predictions.csv`
+### `output/predictions.csv` columns
 
-`target, epoch_id, obs_id, detector, release` связывают строку с кадром;
-`mjd` — MJD UTC, `time_source` — `fits_mjd_avg`, `fits_date_avg` или
-`sia_midpoint`. `ra_bary, dec_bary, ra_geo, dec_geo` — градусы.
-`d_east_arcsec, d_north_arcsec` — сферические смещения относительно **первой
-выбранной эпохи той же цели**, а не разность геоцентрической и барицентрической
-позиции. `shift_px` — угловое расстояние от первой эпохи / 6.15″, приблизительный
-масштаб, не измерение движения в пикселях. `coverage_margin_arcsec`,
-`quality_status`, `assumptions` описывают покрытие, проверку и допущения.
-Пустое значение означает отсутствие данных, не ноль. Ссылки на кадры находятся
-в `data/physics_observations.csv` и `selection.json`.
+`target, epoch_id, obs_id, detector, release` link the row to a frame; `mjd` is MJD UTC, `time_source` is `fits_mjd_avg`, `fits_date_avg`, or `sia_midpoint`. `ra_bary, dec_bary, ra_geo, dec_geo` are degrees. `d_east_arcsec, d_north_arcsec` are spherical offsets relative to **the first selected epoch of the same target**, not the difference between geocentric and barycentric positions. `shift_px` is angular distance from the first epoch / 6.15″, an approximate scale rather than a measured motion in pixels. `coverage_margin_arcsec`, `quality_status`, and `assumptions` describe coverage, checks and assumptions. An empty value means unavailable data, not zero. Frame links are in `data/physics_observations.csv` and `selection.json`.
 
-## Что ожидать от пяти объектов
+## What to expect from the five objects
 
-Величины движения и параллакса ниже рассчитаны/прочитаны из одной исходной
-строки каждого объекта; они не являются новыми измерениями SPHEREx.
+The motion and parallax values below are calculated or read from one source row per object; they are not new SPHEREx measurements.
 
-| Цель | μ, ″/год | Каталожный параллакс, ″ | Научное ожидание и ограничение |
+| Target | μ, ″/year | Catalogue parallax, ″ | Scientific expectation and limitation |
 | --- | ---: | ---: | --- |
-| Барнард | 10.39335 | 0.54698 | Движение преимущественно на север. Параллакс меняет и направление межэпохального смещения. Проверить плохие пиксели до измерения центра. |
-| Epsilon Indi B | 4.68416 | 0.27066 | Движение на юго-восток; Ba/Bb — карлики T1–1.5 и T6. Они не разделяются надёжно на этих изображениях. Модель Gaia Ba не задаёт точный ИК-фотоцентр пары. |
-| WISE 0855 | 8.15155 | 0.43900 | Движение преимущественно на запад. Сигнал в конкретном канале не гарантирован; предпочтение D6 не является обнаружением. |
-| RW Aur | 0.02506 | 0.00545 | На выбранном интервале движение мало; искать изменение потока в сопоставимых полосах. Учитывать смешение пары и неоднозначность обозначений A/B. |
-| R Dra | 0.02154 | 0.00125 | Основной эффект — переменность Mira, а не заметное движение. Литературный период около 246.12 суток (AAVSO) не выдавать за измеренный по трём эпохам. |
+| Barnard | 10.39335 | 0.54698 | Motion mostly northward. Parallax also changes the direction of inter-epoch displacement. Check bad pixels before measuring the centroid. |
+| Epsilon Indi B | 4.68416 | 0.27066 | Southeastward motion; Ba/Bb are T1–1.5 and T6 dwarfs. They are not reliably resolved in these images. Gaia's Ba model does not give the pair's exact IR photocentre. |
+| WISE 0855 | 8.15155 | 0.43900 | Motion mostly westward. Signal in a particular channel is not guaranteed; preferring D6 is not a detection. |
+| RW Aur | 0.02506 | 0.00545 | Motion over the selected interval is small; look for flux changes in comparable bands. Account for blending and ambiguous A/B designations. |
+| R Dra | 0.02154 | 0.00125 | The main effect is Mira variability, not detectable motion. Do not present the literature period of about 246.12 days (AAVSO) as measured from three epochs. |
 
-Источники астрометрии: четыре строки Gaia DR3 и Table 5
-[Kirkpatrick et al. (2021)](https://arxiv.org/html/2011.11616#S4.T5) для WISE.
-По Epsilon Indi Ba/Bb:
-[Chen et al. (2022)](https://arxiv.org/html/2205.08077).
-О переменности RW Aur:
-[Koutoulaki et al. (2019)](https://arxiv.org/abs/1903.06423).
-Классификация R Dra и литературные сведения:
-[AAVSO](https://targettool.aavso.org/?ac=on&cv=on&ev=on&exo=on&het=on&lpv=on&settype=true&spv=on&yso=on).
+Astrometry sources: four Gaia DR3 rows and [Kirkpatrick et al. (2021), Table 5](https://arxiv.org/html/2011.11616#S4.T5) for WISE. Epsilon Indi Ba/Bb: [Chen et al. (2022)](https://arxiv.org/html/2205.08077). RW Aur variability: [Koutoulaki et al. (2019)](https://arxiv.org/abs/1903.06423). R Dra classification and literature: [AAVSO](https://targettool.aavso.org/?ac=on&cv=on&ev=on&exo=on&het=on&lpv=on&settype=true&spv=on&yso=on).
 
-## Метан: предложенный метод, численного результата пока нет
+## Methane: proposed method, no numerical result yet
 
-Основная цель для проверки — Epsilon Indi B, но наблюдается смешанный спектр
-Ba/Bb, а не отдельные индексы каждого компонента. Предлагается литературный
-**CH₄-K** целиком внутри D3:
+The primary target is Epsilon Indi B, but the observed spectrum combines Ba/Bb rather than providing separate indices for each component. The proposed literature **CH₄-K** index lies entirely within D3:
 
-**I = ∫[2.215, 2.255] Fλ dλ / ∫[2.080, 2.120] Fλ dλ**, длина волны в мкм.
+**I = ∫[2.215, 2.255] Fλ dλ / ∫[2.080, 2.120] Fλ dλ**, wavelength in µm.
 
-Числитель — область поглощения, знаменатель — область сравнения. Индекс
-безразмерный; меньшее значение соответствует более глубокому относительному
-поглощению. Определение —
-[Burgasser et al. (2006), Table 3](https://arxiv.org/html/astro-ph/0510090#S4.T3).
+The numerator is the absorption region, the denominator a comparison region. The index is dimensionless; a lower value indicates deeper relative absorption. Definition: [Burgasser et al. (2006), Table 3](https://arxiv.org/html/astro-ph/0510090#S4.T3).
 
-Для SPHEREx это **оценочная диагностика**, не готовая классификация: при R≈41
-ширина канала около 2.2/41 ≈ 0.054 мкм, что больше каждого окна 0.040 мкм.
-Нельзя автоматически восстановить литературные интегралы из двух центральных
-значений каналов. Нужны фактические спектральные отклики и проверка, что
-измерения покрывают окна. Предпочтение одного детектора уменьшает проблему
-взаимной калибровки, но не исправляет недостаточное спектральное разрешение.
-[Диапазоны и разрешение SPHEREx](https://caltech-ipac.github.io/spherex-archive-documentation/spherex-data-products/).
+For SPHEREx this is an **approximate diagnostic**, not a ready classification: at R≈41, channel width around 2.2/41 ≈ 0.054 µm exceeds each 0.040 µm window. The literature integrals cannot automatically be recovered from two channel-centre values. Actual spectral responses and a check that measurements cover the windows are needed. Preferring one detector reduces cross-calibration problems but does not fix insufficient spectral resolution. [SPHEREx bands and resolution](https://caltech-ipac.github.io/spherex-archive-documentation/spherex-data-products/).
 
-Перед расчётом команда должна извлечь фоновые вычтенные потоки в сопоставимых
-условиях, учесть флаги, ошибки и отклики. MJy/sr в IMAGE — поверхностная
-плотность Fν: это не готовый Fλ отдельной звезды; нужны фотометрия, единицы,
-телесный угол и корректное преобразование Fν↔Fλ. При недостаточном покрытии
-или сигнале численный индекс не показывать. Для обычного отношения требовать
-положительный знаменатель с S/N≥5 и числитель с S/N≥3; иначе сообщать
-«недостаточно данных», а не подставлять ноль. Это рабочие пороги демонстрации,
-не универсальная шкала обнаружения метана.
+Before calculation, the team must extract background-subtracted fluxes under comparable conditions and account for flags, errors and responses. MJy/sr in IMAGE is surface brightness Fν, not a ready Fλ for an individual star; photometry, units, solid angle and correct Fν↔Fλ conversion are required. Do not show a numerical index if coverage or signal is insufficient. For an ordinary ratio require a positive denominator with S/N≥5 and numerator with S/N≥3; otherwise report “insufficient data” rather than inserting zero. These are working demonstration thresholds, not a universal methane-detection scale.
 
-Дополнительный CH₄-H: окна 1.635–1.675 / 1.560–1.600 мкм лежат на D3/D2,
-поэтому индекс дополнительно зависит от взаимной калибровки; он также оценочный.
-Для WISE область около **3.3 мкм внутри D4** — возможная диагностика только при
-достаточном сигнале. Цвет 4.5/3.3 мкм не является однозначным обнаружением или
-измерением содержания метана. В этой работе потоки и значения индексов
-**не извлекались**.
+Additional CH₄-H windows 1.635–1.675 / 1.560–1.600 µm lie on D3/D2, so the index also depends on cross-calibration and is approximate. For WISE, the region around **3.3 µm within D4** is a possible diagnostic only with sufficient signal. The 4.5/3.3 µm colour is not an unambiguous detection or measurement of methane abundance. Fluxes and index values **were not extracted** in this work.
 
-## Текст научного слайда
+## Text for the science slide
 
-**Положение источника — проверяемое предсказание.** Мы перенесли каталожную
-астрометрию всех пяти целей на реальные времена SPHEREx и отдельно добавили
-геометрический годичный параллакс. На исходном интервале Барнарда 196.354 дня
-ожидаемое смещение меняется с 5.594″ до 5.455″; меняется и его направление.
-Для новой подборки сохранены 15 предсказаний и локальные проверки качества:
-3 кадра прошли быстрый контроль, 4 имеют плохие флаги, 8 пока не проверены из-за
-ответов архива 503. Для RW Aur и R Dra основной ожидаемый эффект — изменение
-яркости, которое нужно проверять в сопоставимых полосах. **Ни предсказанный
-маркер, ни литературный метановый индекс не заменяют измерения по данным.**
+**The source position is a testable prediction.** We propagated catalogue astrometry for all five targets to actual SPHEREx times and separately added geometric annual parallax. Over the original 196.354-day Barnard interval, expected displacement changes from 5.594″ to 5.455″; its direction changes as well. For the new selection, 15 predictions and local quality checks are saved: 3 frames passed the quick check, 4 have bad flags, and 8 remain unchecked because of archive 503 responses. For RW Aur and R Dra, the main expected effect is a brightness change that must be checked in comparable bands. **Neither a predicted marker nor a literature methane index replaces measurement from the data.**
 
-Измеренные смещения/потоки, их ошибки и согласие с предсказанием добавляются
-после независимой обработки изображений командой.
+Measured displacements/fluxes, their errors, and agreement with the prediction are to be added after independent image processing by the team.

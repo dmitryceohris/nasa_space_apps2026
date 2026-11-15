@@ -12,6 +12,7 @@ from astropy.time import Time
 from astropy.wcs import WCS, FITSFixedWarning
 
 from .exposure import Exposure, parse_flag_bits
+from runtime_storage import current_workspace
 
 # Ключи времени. В реальных файлах SPHEREx (проверено на DR1) есть MJD-BEG/MJD-AVG/MJD-END —
 # берём MJD-AVG (середина экспозиции). Остальные — запасные варианты.
@@ -151,15 +152,31 @@ def _download(url: str, cache: bool, timeout: float, retries: int = 5) -> str:
 
 def load_exposure(path_or_url: str, *, mjd_hint: float | None = None,
                   obs_id_hint: str = "", cache: bool = True, timeout: float = 60,
-                  product_url: str | None = None) -> Exposure:
+                  product_url: str | None = None, workspace=None) -> Exposure:
     """Открывает локальный файл или URL (URL кэшируется на диске средствами astropy)."""
+    if workspace is not None:
+        # ContextVars do not cross the download worker's thread boundary automatically.
+        with workspace.activate():
+            return load_exposure(path_or_url, mjd_hint=mjd_hint, obs_id_hint=obs_id_hint,
+                                 cache=cache, timeout=timeout, product_url=product_url)
+    workspace = current_workspace()
     src = path_or_url
+    owned = False
     if path_or_url.startswith(("http://", "https://")):
-        src = _download(path_or_url, cache, timeout)
-    with fits.open(src, memmap=False) as hdul:
-        exp = exposure_from_hdul(hdul, source=product_url or path_or_url,
-                                 mjd_hint=mjd_hint, obs_id_hint=obs_id_hint)
-    import hashlib
-    from pathlib import Path
-    exp.provenance["file_sha256"] = hashlib.sha256(Path(src).read_bytes()).hexdigest()
-    return exp
+        if workspace is not None:
+            with _IRSA_SLOTS:
+                src = workspace.download(path_or_url, timeout=timeout)
+            owned = True
+        else:
+            src = _download(path_or_url, cache, timeout)
+    try:
+        with fits.open(src, memmap=False) as hdul:
+            exp = exposure_from_hdul(hdul, source=product_url or path_or_url,
+                                     mjd_hint=mjd_hint, obs_id_hint=obs_id_hint)
+        import hashlib
+        from pathlib import Path
+        exp.provenance["file_sha256"] = hashlib.sha256(Path(src).read_bytes()).hexdigest()
+        return exp
+    finally:
+        if owned:
+            src.unlink(missing_ok=True)

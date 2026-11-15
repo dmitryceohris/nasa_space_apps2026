@@ -6,6 +6,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from . import cache
+from runtime_storage import enabled, worker_slot
 
 
 def connect():
@@ -53,12 +54,19 @@ def run(job, runner):
         if not locked:
             return 202, {"status": "running", "stage": "process", "message": "Обработка"}
         result = read(conn, job.key)
-        if result is None:
+        if result is not None:
+            return 200, result
+        with worker_slot() as workspace:
+            if enabled() and workspace is None:
+                return 202, {"status": "running", "stage": "queued", "message": "Ожидание обработки"}
             job.started = True
             result = runner(job)
             urls = [f[field] for f in result.get("frames", []) for field in ("image_url", "flags_url") if f.get(field)]
             if result.get("trail_url"):
                 urls.append(result["trail_url"])
-            images = [(Path(url).name, (cache.CACHE / job.key / Path(url).name).read_bytes()) for url in urls]
+            directory = workspace.path / "render" if workspace is not None else cache.CACHE / job.key
+            images = [(Path(url).name, (directory / Path(url).name).read_bytes()) for url in urls]
             save(conn, job.key, result, images, cache.ttl(result))
+            # Commit before workspace cleanup: response images must already be durable.
+            conn.commit()
         return 200, result

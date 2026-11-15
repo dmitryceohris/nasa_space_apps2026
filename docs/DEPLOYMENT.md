@@ -1,144 +1,97 @@
-# Запуск и размещение SPHEREx Viewer
+# Running and deploying SPHEREx Viewer
 
-Основная страница и API опубликованы на Vercel. Готовые результаты и изображения
-хранятся в PostgreSQL на Supabase. [Открыть SPHEREx Sky Viewer](https://spherex-sky-viewer-zeta.vercel.app/).
-Настройки размещения и ссылки по координатам приведены в разделе «Vercel и Supabase».
+The main page and API are deployed on Vercel. Completed results and images are stored in PostgreSQL on Supabase. [Open SPHEREx Sky Viewer](https://spherex-sky-viewer-zeta.vercel.app/). Deployment settings and coordinate links are described in “Vercel and Supabase”.
 
-## Локально
+## Local operation
 
 ```sh
 uv sync --locked
 PREWARM=0 bash start.sh
 ```
 
-Открыть `http://127.0.0.1:8000/`. Для выбранного порта и внешнего интерфейса:
+Open `http://127.0.0.1:8000/`. To select a port and external interface:
 
 ```sh
 HOST=0.0.0.0 PORT=8000 PREWARM=0 bash start.sh
 ```
 
-`CENTER_MJD` необязателен. Он фиксирует дату центра запроса для воспроизводимого демо;
-для обычной работы центр по имени вычисляется на текущую дату. Введённые RA/Dec всегда фиксированы.
+`CENTER_MJD` is optional. It fixes the query-centre date for a reproducible demo; in normal operation the centre for a name is calculated for the current date. Entered RA/Dec coordinates are always fixed.
 
-## Контейнер
+## Container
 
-`Dockerfile` использует Python 3.12.13, uv 0.11.29 и `uv.lock`. Приложение работает
-от отдельного пользователя; каталог `/cache` предназначен для постоянного тома.
-Не добавляются личная среда, Git, runtime-кэш, FITS и проверочные ответы.
+The `Dockerfile` uses Python 3.12.13, uv 0.11.29, and `uv.lock`. The application runs as a separate user; `/cache` is intended for a persistent volume. Personal environments, Git, runtime cache, FITS files, and validation responses are excluded.
 
 ```sh
 docker compose up --build -d
 ```
 
-Открыть `http://127.0.0.1:8000/`. Именованный том `spherex-cache` сохраняет данные
-между перезапусками приложения. Команда `docker compose down` оставляет этот том.
-На выбранном хостинге нужно подключить постоянный диск к `/cache`, передать `PORT`
-при необходимости и настроить внешний адрес/HTTPS перед приложением.
+Open `http://127.0.0.1:8000/`. The named `spherex-cache` volume retains data across application restarts. `docker compose down` leaves the volume intact. On the chosen host, mount persistent storage at `/cache`, provide `PORT` if necessary, and configure an external address and HTTPS in front of the application.
 
-Используется один процесс приложения. Очередь и блокировки находятся в памяти:
-несколько процессов с общим каталогом кэша требуют отдельной общей очереди и блокировок.
+One application process is used. The queue and locks are in memory: multiple processes sharing a cache directory require a separate shared queue and locks.
 
-## Данные и пределы нагрузки
+## Data and load limits
 
-По умолчанию снимки ищутся в живом архиве. Для намеренно ограниченного набора из
-локальных таблиц задать `SPHEREX_SOURCE=tables`; результаты этого режима имеют
-отдельные ключи кэша. В режиме `archive` локальная таблица не скрывает новые наблюдения.
+By default, images are searched in the live archive. Set `SPHEREX_SOURCE=tables` for an intentionally limited set from local tables; this mode uses separate cache keys. In `archive` mode, a local table does not hide new observations.
 
-| Переменная | По умолчанию | Смысл |
+| Variable | Default | Meaning |
 | --- | ---: | --- |
-| `CACHE_DIR` | `cache/`, в контейнере `/cache` | FITS, метаданные, PNG и результаты |
-| `PREWARM` | 0 в контейнере | Не запускать пять целей автоматически |
-| `RESULT_CACHE_TTL` | 3600 секунд | Срок актуальности готового результата |
-| `PARTIAL_CACHE_TTL` | 60 секунд | Повторить пропущенные загрузки после ответа `partial`, `download_failed` или `unusable_data` |
-| `EMPTY_CACHE_TTL` | 60 секунд | Обновление пустого ответа |
-| `EXPOSURE_CACHE_TTL` | 3600 секунд | Обновление списка экспозиций |
-| `TAP_PROBE_TIMEOUT` | 12 секунд | Одна попытка TAP перед автоматическим поиском через официальный IRSA SIA2 |
-| `TAP_RETRY_SECONDS` | 300 секунд | Пауза повторной проверки TAP после отказа; SIA2 продолжает обслуживать запросы |
-| `MAX_PENDING_JOBS` | 16 | Ожидающие и исполняющиеся задачи (сохранённые ошибки не считаются); далее HTTP 503 `busy` |
-| `MAX_JOB_SECONDS` | 1800 секунд | Общий срок ожидания/работы; проверяется между этапами и загрузками |
-| `JOB_RETENTION_SECONDS` | 300 секунд | Хранение забытых завершившихся ошибок |
+| `CACHE_DIR` | `cache/`, `/cache` in container | FITS, metadata, PNG and results |
+| `PREWARM` | 0 in container | Do not automatically start the five targets |
+| `RESULT_CACHE_TTL` | 3600 seconds | Lifetime of a completed result |
+| `PARTIAL_CACHE_TTL` | 60 seconds | Retry missed downloads after `partial`, `download_failed`, or `unusable_data` |
+| `EMPTY_CACHE_TTL` | 60 seconds | Refresh interval for an empty response |
+| `EXPOSURE_CACHE_TTL` | 3600 seconds | Refresh interval for the exposure list |
+| `TAP_PROBE_TIMEOUT` | 12 seconds | One TAP attempt before automatic fallback to official IRSA SIA2 search |
+| `TAP_RETRY_SECONDS` | 300 seconds | Delay before retrying TAP after failure; SIA2 continues serving requests |
+| `MAX_PENDING_JOBS` | 16 | Queued and running jobs (saved errors excluded); subsequent requests get HTTP 503 `busy` |
+| `MAX_JOB_SECONDS` | 1800 seconds | Total wait/run limit, checked between stages and downloads |
+| `JOB_RETENTION_SECONDS` | 300 seconds | Retention of forgotten completed errors |
 
-Четыре задачи исполняются одновременно. При превышении срока оставшиеся ожидающие
-загрузки отменяются; уже начавшиеся HTTP-вызовы завершаются по своим сетевым ограничениям.
-Во время их завершения повторный запрос не создаёт вторую задачу с тем же ключом.
-Вызовы IRSA API используют три попытки по 45 секунд с ограниченной паузой.
-Спектральная библиотека сохраняет собственный лимит и повторы загрузки.
-Повреждённые FITS и незавершённые JSON не публикуются как готовые результаты.
-Автоматическая очистка диска от старых FITS/PNG пока не реализована.
+Four jobs run concurrently. On timeout, remaining queued downloads are canceled; HTTP calls already started finish under their own network limits. While they finish, a repeated request does not create a second job with the same key. IRSA API calls use three 45-second attempts with a bounded delay. The spectral library retains its own download limit and retries. Damaged FITS and incomplete JSON are not published as completed results.
 
-## Проверка после размещения
+In the Vercel entry point (`app.py`), `SPHEREX_EPHEMERAL_STORAGE=1` enables one heavy calculation per instance, a separate working directory, per-epoch downloads, and cleanup after success, error, or timeout. PNGs are removed after the Supabase transaction is confirmed. Working directories from interrupted calls are removed on the next job. Inactive temporary-cache files are evicted by last use; open files are protected.
 
-Подставить внешний адрес вместо `BASE`:
+All Vercel application directories are isolated inside `/tmp/spherex-runtime`. Platform-provided XDG values are not used as cleanup roots: Vercel service files and installed dependencies are not affected. `SPHEREX_TMP_MAX_BYTES=350000000` limits the application's total temporary cache, including calibrations and library caches. `SPHEREX_TMP_MIN_FREE_BYTES=75000000` reserves free filesystem space. If space cannot be safely freed, the API returns `503`, `error.code=storage_full`, and `Retry-After: 5`, rather than a completed result without pixels. The `scratch job finished` log contains peak managed-file usage and remaining free space. On Vercel, calibrations are checked by SHA-256 and held in a bounded memory cache: the platform uses a substantial part of `/tmp` for its own dependencies, so an additional 50 MB of calibrations per detector cannot be stored there.
+
+A local `api.main:app` run keeps the normal FITS cache and does not enable archive cleanup. Vercel requires a configured `SPHEREX_DATABASE_URL`; completed frames and GIFs are read from the database independently of temporary-directory lifetimes.
+
+## Verification after deployment
+
+Replace `BASE` with the external address:
 
 ```sh
 .venv/bin/python scripts/validate_targets.py --base BASE --images --timeout 300 --equivalent-coordinates --output data/validation/published
 ```
 
-Затем в обычном браузере с другого устройства:
+Then, in a normal browser on another device:
 
-1. Открыть пустую главную страницу; форма не запускает загрузки снимков.
-2. Проверить пять пресетов и точную пару WISE `08h55m10.831s, -7d14m42.53s`, поле 6′, D6.
-3. Переключить разные даты; проверить доступность PNG и предупреждения.
-4. Открыть ссылки из манифеста на три дополнительные звезды и эквивалентные координаты.
-5. Проверить повторный запрос, неизвестное имя, ошибочную/неполную пару, отказ архива.
-6. Проверить `/dev` и `/dev/`, если тестовая страница остаётся доступна.
+1. Open the empty home page; the form should not initiate image downloads.
+2. Check the five presets and the exact WISE pair `08h55m10.831s, -7d14m42.53s`, field 6′, D6.
+3. Switch dates and check PNG availability and warnings.
+4. Open manifest links for three additional stars and equivalent coordinates.
+5. Check a repeated query, an unknown name, an invalid or incomplete coordinate pair, and archive failure.
+6. Check `/dev` and `/dev/` if the test page remains available.
 
-Этот список и контейнер сами по себе не подтверждают публикацию. Проверка реальных
-кадров и ограничения качества: [TARGET_VALIDATION.md](TARGET_VALIDATION.md).
+This list and the container alone do not establish that deployment has occurred. For real-frame checks and quality limitations see [TARGET_VALIDATION.md](TARGET_VALIDATION.md).
 
+## API acceptance follow-up
 
-## Дополнение после API-приёмки
+Five fixes by Asanali from `b55b05e` were carried over onto current main, including invalid-spectrum cache refresh and excluding saved errors from the queue limit. Full report: [reviews/api-acceptance.md](reviews/api-acceptance.md).
 
-Пять исправлений Асанали из `b55b05e` перенесены поверх актуального main, включая
-обновление кэша непригодного спектра и исключение сохранённых ошибок из лимита очереди.
-Полный отчёт: [reviews/api-acceptance.md](reviews/api-acceptance.md).
+Internal exceptions were additionally hidden from public responses and background jobs; `Retry-After` was added for 503 responses and expensive API requests were limited with 429. `API_RATE_LIMIT_PER_MINUTE=120` is one client's combined budget across all expensive endpoints; normal polling every 2–2.5 seconds fits within it. When deploying behind a proxy, configure trusted proxy addresses in Uvicorn (`FORWARDED_ALLOW_IPS`) based on the actual deployment network. Without this, the proxy may be treated as one client. Do not trust forwarded headers from arbitrary external addresses.
 
-Дополнительно скрыты внутренние исключения из публичных ответов и фоновых задач,
-добавлены `Retry-After` для 503 и ограничение дорогих API-запросов с 429.
-`API_RATE_LIMIT_PER_MINUTE=120` — бюджет одного клиента для всех дорогих endpoint вместе;
-обычный polling раз в 2–2.5 секунды укладывается в него. При размещении за proxy
-укажите доверенные proxy-адреса в настройках Uvicorn (`FORWARDED_ALLOW_IPS`), исходя
-из реальной сети размещения. Без этой настройки proxy может считаться одним клиентом.
-Не доверяйте заголовкам пересылки от произвольных внешних адресов.
+A single local application process and an unverified live cold spectral run remain limitations. This patch does not select hosting or validate scientific interpretation.
 
-Один процесс приложения, отсутствие автоматической очистки диска и непроверенный
-живой холодный спектральный прогон остаются ограничениями. Этот патч не выбирает
-хостинг и не подтверждает научную интерпретацию.
+## Vercel and Supabase
 
-## Vercel и Supabase
+The public viewer accepts ICRS coordinates in degrees or hours, minutes and seconds. Example archive query: `/?ra=133.79512917&dec=-7.24514722&det=6&fov=6&mode=single&max_per_epoch=1`. The same URL works as an external iframe's `src`. **Share or embed this view** provides a link and HTML with the current parameters. The field of view is specified in arcminutes.
 
-Публичный viewer принимает ICRS-координаты в градусах или в часах, минутах и
-секундах. Пример запроса к архиву:
-`/?ra=133.79512917&dec=-7.24514722&det=6&fov=6&mode=single&max_per_epoch=1`.
-Тот же URL подходит для `src` внешнего iframe. Раздел **Share or embed this view**
-выдаёт ссылку и HTML с текущими параметрами. Поле зрения задаётся в угловых минутах.
+By default the viewer queries IRSA. PostgreSQL results and exposure lists are refreshed on the next request after their TTL expires. The separate `snapshot=2026-11-15` parameter opens saved frames for the five presets or the exact WISE coordinate selection. These support `single`, `coadd`, `diff`, and `trail`, with `max_per_epoch=6` (default) or `1`. Results were recalculated from verified original FITS, and PNGs and responses are included in the deployment: viewing requires no database, new IRSA search, or background processing. Manifest and parameters: `frontend/challenge-demo/snapshots/manifest.json`; reproduce with `python scripts/export_viewer_snapshots.py` using the original local FITS cache. All network access during export is prohibited. Scientific interpretation limitations and quality masks are retained.
 
-По умолчанию viewer обращается к IRSA. Результаты в PostgreSQL и списки экспозиций
-обновляются при следующем запросе после истечения их TTL. Отдельный параметр
-`snapshot=2026-11-15` открывает сохранённые кадры пяти пресетов или точной
-координатной выборки WISE. Для них включены `single`, `coadd`, `diff` и `trail`,
-с `max_per_epoch=6` (по умолчанию) или `1`. Результаты заново рассчитаны из
-проверенных исходных FITS, а PNG и ответы включены в публикацию: для просмотра
-не нужны база, новый поиск IRSA или фоновая обработка. Манифест и параметры:
-`frontend/challenge-demo/snapshots/manifest.json`; воспроизведение:
-`python scripts/export_viewer_snapshots.py` с исходным локальным FITS-кэшем.
-Все сетевые обращения при экспорте запрещены. Ограничения научной интерпретации
-и маски качества сохранены.
+When a user selects one of the five presets, the interface selects saved observations if the user has not explicitly selected a source. `Latest IRSA` remains available for a new search and arbitrary parameters. Saved frames load from the current deployment even when an external server is specified with `?api=`; spectrum and light curve use the archive API.
 
-При выборе одного из пяти пресетов интерфейс выбирает сохранённые наблюдения,
-если пользователь ещё не выбирал источник явно. `Latest IRSA` остаётся доступен
-для нового поиска и произвольных параметров. Сохранённые кадры загружаются из
-текущей публикации даже при заданном `?api=` внешнем сервере; спектр и кривая
-блеска используют архивный API.
+The slider displays the selected field of view in arcminutes. After resizing or changing detector, the viewer automatically selects `Latest IRSA` and loads with the new parameters; processing may take time. A later preset selection preserves that source. When manually returning to saved observations, field size and detector are restored from the manifest for the selected object or exact WISE coordinate selection.
 
-Для следующего релиза укажите в Vercel `SPHEREX_COLLECTIONS` (имена SIA2 через
-запятую в порядке предпочтения) и повторите деплой. Сейчас используются
-`spherex_dr1,spherex_qr3`. Настройка применяется к резервному SIA2-поиску и
-спектрам. Основной TAP-поиск обращается к актуальной таблице IRSA. Ключи архивного
-кэша учитывают список коллекций. При смене калибровок обновите проверенный манифест
-и совместимые версии конвейера. [Коллекции и периодичность публикации IRSA](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-access/).
+For the next release, set `SPHEREX_COLLECTIONS` in Vercel (comma-separated SIA2 names in preference order) and redeploy. Current values are `spherex_dr1,spherex_qr3`. This setting applies to fallback SIA2 search and spectra. The primary TAP search uses the current IRSA table. Archive-cache keys include the collection list. When changing calibrations, update the verified manifest and compatible pipeline versions. [IRSA collections and release cadence](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-access/).
 
-Сервер использует секрет Vercel `SPHEREX_DATABASE_URL` для схемы `spherex`.
-Для новой базы примените миграцию из `supabase/migrations/`, выдайте приложению
-права на эту схему и выполните `python scripts/seed_supabase_demo.py` с тем же
-подключением. Кадры и маски хранятся в PostgreSQL вместе с результатами.
+The server uses the Vercel secret `SPHEREX_DATABASE_URL` for the `spherex` schema. For a new database, apply the migration in `supabase/migrations/`, grant the application access to that schema, and run `python scripts/seed_supabase_demo.py` with the same connection. Frames and masks are stored in PostgreSQL together with results.

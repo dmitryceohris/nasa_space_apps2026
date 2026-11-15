@@ -1,81 +1,49 @@
-# Проверка сценария Дилайлы
+# Scenario validation
 
-## Объединённая приёмка 14 ноября 2026
+## Combined acceptance, November 14, 2026
 
-Текущий проверенный код **be2ca1a**, основа **afa35ef**, научный перенос **cb29e02**.
-[processing-acceptance.md](reviews/processing-acceptance.md) завершает Б1 с вердиктом
-**«согласовано с ограничениями»**: просмотр участков и каталоговый прогноз приняты,
-независимая регистрация и точность измерений не подтверждены. Новый прогон сохранённых
-реальных FITS: 47 входов, 36 сценариев /api/view, 188 кадров, 0 запросов данных к архиву;
-[ответы](../data/validation/processing-acceptance/replay.json).
-Общий набор: **259 passed, 1 skipped**; `git diff --check` без замечаний.
+Current checked code **be2ca1a**, base **afa35ef**, scientific port **cb29e02**. [processing-acceptance.md](reviews/processing-acceptance.md) concludes B1 with **“accepted with limitations”**: field viewing and catalogue predictions are accepted; independent registration and measurement accuracy are not confirmed. A new replay of saved real FITS used 47 inputs, 36 /api/view scenarios, 188 frames, and 0 archive data requests; [responses](../data/validation/processing-acceptance/replay.json). Full suite: **259 passed, 1 skipped**; `git diff --check` clean.
 
-Сведения ниже — история живых и браузерных проверок на указанных там коммитах.
-Прогон FITS не является новым живым внешним проходом; отдельно повторены управляемые браузерные проверки в processing-acceptance/browser.json. Д2–Д7 закрыты в пределах
-просмотра по [карте](DILAYLA_ACCEPTANCE.md); постоянное размещение Б3 остаётся отдельно.
-Прямые подтверждения обработки/наблюдений конкретными участниками не получены.
+The information below records live and browser checks at the specified commits. The FITS replay is not a new live external run; controlled browser checks were separately repeated in processing-acceptance/browser.json. D2–D7 are closed for viewing according to the [acceptance map](DILAYLA_ACCEPTANCE.md); permanent hosting B3 remains separate. Direct participant confirmation of processing/observations was not obtained.
 
+November 14, 2026. Checked code: `aa7ce46`, base `39bdbd5`. Current report changes are identified separately in Git. D1 was already in the base. D2–D5 were refined in this run; D6 was checked to the extent described below. Shared changes were already merged into the base; no new agreement with participants is claimed.
 
-14 ноября 2026. Проверенная версия кода: `aa7ce46`, основа `39bdbd5`. Текущие изменения отчёта указаны отдельно в Git.
-Д1 уже присутствовал в основе. Д2–Д5 доработаны в этом прогоне; Д6 проверен в указанном ниже объёме.
-Общие изменения Асанали уже объединены в основу; новая договорённость с участниками не заявляется.
+## Real data
 
-## Реальные данные
+The server ran with `PREWARM=0`, without mock data. The check uses `single` mode, a 6′ field, one exposure per epoch, D6 for WISE and D3 for the other objects. Manifest: [target_cases.csv](../data/validation/target_cases.csv). Responses: [responses](../data/validation/responses/). The JSON records source, components, actual reference epochs, assumptions, obs_ids, times and warnings. Raw Sesame responses for three additional stars are stored separately (`*-sesame.txt`).
 
-Сервер запущен с `PREWARM=0`, без mock. Проверка использует режим `single`, поле 6′,
-одну экспозицию на эпоху, D6 для WISE и D3 для остальных объектов.
-Манифест: [target_cases.csv](../data/validation/target_cases.csv).
-Ответы: [responses](../data/validation/responses/). В JSON сохранены источник, компоненты,
-реальные исходные эпохи, допущения, obs_ids, время и предупреждения.
-Сырые ответы Sesame трёх дополнительных звёзд сохранены отдельно (`*-sesame.txt`).
-
-| Цель | Кадры разных дат | Ограничение |
+| Target | Frames on different dates | Limitation |
 | --- | ---: | --- |
-| Barnard | 5 | Загрязнение/насыщение, плохое качество центроидов, разные полосы |
-| Epsilon Indi B | 7 | Координаты Ba; неоднозначные кандидаты, Ba/Bb не разрешены |
-| WISE 0855 | 4 | Неоднозначность кандидатов, разные полосы; обнаружение цели не подтверждено |
-| RW Aur | 3 | Восточная литературная A; A/B не разрешены; TRANSIENT/SUR_ERROR/BLOOM во всех трёх окрестностях прогноза, OVERFLOW в двух; см. научную проверку ниже |
-| R Dra | 11 | Насыщение и разные полосы; период не измерялся |
-| Proxima Cen | 4 | Sesame J2000 без проверенной исходной эпохи; фиксированная позиция, кандидаты неоднозначны |
-| 61 Cyg A | 5 | Те же ограничения эпохи; разные полосы и неоднозначные кандидаты |
-| Vega | 4 | Те же ограничения эпохи; насыщение и плохие центроиды |
+| Barnard | 5 | Contamination/saturation, poor centroid quality, different bands |
+| Epsilon Indi B | 7 | Ba coordinates; ambiguous candidates, Ba/Bb unresolved |
+| WISE 0855 | 4 | Ambiguous candidates, different bands; target detection not confirmed |
+| RW Aur | 3 | Eastern literature A; A/B unresolved; TRANSIENT/SUR_ERROR/BLOOM in all three prediction neighbourhoods, OVERFLOW in two; see scientific review below |
+| R Dra | 11 | Saturation and different bands; period not measured |
+| Proxima Cen | 4 | Sesame J2000 without a verified reference epoch; fixed position, ambiguous candidates |
+| 61 Cyg A | 5 | Same epoch limitations; different bands and ambiguous candidates |
+| Vega | 4 | Same epoch limitations; saturation and poor centroids |
 
-Точная пара WISE `08h55m10.831s, -7d14m42.53s` отдельно вернула 4 кадра при FOV=6′, D6;
-[ответ](../data/validation/responses/wise-objective.json). Центр остался фиксированным,
-`target_info=null`, прогноз движения не добавлен.
+The exact WISE pair `08h55m10.831s, -7d14m42.53s` separately returned 4 frames at FOV=6′, D6; [response](../data/validation/responses/wise-objective.json). The centre remained fixed, `target_info=null`, and no motion prediction was added.
 
-Первый проход выполнял реальные HTTP-запросы и загрузки FITS с IRSA; некоторые метаданные
-и FITS могли уже находиться в локальном кэше. У R Dra первоначальный лимит 90 секунд истёк;
-задача завершилась позже и вернула 11 кадров. На окончательной версии выполнен повторный
-прогон всех восьми целей. Он использовал реальные FITS и кэш; это **не** доказательство
-холодного запуска без кэша или актуальности всей выборки архива.
-Сбой/503 IRSA не интерпретируется как отсутствие покрытия.
+The first pass made real HTTP requests and FITS downloads from IRSA; some metadata and FITS may already have been in the local cache. R Dra exceeded the initial 90-second limit; the job completed later and returned 11 frames. All eight targets were rerun on the final version. It used real FITS and cache; this is **not** evidence of a cold start without cache or current completeness of the archive sample. IRSA failures/503 are not interpreted as absence of coverage.
 
-## Браузер
+## Browser
 
-Основная HTTP-страница проверена для всех восьми объектов: PNG загружены (59×59 пикселей),
-кнопка перехода меняет дату первой эпохи на дату второй. Журнал:
-[browser-real.txt](../data/validation/browser-real.txt). Проверены сохранённые ссылки с
-`target`, `fov`, `det`, `mode`, `max_per_epoch`. На ширине 375 px изображение занимает
-351 px; предупреждения остаются после перехода к следующему кадру.
-После записи журнала уточнена только подпись центроида: «centroid candidate».
+The main HTTP page was checked for all eight objects: PNGs loaded (59×59 pixels), and the navigation button changed the first epoch date to the second. Log: [browser-real.txt](../data/validation/browser-real.txt). Saved links with `target`, `fov`, `det`, `mode`, and `max_per_epoch` were checked. At 375 px width the image occupies 351 px; warnings persist after advancing to the next frame. After the log was recorded only the centroid label was clarified to “centroid candidate”.
 
-Управляемые проверки в браузере:
+Controlled browser checks:
 
-- пустая форма запрашивает только `/api/targets`;
-- `target=barnard&ra=133.795` и нажатие Light curve показывают подсказку; запросы данных отсутствуют;
-- при быстрой смене RA=10 → RA=30 ответ RA=10 задержан; сохраняется предупреждение RA=30;
-- отказ PNG показывает ошибку, `src` основного изображения отсутствует, графики автоматически не запускаются;
-- изображения работают при недоступном Plotly; графики требуют отдельного нажатия.
+- The empty form requests only `/api/targets`.
+- `target=barnard&ra=133.795` and pressing Light curve show a prompt; no data requests occur.
+- When RA changes quickly from 10 → 30 and the RA=10 response is delayed, the RA=30 warning remains.
+- A PNG failure shows an error, the main image has no `src`, and plots do not start automatically.
+- Images work when Plotly is unavailable; plots require a separate click.
 
-Новые серверные проверки покрывают исходящую кодировку специальных символов имени,
-недоступность резолвера, происхождение/неизвестные значения, пять целей без сети,
-совпадение с `sky_motion` на трёх датах, UTC/TAI и приоритет середины экспозиции,
-разные состояния отсутствия данных и отсутствие надёжного маркера при плохом центроиде.
+New server tests cover outgoing encoding of special characters in names, resolver unavailability, provenance/unknown values, five targets offline, agreement with `sky_motion` on three dates, UTC/TAI and exposure-midpoint priority, different missing-data states, and the absence of a reliable marker for a poor centroid.
 
-## Повторение
+## Reproduction
 
-Из корня репозитория:
+From the repository root:
 
 ```sh
 PREWARM=0 .venv/bin/python -m uvicorn api.main:app --host 127.0.0.1 --port 8011
@@ -83,124 +51,50 @@ PREWARM=0 .venv/bin/python -m uvicorn api.main:app --host 127.0.0.1 --port 8011
 .venv/bin/python -m pytest -q
 ```
 
-Ссылки в CSV относительные: открыть их на адресе запущенного приложения.
-Скрипт записывает новый манифест и ответы выбранного прогона; FITS в Git не добавляются.
-Последний полный тестовый прогон: **195 passed, 1 skipped**. Пропущена отдельная живая
-проверка `test_live_barnard_cutout`; реальные API/браузерные запросы описаны выше.
+Links in the CSV are relative: open them at the running application's address. The script writes a new manifest and responses for the selected run; FITS files are not added to Git. Last full test run: **195 passed, 1 skipped**. The skipped test was the separate live check `test_live_barnard_cutout`; real API/browser requests are described above.
 
-## Продолженная проверка: фактический итог
+## Continued validation: actual result
 
-Холодный проход выполнен с пустым отдельным API/FITS-кэшем, отключёнными локальными таблицами
-и `CENTER_MJD=61358`: [cold/target_cases.csv](../data/validation/cold/target_cases.csv).
-Все восемь звёзд вернули реальные кадры. Для Proxima Cen, 61 Cyg A и Vega эквивалентные
-координатные запросы вернули те же obs_ids. Затем проверены повторный проход,
-Linux-контейнер с постоянным томом и запросы через временный внешний адрес:
-[repeat](../data/validation/repeat/target_cases.csv),
-[container](../data/validation/container/target_cases.csv),
-[public-preview](../data/validation/public-preview/target_cases.csv).
+A cold pass used an empty separate API/FITS cache, disabled local tables, and `CENTER_MJD=61358`: [cold/target_cases.csv](../data/validation/cold/target_cases.csv). All eight stars returned real frames. Equivalent coordinate queries returned the same obs_ids for Proxima Cen, 61 Cyg A and Vega. A repeat pass, Linux container with persistent volume, and requests through a temporary external address were then checked: [repeat](../data/validation/repeat/target_cases.csv), [container](../data/validation/container/target_cases.csv), [public-preview](../data/validation/public-preview/target_cases.csv).
 
-[geometry_audit.json](../data/validation/geometry_audit.json) содержит 43 кадра:
-проверка осей/единственного переворота y прошла; положение цели имеет геометрический
-запас 7 пикселей для фонового кольца на общей сетке и исходных FITS.
-Это не независимое измерение регистрации по опорным звёздам.
+[geometry_audit.json](../data/validation/geometry_audit.json) contains 43 frames: the axis/single y-flip check passed; the target position has a geometric margin of 7 pixels for the background annulus on the common grid and original FITS. This is not an independent measurement of registration using reference stars.
 
-Браузерные проверки сохранены как повторяемые сценарии:
-`scripts/check_viewer_browser.js` — управляемые ошибки, поздние ответы, смена имени/режима/вкладки,
-кандидаты, мобильная ширина и отказ Plotly/PNG;
-`scripts/check_targets_browser.js` — реальные изображения восьми звёзд и смена дат.
-Журналы: [browser-controlled.txt](../data/validation/browser-controlled.txt),
-[browser-public.txt](../data/validation/browser-public.txt).
+Browser checks are saved as repeatable scenarios: `scripts/check_viewer_browser.js` covers controlled errors, late responses, name/mode/tab changes, candidates, mobile width, and Plotly/PNG failures; `scripts/check_targets_browser.js` covers real images of eight stars and date switching. Logs: [browser-controlled.txt](../data/validation/browser-controlled.txt), [browser-public.txt](../data/validation/browser-public.txt).
 
-Через HTTP также проверены одна эпоха во всех четырёх режимах, отсутствие ложного
-измерения неподвижной звезды при изменении фона/NaN у края и восстановление частичного
-ответа после короткого срока кэша. Отдельно проверены актуализация метаданных,
-гонка завершения задачи, предел очереди и сохранение одной задачи до завершения
-начавшихся сетевых вызовов после таймаута.
+HTTP checks also covered one epoch in all four modes, absence of a false measurement of a stationary star when background/NaN changes near an edge, and recovery of a partial response after a short cache lifetime. Metadata refresh, job completion race, queue limit, and maintaining one job until already-started network calls finish after timeout were checked separately.
 
-Контейнер собран и запущен, healthcheck прошёл. Постоянный том пережил замену контейнера.
-Инструкции: [DEPLOYMENT.md](DEPLOYMENT.md).
+The container was built and started, and its healthcheck passed. The persistent volume survived container replacement. Instructions: [DEPLOYMENT.md](DEPLOYMENT.md).
 
-## Незакрытые критерии
+## Open criteria
 
-- Прямое подтверждение командой выбранных наблюдений/компонентов и новых полей контракта не получено.
-- Б1 теперь принята для просмотра с ограничениями (be2ca1a); эмпирическая регистрация и научная сертификация измерений остаются открытыми для количественных заявлений.
-  Центроиды подписаны как кандидаты; качество не объявляется проверенным;
-  разностная шкала не объявляется откалиброванной статистической значимостью.
-- Б3: постоянный сервер/домен не выбран (пользователь сообщил «нету»).
-  Временный адрес ниже зависит от запущенных контейнеров на этом компьютере.
-  Проверка с отдельного физического устройства ещё не подтверждена.
+- Direct team confirmation of selected observations/components and new contract fields has not been obtained.
+- B1 is now accepted for viewing with limitations (be2ca1a); empirical registration and scientific certification of measurements remain open for quantitative claims. Centroids are labelled as candidates; quality is not declared verified; the difference scale is not declared calibrated statistical significance.
+- B3: no permanent server/domain was selected (the user said “none”). The temporary address below depends on containers running on this computer. Testing from a separate physical device had not yet been confirmed.
 
-Временная демонстрация: https://three-employers-look-obtaining.trycloudflare.com/ .
-Её доступность не означает постоянное размещение. Быстрые туннели предназначены для тестирования:
-[документация Cloudflare](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/).
-Старые научные таблицы и прогнозы не перезаписаны.
+Temporary demo: https://three-employers-look-obtaining.trycloudflare.com/ . Its availability does not imply permanent hosting. Quick tunnels are intended for testing: [Cloudflare documentation](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/). Old scientific tables and predictions were not overwritten.
 
-### Снимок частичного результата для push
+### Partial result snapshot for push
 
-Последний повторный внешний проход был остановлен по просьбе сохранить и отправить
-текущее состояние. В `public-preview/responses` первые три ответа уже обновлены,
-остальные относятся к предыдущему успешному проходу. Последняя браузерная попытка
-через внешний адрес превысила первоначальный лимит 30 секунд; повтор с лимитом
-180 секунд не завершён. `browser-public.txt` сохраняет результат незавершённой
-проверки и не считается доказательством прохождения всех восьми целей в браузере
-по внешнему адресу. Предыдущая локальная браузерная проверка остаётся отдельным свидетельством.
+The latest repeated external pass was stopped at the request to save and push the current state. The first three responses in `public-preview/responses` were already updated; the rest belong to the previous successful pass. The latest browser attempt through the external address exceeded the initial 30-second limit; a retry with a 180-second limit was not completed. `browser-public.txt` records the incomplete check and is not evidence that all eight targets passed browser checks at the external address. The earlier local browser check remains separate evidence.
 
+### Completed external pass after push
 
-### Завершённый внешний проход после push
+A new complete pass on code `aa7ce46` finished: [public-final/target_cases.csv](../data/validation/public-final/target_cases.csv). All eight results have `available`; three additional stars yield the same observations with equivalent coordinates. The browser separately loaded real PNGs for all eight targets and switched the first date to the second. Structured result: [browser-public-final.json](../data/validation/browser-public-final.json), [log](../data/validation/browser-public-final.txt). This pass supersedes the incomplete attempt as external-check evidence. It is an external HTTP address opened from the work computer; a separate physical device and independent permanent server were not checked by this pass.
 
-На коде `aa7ce46` завершён новый цельный проход:
-[public-final/target_cases.csv](../data/validation/public-final/target_cases.csv).
-Все восемь результатов имеют `available`; три дополнительные звезды дают те же наблюдения
-при эквивалентных координатах. Браузер отдельно загрузил реальные PNG всех восьми целей
-и переключил первую дату на вторую. Структурированный результат:
-[browser-public-final.json](../data/validation/browser-public-final.json),
-[журнал](../data/validation/browser-public-final.txt).
-Данные этого прохода заменяют незавершённую попытку как свидетельство внешней проверки.
-Это внешний HTTP-адрес, открытый с рабочего компьютера; отдельное физическое устройство
-и независимый постоянный сервер этим не проверены.
+### Final route check
 
+The external check found a 404 at `/dev` without a slash. An explicit redirect to `/dev/` was added and tested after rebuilding the container. Result: `/dev` → 307, `/dev/` → 200; invalid and incomplete coordinates → 400; PNGs for all eight targets → 200 with a valid PNG signature. Evidence: [public-routes.json](../data/validation/public-routes.json). Last full suite: **196 passed, 1 skipped**. The running container's source matches this version; the volume with real FITS was preserved during replacement.
 
-### Финальная проверка маршрутов
+The D7 handoff is prepared: contract in API.md, startup in DEPLOYMENT.md, observations and browser evidence in data/validation. B3 remains open pending permanent hosting and testing from another device. The user was asked about hosting and phone testing; no response had yet been received.
 
-Внешняя проверка выявила 404 у `/dev` без слеша. Добавлено явное перенаправление
-на `/dev/`, проверенное тестом и после пересборки контейнера. Итог:
-`/dev` → 307, `/dev/` → 200; неверные и неполные координаты → 400;
-PNG всех восьми целей → 200 с настоящей сигнатурой PNG.
-Доказательства: [public-routes.json](../data/validation/public-routes.json).
-Последний полный набор: **196 passed, 1 skipped**. Исходники работающего контейнера
-соответствуют этой версии, том с реальными FITS сохранён при замене контейнера.
+### Feedback from testing on other devices
 
-Передача Д7 подготовлена: контракт в API.md, запуск в DEPLOYMENT.md, наблюдения и
-браузерные доказательства в data/validation. До постоянного размещения и проверки
-с отдельного устройства Б3 остаётся открытым. Вопросы о месте размещения и проверке
-с телефона переданы пользователю; ответа на них пока нет.
+The user reported that one tester confirmed it worked, while a second could not find the date. This is user confirmation of operation on a separate device; no separate device log was supplied. In response, the date was moved to a large separate line, date controls placed directly below it, and buttons labelled. Permanent hosting remains unconfirmed.
 
+After updating the external demo, a browser check showed the large Barnard date changing from 2025-08-15 to 2026-03-19, with the counter Date 2 of 5. At 375 px width the date uses a 21 px font; buttons are immediately adjacent. Log: data/validation/browser-date-visibility.txt.
 
-### Проверка с других устройств: обратная связь
+Detailed acceptance map for each item: [acceptance map](DILAYLA_ACCEPTANCE.md). The latest check adds an HTTP scenario for an out-of-frame prediction: **197 passed, 1 skipped**; application code was not changed after the date-visibility change.
 
-Пользователь передал: один проверяющий подтвердил работу, второй не смог найти дату.
-Это пользовательское подтверждение работы на отдельном устройстве; отдельный журнал
-того устройства не предоставлялся. По замечанию дата вынесена в крупную отдельную
-строку, управление датами перенесено непосредственно под неё, кнопки получили подписи.
-Постоянное размещение по-прежнему не подтверждено.
+### Scientific review of sources and selected observations
 
-После обновления внешней демонстрации проверено в браузере: крупная строка даты
-Барнарда меняется с 2025-08-15 на 2026-03-19, счётчик — Date 2 of 5.
-На ширине 375 px дата показана шрифтом 21 px; кнопки находятся непосредственно рядом.
-Журнал: data/validation/browser-date-visibility.txt.
-
-
-Подробная карта приёмки каждого пункта: [DILAYLA_ACCEPTANCE.md](DILAYLA_ACCEPTANCE.md).
-Последняя проверка дополняет набор HTTP-сценарием внекадрового прогноза:
-**197 passed, 1 skipped**; код приложения после изменения видимости даты не менялся.
-
-### Научная проверка источников и выбранных наблюдений
-
-[science-acceptance.md](reviews/science-acceptance.md) сопоставляет все 43 кадра
-public-final и четыре кадра точного координатного запроса WISE с исходными продуктами,
-эпохами, масками FITS и первичными публикациями. Это согласование идентичности и
-пределов интерпретации для Д2, Д3 и Д6; обнаружение каждой цели, измеренное движение
-и период R Dra не подтверждены. Флаг приложения `saturated_core` объединяет несколько
-видов загрязнения и сам по себе не доказывает насыщение конкретной цели.
-Сведения о выпусках восстановлены по сохранённым URI и имеющимся FITS; новые запросы
-IRSA при этой проверке превысили время ожидания, полнота текущего архива не проверена.
+[science-acceptance.md](reviews/science-acceptance.md) compares all 43 public-final frames and four frames from the exact WISE coordinate query against original products, epochs, FITS masks, and primary publications. This reconciles identity and interpretation limits for D2, D3 and D6; detection of every target, measured motion, and the R Dra period are not confirmed. The application flag `saturated_core` combines several kinds of contamination and does not by itself prove saturation of a particular target. Release information was recovered from saved URIs and available FITS; new IRSA requests timed out during this review, and current archive completeness was not checked.

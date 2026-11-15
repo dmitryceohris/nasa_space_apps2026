@@ -1,21 +1,21 @@
-# Расчёт положения звезды Барнарда
+# Calculating the position of Barnard’s Star
 
-Скрипт `barnard_motion.py` и блокнот `output/jupyter-notebook/barnard_motion.ipynb` используют одну реализацию. Источник — существующая строка **Gaia DR3 4472832130942575872** в `OBJECT_PARAMETERS.csv`. Таблица параметров не изменена. Результат — **барицентрические астрометрические координаты ICRS**, без годичного параллакса и без поправки на наблюдателя SPHEREx.
+The script `barnard_motion.py` and notebook `output/jupyter-notebook/barnard_motion.ipynb` use the same implementation. The source is the existing **Gaia DR3 4472832130942575872** row in `OBJECT_PARAMETERS.csv`. The parameter table is unchanged. The result is **barycentric astrometric ICRS coordinates**, without annual parallax or a correction for the SPHEREx observer.
 
-Обновление от 14 ноября 2026 года: отдельно найдены три наблюдения IRSA, проверены их заголовки FITS и рассчитаны позиции. Подробности — в [AIGERIM_DATA_CHECK.md](AIGERIM_DATA_CHECK.md), общий состав результатов — в [README.md](README.md). Раздел «Файлы Айгерим» ниже описывает первоначальную проверку предоставленной выгрузки.
+Update of November 14, 2026: three IRSA observations were found separately, their FITS headers checked, and positions calculated. An overview of the results is in [README.md](README.md). The “Provided files” section below describes the initial review of the supplied export.
 
-## Установка и запуск
+## Installation and execution
 
-Откройте терминал в папке проекта:
+Open a terminal in the project directory:
 
 ```sh
 cd nasa_space_apps2026
 uv sync --locked --python 3.12.13
 ```
 
-Используется отдельное окружение `.venv` и установленный Python **3.12.13**. Прямые зависимости зафиксированы в `pyproject.toml`: Astropy 8.0.2, NumPy 2.5.4, Matplotlib 3.11.2, JupyterLab 4.6.6, ipykernel 7.4.0, nbconvert 7.17.2; pytest 9.2.0 — для проверок. `uv.lock` фиксирует также транзитивные зависимости, включая ERFA и таблицы времени. Установка требует доступа к пакетам; последующий расчёт работает без запросов к каталогам и без сети. Скрипт отключает автоматическое скачивание IERS.
+A separate `.venv` environment and installed Python **3.12.13** are used. Direct dependencies are pinned in `pyproject.toml`: Astropy 8.0.2, NumPy 2.5.4, Matplotlib 3.11.2, JupyterLab 4.6.6, ipykernel 7.4.0, nbconvert 7.17.2; pytest 9.2.0 is used for checks. `uv.lock` also pins transitive dependencies, including ERFA and time tables. Installation requires access to packages; subsequent calculations work offline without catalogue requests. The script disables automatic IERS downloads.
 
-Одна дата, ISO в UTC по умолчанию:
+One date, ISO in UTC by default:
 
 ```sh
 uv run --offline --locked python barnard_motion.py \
@@ -23,7 +23,7 @@ uv run --offline --locked python barnard_motion.py \
   --output output/barnard_single.csv
 ```
 
-Числовые даты требуют явных формата **и** шкалы:
+Numeric dates require an explicit format **and** time scale:
 
 ```sh
 uv run --offline --locked python barnard_motion.py \
@@ -35,21 +35,21 @@ uv run --offline --locked python barnard_motion.py \
   --output output/barnard_reference_epoch.csv
 ```
 
-Последний пример проверяет исходную эпоху. MJD 60800.0 выше — отдельный пример ввода, он **не обозначает тот же момент**, что 1 апреля.
+The last example checks the original epoch. MJD 60800.0 above is a separate input example; it **does not represent the same instant** as April 1.
 
-Допустимые форматы: `iso`, `isot`, `mjd`, `jyear`; шкалы: `utc`, `tai`, `tt`, `tcg`, `tdb`, `tcb`. ISO принимает `YYYY-MM-DD`, `YYYY-MM-DDTHH:MM:SS[.доли]` и вариант с пробелом вместо T. Одна календарная дата означает 00:00:00 в выбранной шкале. Суффикс Z разрешён только для UTC. Часовой пояс компьютера не используется, записи с часовыми смещениями отклоняются. `jyear` — юлианский год, где 2000.0 соответствует JD 2451545.0 выбранной шкалы, а год равен 365.25 суток; это не десятичная доля календарного года. UT1 не поддерживается в этом расчёте.
+Supported formats: `iso`, `isot`, `mjd`, `jyear`; scales: `utc`, `tai`, `tt`, `tcg`, `tdb`, `tcb`. ISO accepts `YYYY-MM-DD`, `YYYY-MM-DDTHH:MM:SS[.fraction]`, and a space in place of T. A calendar date alone means 00:00:00 in the selected scale. The Z suffix is allowed only for UTC. The computer time zone is not used; entries with time-zone offsets are rejected. `jyear` is a Julian year: 2000.0 corresponds to JD 2451545.0 in the selected scale and a year is 365.25 days; it is not a decimal calendar year. UT1 is not supported in this calculation.
 
-Полный список аргументов:
+Full list of arguments:
 
 ```sh
 uv run --offline --locked python barnard_motion.py --help
 ```
 
-Без `--output` результат записывается в `output/barnard_positions.csv`. `--catalog` позволяет явно указать путь к CSV параметров. По умолчанию каталог ищется рядом со скриптом, независимо от текущей папки. Выходной файл с тем же именем перезаписывается. При ошибке входных данных программа завершается с кодом 2 и объяснением.
+Without `--output`, the result is written to `output/barnard_positions.csv`. `--catalog` explicitly specifies the parameter CSV path. By default the catalogue is sought beside the script, regardless of the current directory. An output file of the same name is overwritten. On invalid input the program exits with code 2 and an explanation.
 
-## Список наблюдений
+## Observation list
 
-Учебный запуск:
+Tutorial run:
 
 ```sh
 uv run --offline --locked python barnard_motion.py \
@@ -57,131 +57,131 @@ uv run --offline --locked python barnard_motion.py \
   --output output/barnard_demo_positions.csv
 ```
 
-В примере ровно две даты: **2025-04-01 00:00 UTC** и **2025-10-01 00:00 UTC**. Они помечены `is_demo=true`; `obs_id`, детектор, выпуск и ссылка пусты. Это не найденные кадры. Для реальных данных заполните файл с заголовком `data/barnard_observations_template.csv`.
+The example has exactly two dates: **2025-04-01 00:00 UTC** and **2025-10-01 00:00 UTC**. They are marked `is_demo=true`; `obs_id`, detector, release and link are empty. These are not discovered frames. For real data, fill in a file using the header in `data/barnard_observations_template.csv`.
 
-| Входная колонка | Содержание |
+| Input column | Contents |
 | --- | --- |
-| `obs_id` | Реальный ID наблюдения как строка. Для учебной строки допускается пустое значение при `is_demo=true`. |
-| `time_format`, `time_scale` | Обязательны в каждой строке, даже для ISO. Не определяются по величине даты или имени файла. |
-| `time` | Один момент в указанном формате/шкале. |
-| `t_min`, `t_max` | Вместо `time` — начало и конец интервала в одном формате/шкале. |
-| `detector`, `data_release` | Необязательные номер/имя детектора и выпуск; сохраняются без изменения. |
-| `access_url` | Необязательная ссылка на кадр или ресурс DataLink; сохраняется, но не открывается. |
-| `is_demo` | `true` или `false`, по умолчанию `false`. |
+| `obs_id` | Actual observation ID as a string. A tutorial row may be empty when `is_demo=true`. |
+| `time_format`, `time_scale` | Required in every row, including ISO. Not inferred from the date value or filename. |
+| `time` | A single instant in the stated format and scale. |
+| `t_min`, `t_max` | Instead of `time`, the interval start and end in the same format and scale. |
+| `detector`, `data_release` | Optional detector number/name and release; preserved unchanged. |
+| `access_url` | Optional frame or DataLink resource link; retained but not opened. |
+| `is_demo` | `true` or `false`, default `false`. |
 
-В одном CSV допустимы разные форматы и шкалы по строкам. Одновременные `time` и границы, неполная пара границ, обратный интервал и отсутствие времени отклоняются с номером строки. Равные границы допустимы. Средний момент вычисляется как `t0.tai + (t1.tai - t0.tai)/2`: так учитываются дополнительные секунды UTC, а не усредняются строки или календарные часы. Это невзвешенная середина интервала, не эффективное время взвешенного по потоку измерения.
+Different rows in one CSV may use different formats and scales. Providing both `time` and bounds, incomplete bounds, a reversed interval, or no time causes rejection with the row number. Equal bounds are allowed. The midpoint is calculated as `t0.tai + (t1.tai - t0.tai)/2`, accounting for UTC leap seconds rather than averaging strings or calendar hours. It is the unweighted interval midpoint, not the effective time of a flux-weighted measurement.
 
-`--format` и `--scale` применяются только к `--date`: при пакетном запуске эти сведения берутся из CSV. Пакетный режим ожидает нормализованный CSV, а не IPAC `.tbl`. При переносе из IRSA нужно явно установить подтверждённую шкалу времени, перенести `obs_collection` в `data_release`, а номер детектора — в `detector`. `obs_id` может повторяться для разных детекторов; строки не объединяются.
+`--format` and `--scale` apply only to `--date`; in batch mode they are read from the CSV. Batch mode expects normalized CSV, not IPAC `.tbl`. When transferring from IRSA, explicitly set the verified time scale, transfer `obs_collection` to `data_release`, and the detector number to `detector`. `obs_id` may repeat for different detectors; rows are not combined.
 
-Идентификаторы читаются стандартным CSV-парсером как строки: ведущие нули и все цифры Gaia сохраняются. При открытии результата в Excel/Sheets импортируйте `obs_id` и `source_id` как **текст**, чтобы приложение само не округлило длинный номер.
+Identifiers are read as strings by a standard CSV parser, preserving leading zeros and all Gaia digits. When opening the output in Excel or Sheets, import `obs_id` and `source_id` as **text** to prevent automatic rounding of long numbers.
 
-## Учебный блокнот
+## Tutorial notebook
 
 ```sh
 uv run --offline --locked jupyter lab output/jupyter-notebook/barnard_motion.ipynb
 ```
 
-Используйте ядро Python из `.venv`. Блокнот показывает исходные параметры и корреляции, выбранную дату и результат, сравнение двух дат, график и упражнение с изменением даты. Для полного воспроизведения выберите перезапуск ядра и выполнение всех ячеек. Блокнот импортирует `barnard_motion.py`; второй реализации переноса в нём нет.
+Use the Python kernel from `.venv`. The notebook shows the original parameters and correlations, the selected date and result, a comparison of two dates, a plot, and an exercise changing the date. To reproduce everything, restart the kernel and run all cells. The notebook imports `barnard_motion.py`; it does not contain a second propagation implementation.
 
-Запуск целиком без интерфейса:
+Run the entire notebook without the interface:
 
 ```sh
 uv run --offline --locked jupyter nbconvert --to notebook --execute --inplace \
   --ExecutePreprocessor.timeout=180 output/jupyter-notebook/barnard_motion.ipynb
 ```
 
-Блокнот сохраняет тот же `output/barnard_demo_positions.csv`, что и скрипт, и `output/barnard_motion_demo.png`. В репозитории сохранены выполненный блокнот и учебные результаты. При повторном запуске эти два выходных файла обновляются.
+The notebook saves the same `output/barnard_demo_positions.csv` as the script, plus `output/barnard_motion_demo.png`. The executed notebook and tutorial results are saved in the repository. Rerunning it updates both output files.
 
-## Метод и исходная запись
+## Method and source record
 
-Из CSV выбирается только точный строковый `source_id=4472832130942575872`, с проверкой выпуска Gaia DR3, ICRS, эпохи J2016.0 TCB, соглашения об ошибке RA и наличия обязательных величин. Смешение строк и подстановка нулевой RV при пропуске не допускаются.
+Only the exact string `source_id=4472832130942575872` is selected from the CSV, checking Gaia DR3 release, ICRS, epoch J2016.0 TCB, the RA error convention, and required values. Mixing rows or substituting zero for a missing RV is not permitted.
 
-| Параметр | Значение | Формальная ошибка 1σ |
+| Parameter | Value | Formal 1σ error |
 | --- | ---: | ---: |
-| RA на J2016.0 TCB, градусы | 269.44850252543836 | σα⋆ = 0.026238997 mas |
-| Dec на J2016.0 TCB, градусы | 4.739420051112412 | 0.029043527 mas |
-| μα⋆, mas/год | −801.5509783684709 | 0.031820867 |
-| μδ, mas/год | 10362.394206546573 | 0.036070455 |
-| Параллакс, mas | 546.975939730948 | 0.040116355 |
-| RV, км/с | −110.46822 | 0.13125522 |
+| RA at J2016.0 TCB, degrees | 269.44850252543836 | σα⋆ = 0.026238997 mas |
+| Dec at J2016.0 TCB, degrees | 4.739420051112412 | 0.029043527 mas |
+| μα⋆, mas/year | −801.5509783684709 | 0.031820867 |
+| μδ, mas/year | 10362.394206546573 | 0.036070455 |
+| Parallax, mas | 546.975939730948 | 0.040116355 |
+| RV, km/s | −110.46822 | 0.13125522 |
 
-Официальное [описание Gaia DR3](https://gea.esac.esa.int/archive/documentation/GDR3/Gaia_archive/chap_datamodel/sec_dm_main_source_catalogue/ssec_dm_gaia_source.html) определяет эпоху в TCB, RA/Dec как барицентрические ICRS и `pmra`, `ra_error` с множителем cos δ. [Страница Gaia MAST](https://archive.stsci.edu/missions-and-data/gaia) — исходный ресурс №4; выбранная запись и воспроизводимый запрос ESA уже сохранены в CSV. Ссылки на запись также включаются в каждый результат.
+The official [Gaia DR3 documentation](https://gea.esac.esa.int/archive/documentation/GDR3/Gaia_archive/chap_datamodel/sec_dm_main_source_catalogue/ssec_dm_gaia_source.html) defines the epoch in TCB, RA/Dec as barycentric ICRS, and `pmra` and `ra_error` with the cos δ factor. The [Gaia MAST page](https://archive.stsci.edu/missions-and-data/gaia) is source resource #4; the selected record and reproducible ESA query are already in the CSV. Links to the record are also included in each result.
 
-`SkyCoord` получает `pm_ra_cosdec`, `pm_dec`, расстояние из параллакса, RV и исходную эпоху. `SkyCoord.apply_space_motion(new_obstime=time.tcb)` переносит положение по модели постоянной пространственной скорости. В отличие от простого прибавления μα⋆ и μδ, изменение расстояния приводит к перспективному изменению углового движения. Реализация и соглашения модели определяются [методом Astropy](https://docs.astropy.org/en/stable/coordinates/apply_space_motion.html) и используемой ERFA.
+`SkyCoord` receives `pm_ra_cosdec`, `pm_dec`, distance from parallax, RV, and the reference epoch. `SkyCoord.apply_space_motion(new_obstime=time.tcb)` propagates the position using a constant spatial velocity model. Unlike simply adding μα⋆ and μδ, the changing distance causes a perspective change in angular motion. Implementation and model conventions are defined by the [Astropy method](https://docs.astropy.org/en/stable/coordinates/apply_space_motion.html) and the ERFA version used.
 
-Для ошибок используется вектор локальных возмущений **q = (δα⋆, δδ, δϖ, δμα⋆, δμδ, δRV)**. Его единицы: mas, mas, mas, mas/год, mas/год, км/с. Пятикомпонентная ковариация восстанавливается из десяти корреляций Gaia как **Cᵢⱼ = ρᵢⱼ σᵢ σⱼ**. Добавляется независимая RV: C₆₆ = σ²RV, остальные элементы её строки/столбца нулевые. Проверяются конечность величин, положительность ошибок, пределы корреляций и положительная полуопределённость матрицы.
+For uncertainties, the local perturbation vector **q = (δα⋆, δδ, δϖ, δμα⋆, δμδ, δRV)** is used, with units mas, mas, mas, mas/year, mas/year, km/s. The five-parameter covariance is reconstructed from the ten Gaia correlations as **Cᵢⱼ = ρᵢⱼ σᵢ σⱼ**. Independent RV is added: C₆₆ = σ²RV, with all other elements of its row/column zero. Values are checked for finiteness, errors for positivity, correlations for valid bounds, and the matrix for positive semidefiniteness.
 
-Численный Якобиан J размера 2×6 вычисляется центральными разностями той же функции переноса. Входное возмущение δα⋆ превращается в изменение RA делением на cos δ **исходной** точки. Выходные смещения берутся в локальной сферической системе восток/север относительно центрального перенесённого положения; её дифференциалы — dα cos δ и dδ **на выходной эпохе**. **C_out = J C_in Jᵀ** — ковариация только положения, 2×2, а не полное новое шестикомпонентное решение Gaia.
+A numerical 2×6 Jacobian J is calculated by central differences of the same propagation function. Input perturbation δα⋆ is converted to an RA change by dividing by cos δ at the **original** position. Output offsets use a local spherical east/north frame relative to the central propagated position; its differentials are dα cos δ and dδ **at the output epoch**. **C_out = J C_in Jᵀ** is a 2×2 position-only covariance, not a complete new six-parameter Gaia solution.
 
-Шаги разностей: 10 mas по каждой координате, 0.1 mas по параллаксу, 0.1 mas/год по каждой компоненте движения, 0.1 км/с по RV. Они больше шума машинного округления углов и достаточно малы для локальной производной. Проверка с половинными и двойными шагами контролирует устойчивость выходной ковариации. Погрешности не переносятся автоматически методом `apply_space_motion`.
+Difference steps: 10 mas for each coordinate, 0.1 mas for parallax, 0.1 mas/year for each motion component, and 0.1 km/s for RV. These exceed angular machine-rounding noise and are small enough for a local derivative. Checks with half and double steps test output covariance stability. `apply_space_motion` does not automatically propagate uncertainties.
 
-## Выходной CSV
+## Output CSV
 
-| Колонки | Значение |
+| Columns | Meaning |
 | --- | --- |
-| `obs_id`, `detector`, `data_release`, `access_url`, `is_demo` | Связь со строкой входа; для отдельной даты `obs_id` пуст. |
-| `input_time_format`, `input_time_scale`, `input_time`, `input_t_min`, `input_t_max` | Формат/шкала и исходные значения для воспроизведения. |
-| `time_method` | `exact` либо `midpoint_tai`. |
-| `time_utc`, `time_tcb` | Использованный момент в ISO до 9 знаков долей секунды. Z стоит только у UTC; шкала TCB указана именем колонки. |
-| `time_mjd_utc`, `time_jyear_tcb` | Дополнительные числовые представления того же момента. |
+| `obs_id`, `detector`, `data_release`, `access_url`, `is_demo` | Link to input row; `obs_id` is empty for a single date. |
+| `input_time_format`, `input_time_scale`, `input_time`, `input_t_min`, `input_t_max` | Format/scale and original values for reproduction. |
+| `time_method` | `exact` or `midpoint_tai`. |
+| `time_utc`, `time_tcb` | Instant used, in ISO with up to 9 fractional-second digits. Z is used only for UTC; TCB is indicated by the column name. |
+| `time_mjd_utc`, `time_jyear_tcb` | Additional numeric representations of the same instant. |
 | `coordinate_frame`, `position_type` | `ICRS`, `barycentric_astrometric`. |
-| `ra_deg`, `dec_deg` | Перенесённые координаты в градусах, без годичного параллакса. |
-| `sigma_alpha_star_mas`, `sigma_delta_mas` | Формальные стандартные ошибки 1σ: √C₀₀, √C₁₁. Ошибка RA содержит cos δ. |
-| `ra_dec_corr` | C₀₁ / (σα⋆ σδ), корреляция на выходной эпохе. |
-| `cov_alpha_star_delta_mas2` | C₀₁ в mas². Вместе с ошибками позволяет восстановить матрицу 2×2. |
-| `distance_pc` | Перенесённое расстояние в парсеках. |
-| `parallax_scale_1au_mas` | 1000 / `distance_pc`, характерный масштаб параллакса для базы 1 а.е., в mas. |
-| `parallax_applied` | Всегда `false`; этот масштаб не прибавляется к RA/Dec. |
-| `source_id`, `gaia_source_url` | Полный точный ID и ссылка на исходную запись Gaia. |
+| `ra_deg`, `dec_deg` | Propagated coordinates in degrees, without annual parallax. |
+| `sigma_alpha_star_mas`, `sigma_delta_mas` | Formal 1σ standard errors: √C₀₀, √C₁₁. The RA error includes cos δ. |
+| `ra_dec_corr` | C₀₁ / (σα⋆ σδ), correlation at the output epoch. |
+| `cov_alpha_star_delta_mas2` | C₀₁ in mas². Together with the errors, permits reconstruction of the 2×2 matrix. |
+| `distance_pc` | Propagated distance in parsecs. |
+| `parallax_scale_1au_mas` | 1000 / `distance_pc`, characteristic parallax scale for a 1 AU baseline, in mas. |
+| `parallax_applied` | Always `false`; this scale is not added to RA/Dec. |
+| `source_id`, `gaia_source_url` | Complete exact ID and link to the original Gaia record. |
 
-Округлённые учебные результаты, только для чтения:
+Rounded tutorial results, for reference:
 
-| Дата, 00:00 UTC | RA, градусы | Dec, градусы | σα⋆, mas | σδ, mas | Масштаб 1 а.е., mas |
+| Date, 00:00 UTC | RA, degrees | Dec, degrees | σα⋆, mas | σδ, mas | 1 AU scale, mas |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | 2025-04-01 | 269.446435307 | 4.766052499 | 0.290077 | 0.324998 | 547.288714 |
 | 2025-10-01 | 269.446323228 | 4.767496369 | 0.305989 | 0.344398 | 547.305668 |
 
-За интервал локальное смещение относительно первой позиции: **−0.402086″ к востоку** (то есть к западу) и **+5.197935″ к северу**. Это сферические компоненты смещения, практически совпадающие здесь с Δα cos δ первой точки и Δδ. Формальные ошибки разных дат коррелированы общей исходной записью; ошибка разности не равна корню из суммы независимых дисперсий. Скрипт выводит ошибки каждой позиции, а не ошибку их разности.
+Over the interval the local displacement relative to the first position is **−0.402086″ east** (i.e. west) and **+5.197935″ north**. These are spherical displacement components, practically equal here to Δα cos δ at the first point and Δδ. Formal errors at different dates are correlated through the common source record; the error of the difference is not the square root of the sum of independent variances. The script outputs errors for each position, not the error of their difference.
 
-## Файлы Айгерим
+## Provided files
 
-Проверены предоставленные файлы `/Users/dmitrytukhvatullin/Desktop/table_Spectral-Images (1).tbl` и `/Users/dmitrytukhvatullin/Desktop/table.tbl`. Их содержимое используется как данные, а не как инструкции.
+The supplied files `/Users/dmitrytukhvatullin/Desktop/table_Spectral-Images (1).tbl` and `/Users/dmitrytukhvatullin/Desktop/table.tbl` were checked. Their contents are used as data, not instructions.
 
-- Первый файл: 372 строки, 188 разных `obs_id`; коллекции `spherex_dr1` (265 строк) и `spherex_qr3` (107), детекторы D1–D6. Разные детекторы одного наблюдения имеют отдельные строки.
-- Центры кадров: RA **294.32186906–298.26898590°**, Dec **−16.67792059…−12.85175631°**. Все вершины полигонов покрытия лежат в диапазоне RA 292.3245–300.3479°, Dec −18.6877…−10.7726°. Барнард на рассматриваемые даты находится около RA 269.446°, Dec +4.77°; ближайший центр — примерно в **30.68°**. Эти кадры не покрывают область Барнарда.
-- `table.tbl` — карточка метаданных, а не дополнительный список кадров: 62 поля для **2025W38_1A_0596_1**, **SPHEREx-D6**, **spherex_dr1**. Её координаты и интервал совпадают с первой строкой большого файла.
-- Карточка определяет `t_min`/`t_max` как **MJD**, но **шкала времени в предоставленных файлах не указана**. Полный диапазон чисел в списке — MJD 60935.405692–61317.775151; для выполнения расчёта шкалу нужно подтвердить по документации продукта/заголовку FITS. Время создания и выпуска продукта не заменяет время наблюдения.
-- Все `access_url` в большом файле имеют MIME `application/x-votable+xml;content=datalink`: это ссылки на **DataLink**, а не прямые FITS. Они помогают найти продукт, но сами FITS здесь не загружались.
+- The first file contains 372 rows and 188 distinct `obs_id` values; collections `spherex_dr1` (265 rows) and `spherex_qr3` (107), and detectors D1–D6. Different detectors for the same observation have separate rows.
+- Frame centres: RA **294.32186906–298.26898590°**, Dec **−16.67792059…−12.85175631°**. All coverage polygon vertices are within RA 292.3245–300.3479°, Dec −18.6877…−10.7726°. Barnard's Star is near RA 269.446°, Dec +4.77° on the dates in question; the nearest centre is approximately **30.68°** away. These frames do not cover Barnard's Star.
+- `table.tbl` is a metadata record, not another frame list: 62 fields for **2025W38_1A_0596_1**, **SPHEREx-D6**, **spherex_dr1**. Its coordinates and interval match the first row of the larger file.
+- The record defines `t_min`/`t_max` as **MJD**, but **the supplied files do not specify a time scale**. The complete range is MJD 60935.405692–61317.775151; the scale must be confirmed from product documentation or a FITS header before calculation. Product creation and release times are not observation times.
+- Every `access_url` in the larger file has MIME type `application/x-votable+xml;content=datalink`: these are **DataLink** links, not direct FITS links. They help locate products, but the FITS files themselves were not downloaded here.
 
-Поэтому строки этих файлов **не подставлены как реальные наблюдения Барнарда**. Для следующего применения нужен список команды именно для его области: ID, ссылка на FITS/вырезку или разрешимый DataLink, начало/конец с форматом и шкалой, детектор и выпуск. Структура поиска показана в [официальном введении IRSA/SPHEREx](https://caltech-ipac.github.io/irsa-tutorials/spherex-intro/). Одного подходящего кадра достаточно для проверки структуры; для сравнения движения нужны разные даты.
+The rows in these files were therefore **not used as real observations of Barnard's Star**. The next application requires a team list for its actual region: ID, FITS/cutout link or resolvable DataLink, start and end with format and scale, detector, and release. The search structure is shown in the [official IRSA/SPHEREx introduction](https://caltech-ipac.github.io/irsa-tutorials/spherex-intro/). One suitable frame suffices to check the structure; comparing motion requires different dates.
 
-## Проверки
+## Verification
 
 ```sh
 uv run --offline --locked pytest -q
 ```
 
-Проверяются:
+The tests check:
 
-- исходная эпоха: расхождение координат <0.001 mas, ошибки и ковариация совпадают с каталогом в пределах 1%;
-- направление и величина движения на коротком интервале, включая отдельную проверку cos δ на склонении 60°;
-- соответствие кратковременной ковариации аналитическому переносу положения/движения и использование корреляций;
-- влияние RV на положение и её независимой ошибки на выходную ковариацию;
-- устойчивость численного Якобиана при изменении шагов;
-- эквивалентность ISO UTC, MJD UTC и юлианского года/ISO TCB одного момента;
-- средний момент через дополнительную секунду UTC, валидация неоднозначных/обратных интервалов, некорректных дат, шкал и параметров;
-- совпадение одиночного, пакетного и прямого вызова функций, точное сохранение длинных ID и метаданных;
-- расчёт при запрещённых сетевых соединениях.
+- the reference epoch: coordinate difference <0.001 mas, errors and covariance within 1% of the catalogue;
+- direction and magnitude of motion over a short interval, including a separate cos δ check at declination 60°;
+- agreement of short-term covariance with analytical position/motion propagation, and use of correlations;
+- the influence of RV on position and of its independent uncertainty on output covariance;
+- numerical Jacobian stability when step sizes change;
+- equivalence of ISO UTC, MJD UTC, and Julian year/ISO TCB representations of the same instant;
+- the midpoint across a UTC leap second; validation of ambiguous or reversed intervals, invalid dates, scales, and parameters;
+- agreement of single, batch, and direct function calls, and exact preservation of long IDs and metadata;
+- calculation with network connections disabled.
 
-Блокнот дополнительно выполнен целиком с нового ядра и сверяет учебные результаты с общими функциями. Полнота выполнения проверяется отсутствием ошибок во всех ячейках; учебный CSV совпадает с результатом отдельного запуска скрипта.
+The notebook was also run completely from a fresh kernel and checks tutorial results against the shared functions. Completion is checked by the absence of errors in every cell; the tutorial CSV matches a separate script run.
 
-## Научные ограничения
+## Scientific limitations
 
-1. Модель постоянной пространственной скорости учитывает перспективное изменение углового движения, но не произвольные физические ускорения или орбитальное движение. Далёкая экстраполяция не обоснована малой формальной ошибкой.
-2. Ошибки — локальная линейная аппроксимация формальных ошибок Gaia и независимой ошибки RV. Не включены систематики Gaia/RV, нулевая точка параллакса, неопределённость времени, ошибки пространственной привязки или измерения центра. RUWE исходной записи ≈1.08485, но он не превращает формальные ошибки в полную оценку точности.
-3. Расстояние получено простым обращением сырого положительного параллакса; байесовский вывод расстояния и поправка нулевой точки не применены. Для этой записи относительная ошибка параллакса мала. Масштаб 1 а.е. — характеристика расстояния, не прогноз отдельного параллактического смещения и не его погрешность.
-4. Нет положения наблюдателя SPHEREx, годичного/топоцентрического параллакса, аберрации и гравитационного отклонения для изображения. Предсказание нельзя считать готовой видимой позицией на детекторе. Для сопоставления с конкретным снимком нужны положение наблюдателя и проверка соглашений его WCS.
-5. Используется переданный момент без дополнительной барицентрической поправки ко времени прихода фотонов для конкретного наблюдателя. Такая поправка не получается из одной конвертации UTC↔TCB. Время/геометрия для точного сравнения с кадром проверяются отдельно.
-6. Перевод шкал использует зафиксированные ERFA и таблицы дополнительных секунд. Для далёких будущих дат UTC зависит от ещё не объявленных дополнительных секунд; предупреждения ERFA о сомнительных годах не скрываются. Изменение часового пояса компьютера на расчёт не влияет.
+1. The constant spatial velocity model includes perspective changes in angular motion, but not arbitrary physical accelerations or orbital motion. A small formal error does not justify distant extrapolation.
+2. Errors are a local linear approximation of formal Gaia errors and independent RV error. Gaia/RV systematics, parallax zero point, time uncertainty, spatial registration errors, and centroid measurement errors are excluded. The source record's RUWE is ≈1.08485, but this does not turn formal errors into a complete accuracy estimate.
+3. Distance is obtained by simply inverting the raw positive parallax; no Bayesian distance inference or zero-point correction is applied. The relative parallax error is small for this record. The 1 AU scale characterises distance; it is not a prediction of an individual parallactic displacement or its uncertainty.
+4. The SPHEREx observer position, annual/topocentric parallax, aberration, and gravitational deflection for an image are absent. The prediction cannot be treated as a ready apparent detector position. Comparison with a particular image requires the observer position and checks of its WCS conventions.
+5. The supplied instant is used without an additional barycentric photon-arrival-time correction for a particular observer. Such a correction does not follow from UTC↔TCB conversion alone. Time and geometry must be checked separately for precise comparison with a frame.
+6. Time-scale conversion uses pinned ERFA and leap-second tables. UTC for distant future dates depends on leap seconds that have not yet been announced; ERFA dubious-year warnings are not suppressed. Changing the computer's time zone does not affect the calculation.
 
-Поиск IRSA, загрузка и чтение FITS, флаги качества, точный учёт наблюдателя и сравнение с измеренными координатами остаются следующим этапом команды. WiseView и NEOSSat/CADC для этого локального расчёта не требуются.
+IRSA search, FITS download and reading, quality flags, precise observer treatment, and comparison with measured coordinates remain the team's next stage. WiseView and NEOSSat/CADC are not needed for this local calculation.

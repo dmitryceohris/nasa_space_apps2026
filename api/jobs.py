@@ -32,6 +32,7 @@ from processing.pipeline import CREDITS, build_spectrum, lightcurve_from_spectru
 from . import cache, centroid, irsa, render, resolve
 from .errors import ApiError, PUBLIC_INTERNAL_MESSAGE
 from .params import Params
+from runtime_storage import current_workspace, raise_if_storage_error, StorageFull, STORAGE_MESSAGE
 
 log = logging.getLogger("jobs")
 POOL = ThreadPoolExecutor(max_workers=4)
@@ -56,6 +57,7 @@ class Job:
     created: float = field(default_factory=time.monotonic)
     started: bool = False
     finished: float | None = None
+    error_code: str | None = None
 
 
 def _poll(k: str, runner):
@@ -85,6 +87,8 @@ def _poll(k: str, runner):
             POOL.submit(_run, j, runner)
         if j.status == "error":  # drop it so the next request retries
             JOBS.pop(k)
+            if j.error_code == "storage_full":
+                raise ApiError(503, "storage_full", j.message)
             return 200, {"status": "error", "message": j.message}
         if now - j.created > float(os.environ.get("MAX_JOB_SECONDS", "1800")):
             raise ApiError(503, "timeout", "Задача превысила время ожидания; загрузки ещё завершаются. Повторите запрос позже")
@@ -102,6 +106,10 @@ def _run(j, runner):
         with LOCK:
             if JOBS.get(j.key) is j:
                 JOBS.pop(j.key)
+    except StorageFull:
+        with LOCK:
+            j.status, j.message, j.finished = "error", STORAGE_MESSAGE, time.monotonic()
+            j.error_code = "storage_full"
     except ApiError as e:
         with LOCK:
             j.status, j.message, j.finished = "error", e.message, time.monotonic()
@@ -261,28 +269,31 @@ def _pipeline(j, p, r):
     flat = [i for g in groups for i in g]
 
     size = p.fov / 60 * 1.5  # cutout a bit larger than the grid so rotated footprints still fill it
-    _stage(j, "download", f"Скачано 0 из {len(flat)} снимков", 0, len(flat))
-    paths, failed = {}, 0
-    ex = ThreadPoolExecutor(6)
-    try:
-        futs = {ex.submit(irsa.cutout, meta[i]["uri"], ra, dec, size): i for i in flat}
-        for f in as_completed(futs):
-            _deadline(j)
-            try:
-                paths[futs[f]] = f.result()
-            except Exception as e:
-                failed += 1
-                log.warning("cutout failed: %s", e)
-            j.done += 1
-            j.message = f"Скачано {j.done} из {j.total} снимков"
-    finally:
-        # Do not drain the remaining queue after the request deadline. In-flight HTTP calls are bounded.
-        ex.shutdown(wait=True, cancel_futures=True)
-
-    _stage(j, "process", "Обработка", 0, len(groups))
+    workspace = current_workspace()
+    paths, failed, downloaded = {}, 0, 0
     frames = []
-    for g in groups:
+    for group_index, g in enumerate(groups):
         _deadline(j)
+        _stage(j, "download", f"Скачано {downloaded} из {len(flat)} снимков", downloaded, len(flat))
+        ex = ThreadPoolExecutor(6)
+        try:
+            options = {"workspace":workspace} if workspace is not None else {}
+            futs = {ex.submit(irsa.cutout, meta[i]["uri"], ra, dec, size, **options): i for i in g}
+            for future in as_completed(futs):
+                _deadline(j)
+                try:
+                    paths[futs[future]] = future.result()
+                except Exception as e:
+                    raise_if_storage_error(e)
+                    failed += 1
+                    log.warning("cutout failed: %s", e)
+                downloaded += 1
+                j.done = downloaded
+                j.message = f"Скачано {downloaded} из {len(flat)} снимков"
+        finally:
+            # Drain in-flight calls before deleting their workspace, including on timeout.
+            ex.shutdown(wait=True, cancel_futures=True)
+        _stage(j, "process", "Обработка", group_index, len(groups))
         exps = []
         for i in g:
             if i not in paths:
@@ -298,14 +309,19 @@ def _pipeline(j, p, r):
                 attach_registered_calibration(exp,exp.provenance.get("pipeline_version","unknown"))
                 exps.append(exp)
             except Exception as e:
+                raise_if_storage_error(e)
                 failed += 1
                 log.warning("load failed: %s", e)
+            finally:
+                if workspace is not None:
+                    paths[i].unlink(missing_ok=True)
         if exps:
             # lambda is read at the target position on the epoch date, not at the field centre
             f = coadd(exps, wcs, shape, _sky(r, float(np.mean([e.mjd for e in exps]))))
             if f is not None:
                 frames.append(f)
         j.done += 1
+        exps.clear()
     if failed:
         res["warnings"].append(f"Не удалось получить или обработать {failed} из {len(flat)} снимков")
 
@@ -343,7 +359,10 @@ def _pipeline(j, p, r):
             diffs, template, scales = dd["diffs"], dd["template"], dd["noise_scale"]
 
     _stage(j, "render", "Рисую кадры", 0, len(frames))
-    d = cache.CACHE / j.key
+    if workspace is not None:
+        # Bound even uncompressed RGBA output, including flags and a possible trail.
+        workspace.ensure_space((2 * len(frames) + 1) * shape[0] * shape[1] * 4 + 1_000_000)
+    d = workspace.path / "render" if workspace is not None else cache.CACHE / j.key
     d.mkdir(exist_ok=True)
     vmin, vmax = prender.shared_limits([f.image for f in frames]) if frames else (0.0, 1.0)
     h = shape[0]
@@ -461,7 +480,9 @@ def _spectrum_job(j, r):
     from Exposure.irsa import ArchiveQueryError
 
     try:
-        res = build_spectrum(center, lambda mjd: _sky(r, mjd), progress=progress)
+        workspace = current_workspace()
+        options = {"workspace":workspace} if workspace is not None else {}
+        res = build_spectrum(center, lambda mjd: _sky(r, mjd), progress=progress, **options)
     except ArchiveQueryError as error:
         raise ApiError(502, "upstream", str(error)) from error
     res["query"] = {"ra": ra, "dec": dec, "target": r["label"]}

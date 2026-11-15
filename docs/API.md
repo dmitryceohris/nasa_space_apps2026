@@ -1,59 +1,42 @@
-# Научная валидация: обновление 15 ноября 2026
+# Scientific validation: November 15, 2026 update
 
-Существующие маршруты сохранены. Фотометрические `points[]` теперь содержат `validation.status`
-(`validated`, `provisional`, `rejected`), причины и результаты проверок. `ok` означает только
-`validated`; плоские массивы графиков содержат принятые результаты. Предварительный апертурный
-метод не является принятой научной фотометрией.
+Existing routes are retained. Photometric `points[]` now contain `validation.status` (`validated`, `provisional`, `rejected`), reasons and check results. `ok` means `validated` only; flat graph arrays contain accepted results. Preliminary aperture photometry is not accepted scientific photometry.
 
-`/api/spectrum` добавляет `quality_counts`, происхождение файлов и калибровок, статистическую и
-систематическую ошибки ePSF-подгонки. `/api/lightcurve` добавляет `diagnostic_points`, `series`
-для отдельных сопоставимых полос и `spectral_comparison`. Окно длин волн без полного отклика
-не подтверждает спектральную сопоставимость; в таком случае научные массивы пусты.
+`/api/spectrum` adds `quality_counts`, file and calibration provenance, and statistical and systematic ePSF fit errors. `/api/lightcurve` adds `diagnostic_points`, `series` for separate comparable bands, and `spectral_comparison`. A wavelength window without a full response does not establish spectral comparability; science arrays are empty in that case.
 
-`frames[].validation` явно отделяет просмотр изображений от подтверждённой астрометрии.
-Версия кэша результатов — 12. Подробные правила, изменения Python API и реальные результаты:
-[SCIENCE_REMEDIATION.md](SCIENCE_REMEDIATION.md). Ниже сохранено описание исходного API;
-при различии правил научного качества действует это обновление.
+`frames[].validation` explicitly separates image viewing from validated astrometry. The result cache version is 12. Detailed rules, Python API changes and real results: [SCIENCE_REMEDIATION.md](SCIENCE_REMEDIATION.md). The original API description is retained below; when scientific quality rules differ, this update takes precedence.
 
 # SPHEREx blink: API
 
-Бэкенд на FastAPI. По координатам или имени объекта отдаёт массив кадров SPHEREx по эпохам (PNG и метаданные).
-Данные берутся вживую из NASA/IPAC IRSA. Положения и собственные движения пяти пресетов берутся из таблицы команды `OBJECT_PARAMETERS.csv` (Gaia DR3 и Kirkpatrick et al. 2021), любые другие имена из SIMBAD (через CDS Sesame).
+FastAPI backend. Given coordinates or an object name, it returns SPHEREx frames by epoch (PNG and metadata). Data come live from NASA/IPAC IRSA. Positions and proper motions for five presets come from the team table `OBJECT_PARAMETERS.csv` (Gaia DR3 and Kirkpatrick et al. 2021); other names come from SIMBAD via CDS Sesame.
 
-- Базовый адрес (локально): `http://127.0.0.1:8000`
-- Установка: `uv sync --locked --python 3.12.13` (зависимости API входят в `pyproject.toml`; `requirements.txt` остался для установки через pip).
-- Запуск: `bash start.sh` (или `.venv/bin/uvicorn api.main:app --port 8000` из корня проекта)
-- Тесты (без сети): `uv run --offline --locked pytest -q tests`
-- Обработка изображений не дублируется в `api/`: кадры, фон, маски, разность, trail и спектр берутся из `src/processing`
-  и `src/Exposure`; `api/` отвечает за HTTP, поиск экспозиций, задачи 202/200, кэш и центры объектов.
-- CORS открыт для всех origin.
-- Все примеры ниже сняты с реально работающего сервера, полные версии лежат в `mock/`.
-  Примеры ошибок `upstream` и `internal` составлены по тексту из кода, их на живом сервере не воспроизводили.
+- Local base address: `http://127.0.0.1:8000`
+- Install: `uv sync --locked --python 3.12.13` (API dependencies are in `pyproject.toml`; `requirements.txt` remains for pip installation).
+- Start: `bash start.sh` (or `.venv/bin/uvicorn api.main:app --port 8000` from the repository root).
+- Offline tests: `uv run --offline --locked pytest -q tests`.
+- Image processing is not duplicated in `api/`: frames, background, masks, difference, trail and spectrum come from `src/processing` and `src/Exposure`; `api/` handles HTTP, exposure search, 202/200 jobs, cache and target centres.
+- CORS is open to all origins.
+- Examples below were captured from a running server; complete versions are in `mock/`. The `upstream` and `internal` error examples were composed from code text and not reproduced on the live server.
 
-## Общие параметры
+## Common parameters
 
-Одинаковы в URL страницы и в API (`/api/view`, `/api/export.gif`).
+The same parameters apply to the page URL and API (`/api/view`, `/api/export.gif`).
 
-| Параметр | Тип | Диапазон / значения | По умолчанию | Пример |
+| Parameter | Type | Range / values | Default | Example |
 |---|---|---|---|---|
-| `target` | str | имя объекта (SIMBAD) или `id` пресета | нет | `Barnard's Star`, `barnard` |
-| `ra` | str / float | градусы `0..360` или `08h55m10.83s`, `08:55:10.83` | нет | `133.795` |
-| `dec` | str / float | градусы `-90..90` или `-07d14m42.5s` | нет | `-7.245` |
-| `fov` | float | угловые минуты, `1..20` | `5` | `3` |
+| `target` | str | object name (SIMBAD) or preset `id` | none | `Barnard's Star`, `barnard` |
+| `ra` | str / float | degrees `0..360` or `08h55m10.83s`, `08:55:10.83` | none | `133.795` |
+| `dec` | str / float | degrees `-90..90` or `-07d14m42.5s` | none | `-7.245` |
+| `fov` | float | arcminutes, `1..20` | `5` | `3` |
 | `det` | int | `1..6` | `3` | `6` |
 | `mode` | enum | `single`, `coadd`, `diff`, `trail` | `coadd` | `diff` |
 | `max_per_epoch` | int | `1..20` | `6` | `6` |
 
-Правила: нужен либо `target`, либо пара `ra`+`dec` (если есть всё, приоритет у `ra`/`dec`).
-`ra` и `dec` передаются только вместе.
-Форматы осей можно смешивать: например, `ra=133.7951291667` и `dec=-7d14m42.53s`.
-Запись RA через двоеточия или с `h` задаётся в часах, Dec — в градусах.
-RA 360° (24 часа) нормализуется к 0°. Явная пара задаёт фиксированное направление:
-имя, переданное одновременно в `target`, не включает модель движения.
+Supply either `target` or the pair `ra`+`dec`; when both are supplied, `ra`/`dec` take priority. `ra` and `dec` must be supplied together. Axis formats can be mixed, e.g. `ra=133.7951291667` and `dec=-7d14m42.53s`. RA with colons or `h` is in hours, Dec in degrees. RA 360° (24 hours) is normalized to 0°. An explicit pair fixes the direction: a simultaneous `target` name does not enable a motion model.
 
-## Формат ошибок
+## Error format
 
-Все эндпоинты возвращают ошибки в одном виде (включая отсутствующий обязательный параметр, `400 bad_param`, и неизвестный путь, `404 not_found`):
+All endpoints use the same error format, including a missing required parameter (`400 bad_param`) and an unknown route (`404 not_found`):
 
 ```json
 {
@@ -64,19 +47,19 @@ RA 360° (24 часа) нормализуется к 0°. Явная пара з
 }
 ```
 
-| HTTP | `code` | Когда | Пример |
+| HTTP | `code` | When | Example |
 |---|---|---|---|
-| 400 | `bad_param` | неверный или отсутствующий параметр | `mock/error_bad_param.json` |
-| 404 | `not_found` | имя не найдено в SIMBAD | `mock/error_not_found.json` |
-| 409 | `not_ready` | экспорт GIF до готовности результата | `mock/error_not_ready.json` |
-| 502 | `upstream` | IRSA или SIMBAD недоступны после повторов | `mock/error_upstream.json` |
-| 500 | `internal` | всё остальное, трейсбек пишется в лог | `mock/error_internal.json` |
+| 400 | `bad_param` | invalid or missing parameter | `mock/error_bad_param.json` |
+| 404 | `not_found` | name not found in SIMBAD | `mock/error_not_found.json` |
+| 409 | `not_ready` | GIF export before the result is ready | `mock/error_not_ready.json` |
+| 502 | `upstream` | IRSA or SIMBAD unavailable after retries | `mock/error_upstream.json` |
+| 500 | `internal` | all other cases; traceback is logged | `mock/error_internal.json` |
 
 ---
 
 ## GET /api/health
 
-Проверка, что сервер жив. Параметров нет.
+Check that the server is alive. No parameters.
 
 ```json
 {
@@ -87,7 +70,7 @@ RA 360° (24 часа) нормализуется к 0°. Явная пара з
 
 ## GET /api/targets
 
-Список пресетов для кнопок на фронте. Параметров нет. `id` можно передавать как `target=<id>`.
+List presets for frontend buttons. No parameters. `id` can be passed as `target=<id>`.
 
 ```json
 [
@@ -129,18 +112,17 @@ RA 360° (24 часа) нормализуется к 0°. Явная пара з
 ]
 ```
 
-Имя `WISE 0855-0714` не является именем SIMBAD, поэтому пресеты (в том числе `wise0855` и имя `WISE 0855-0714`) разрешаются по таблице команды, без запроса в SIMBAD.
+`WISE 0855-0714` is not a SIMBAD name, so presets (including `wise0855` and `WISE 0855-0714`) are resolved from the team table without querying SIMBAD.
 
 ## GET /api/resolve
 
-Имя в координаты и собственное движение.
+Resolve a name to coordinates and proper motion.
 
-| Параметр | Обязательный | Описание |
+| Parameter | Required | Description |
 |---|---|---|
-| `target` | да | имя объекта или `id` пресета |
+| `target` | yes | object name or preset `id` |
 
-Пресеты (по `id` или имени) берутся из `OBJECT_PARAMETERS.csv`: `source` называет каталог, `ref_epoch` это эпоха координат (2016.0 для Gaia DR3), есть и `rv_kms`. Остальные имена идут в SIMBAD, координаты на `ref_epoch` 2000.0; собственное движение и параллакс могут быть `null`, если SIMBAD их не знает.
-Ответ SIMBAD кэшируется навсегда (память и `cache/resolve.json`). Неизвестное имя: `404`.
+Presets (by `id` or name) come from `OBJECT_PARAMETERS.csv`: `source` names the catalogue, `ref_epoch` is the coordinate epoch (2016.0 for Gaia DR3), and `rv_kms` is included. Other names go to SIMBAD with coordinates at `ref_epoch` 2000.0; proper motion and parallax may be `null` if SIMBAD does not know them. SIMBAD responses are cached indefinitely (memory and `cache/resolve.json`). Unknown name: `404`.
 
 ```json
 {
@@ -159,18 +141,17 @@ RA 360° (24 часа) нормализуется к 0°. Явная пара з
 
 ## GET /api/view
 
-Главный эндпоинт: серия кадров по эпохам. Работает как «получить или запустить»:
+The main endpoint returns a series of frames by epoch and works as “get or start”:
 
-1. Если результат есть в кэше, сразу `200` с полным JSON.
-2. Если задача уже идёт, `202` с прогрессом.
-3. Иначе запускается фоновая задача и приходит `202`.
+1. A cached result returns `200` immediately with the full JSON.
+2. An already running job returns `202` with progress.
+3. Otherwise a background job starts and returns `202`.
 
-Фронт опрашивает тот же URL каждые 2 секунды, пока не придёт `200`.
-Параметры: см. «Общие параметры». Центр поля считается на сегодняшнюю дату (собственное движение), переменная `CENTER_MJD` закрепляет дату.
+The frontend polls the same URL every 2 seconds until `200`. Parameters: see “Common parameters”. The field centre is calculated for today's date (proper motion); `CENTER_MJD` fixes the date.
 
-### 202: задача идёт
+### 202: job in progress
 
-`stage` проходит `query`, `download`, `process`, `render`.
+`stage` passes through `query`, `download`, `process`, `render`.
 
 ```json
 {
@@ -194,9 +175,9 @@ RA 360° (24 часа) нормализуется к 0°. Явная пара з
 }
 ```
 
-### 200: готово
+### 200: ready
 
-Пример: `/api/view?target=barnard&fov=3&det=3`. Для краткости оставлен первый кадр из пяти (полный ответ в `mock/view_ready.json`).
+Example: `/api/view?target=barnard&fov=3&det=3`. Only the first of five frames is shown for brevity (full response in `mock/view_ready.json`).
 
 ```json
 {
@@ -284,37 +265,37 @@ RA 360° (24 часа) нормализуется к 0°. Явная пара з
 }
 ```
 
-Поля ответа:
+Response fields:
 
-| Поле | Значение |
+| Field | Meaning |
 |---|---|
-| `query` | Фактические параметры; `ra`/`dec` это центр поля (положение объекта на сегодня) |
-| `grid` | Общая TAN-сетка всех кадров; `wcs` позволяет перевести клик в RA/Dec |
-| `frames` | Эпохи, отсортированы по `mjd`. Эпоха это группа снимков без разрыва больше 30 дней, при этом непрерывные серии длиннее 20 дней режутся на окна (так устроен `src/processing/epochs.py`), поэтому кадров бывает больше, чем «полугодовых» проходов |
-| `frames[].n_exp`, `wave_um` | Сколько экспозиций вошло в кадр; длина волны (мкм) в точке цели на дату кадра по спектральному WCS снимков (из-за линейного фильтра она меняется от эпохи к эпохе); `null`, если определить нельзя |
-| `frames[].image_url`, `flags_url` | PNG кадра (в режиме `diff` это относительный разностный остаток: красный ярче шаблона, синий темнее) и прозрачный слой флагов. Из кадра вычтен зодиакальный свет (расширение ZODI), пиксели без данных (вне покрытия, флаги HARD_BAD_FLAGS и одиночные выбросы без SOURCE, отброшенные на родных пикселях до интерполяции) показаны тёмно-фиолетовым `(72, 36, 110)` — цветом, которого нет у неба (небо серое, R=G=B), насыщенное ядро белым. Слой флагов отмечает загрязнение и насыщение (CROSSTALK, GHOST, STREAK, BLOOM, SNOWBALL, HALO, OVERFLOW, NONLINEAR), флаг SOURCE (сам источник) никогда не закрашивается |
-| `frames[].predicted_px` | Где объект должен быть на дату кадра (собственное движение и параллакс); `null`, если заданы `ra`/`dec` без имени |
-| `frames[].measured_px` | Центроид одного алгоритмически выбранного кандидата при `measurement.status == "ok"`, качестве не `poor` и удалении от доступного прогноза ≤1 px (6.15″); при прогнозе вне поля всегда `null`. Без модели движения измерение остаётся кандидатом фиксированного поля. Этот порог — защитная эвристика, не доказанная ошибка регистрации/идентичность. В diff берётся только положительная доля; при соседней отрицательной доле <5 px остаются только кандидаты (`overlaps_negative_residual`) |
-| `frames[].measured_candidates` | Кандидаты с формальной шумовой ошибкой и диагностикой качества; регистрация, PSF и смешение источников этой ошибкой полностью не описаны |
-| `frames[].measurement` | Итог измерения кадра: `status` (`ok` / `ambiguous` / `none`), `reason` (почему нет одного центра), `quality` (`good` / `fair` / `poor`), `flags`, `err_px` (шумовая погрешность `[x, y]`, пикс.), `n_rejected_hot` (отброшено одиночных горячих пикселей), `n_low_snr` (пятна с S/N < 5, не выбираются), `target_association` (`no_prediction` / `no_measurement` / `prediction_outside_field` / `consistent_with_prediction` / `far_from_prediction`), `offset_from_prediction_px` |
-| `frames[].span_days` | Длительность эпохи (последний минус первый снимок), сутки; не больше `processing.epochs.max_span_days` |
-| `frames[].bg_offsets` | Остаточный фон каждой экспозиции после вычитания модели ZODI, MJy/sr (`null`, если для оценки мало пикселей и он не вычитался) |
-| `frames[].diff_noise_scale` | Только `diff`/`trail`: во сколько раз реальный шум разностного кадра отличается от распространённого (обычно < 1 из-за сглаживания при перепроецировании); кадр поделён на это число |
-| `processing` | Как получены кадры и центры: `epochs` (ограничения эпох), `background`, `difference` (`null` вне `diff`/`trail`), `measurement` (метод центроида, параметры, модель ошибки, градации качества, `limitations`, `not_implemented`). Фронтенд показывает это в блоке «How positions are measured» |
-| `frames[].obs_ids` | Идентификаторы наблюдений IRSA |
-| `trail_url` | PNG «следа» движения: остатки эпох окрашены по времени (старые фиолетовые, новые жёлтые) поверх шаблона. Заполнен в режимах `diff` и `trail` при минимум двух эпохах, иначе `null`. Пиксели без данных во всех эпохах — тем же тёмно-фиолетовым, что в кадрах |
-| `motion` | `pm_reference_arcsec_yr`: собственное движение из SIMBAD в угловых секундах в год (`[RA·cos(Dec), Dec]`); `pm_measured_arcsec_yr` пока `null` (измерение по центрам не реализовано); `null` целиком, если движение неизвестно |
-| `warnings` | Строки с предупреждениями (например, часть снимков не скачалась) |
+| `query` | Actual parameters; `ra`/`dec` are the field centre (object position today) |
+| `grid` | Common TAN grid for all frames; `wcs` converts a click to RA/Dec |
+| `frames` | Epochs sorted by `mjd`. An epoch groups images without gaps greater than 30 days; continuous series over 20 days are split into windows (`src/processing/epochs.py`), so there may be more frames than half-year passes |
+| `frames[].n_exp`, `wave_um` | Number of exposures in the frame; wavelength (µm) at the target on the frame date from spectral WCS (the linear filter causes it to vary across epochs); `null` if unavailable |
+| `frames[].image_url`, `flags_url` | Frame PNG (in `diff`, a relative difference residual: red brighter than template, blue darker) and transparent flags layer. Zodiacal light (ZODI extension) is subtracted. No-data pixels (outside coverage, HARD_BAD_FLAGS, and isolated outliers without SOURCE rejected on native pixels before interpolation) are dark purple `(72, 36, 110)`, a colour absent from the grey sky (R=G=B); saturated cores are white. The flags layer marks contamination and saturation (CROSSTALK, GHOST, STREAK, BLOOM, SNOWBALL, HALO, OVERFLOW, NONLINEAR); SOURCE itself is never painted |
+| `frames[].predicted_px` | Predicted target position at the frame date (proper motion and parallax); `null` for `ra`/`dec` without a name |
+| `frames[].measured_px` | Centroid of one algorithm-selected candidate when `measurement.status == "ok"`, quality is not `poor`, and distance from an available prediction is ≤1 px (6.15″); always `null` for an out-of-frame prediction. Without a motion model it remains a fixed-field candidate. This threshold is a protective heuristic, not a verified registration error or identity. In diff only the positive lobe is used; with a negative lobe within 5 px only candidates remain (`overlaps_negative_residual`) |
+| `frames[].measured_candidates` | Candidates with formal noise error and quality diagnostics; that error does not fully describe registration, PSF and blending |
+| `frames[].measurement` | Frame measurement result: `status` (`ok` / `ambiguous` / `none`), `reason` (why no single centre), `quality` (`good` / `fair` / `poor`), `flags`, `err_px` (noise error `[x, y]` in pixels), `n_rejected_hot` (isolated hot pixels rejected), `n_low_snr` (spots with S/N < 5, not selected), `target_association` (`no_prediction` / `no_measurement` / `prediction_outside_field` / `consistent_with_prediction` / `far_from_prediction`), `offset_from_prediction_px` |
+| `frames[].span_days` | Epoch duration (last minus first image), days; at most `processing.epochs.max_span_days` |
+| `frames[].bg_offsets` | Residual background per exposure after ZODI subtraction, MJy/sr (`null` if too few pixels and no subtraction) |
+| `frames[].diff_noise_scale` | `diff`/`trail` only: ratio of actual to propagated difference-frame noise (usually < 1 due to reprojection smoothing); the frame is divided by this number |
+| `processing` | How frames and centres were obtained: `epochs` (epoch limits), `background`, `difference` (`null` outside `diff`/`trail`), `measurement` (centroid method, parameters, error model, quality grades, `limitations`, `not_implemented`). Shown in “How positions are measured” |
+| `frames[].obs_ids` | IRSA observation identifiers |
+| `trail_url` | Motion-trail PNG: epoch residuals coloured by time (older purple, newer yellow) over the template. Populated in `diff` and `trail` with at least two epochs, otherwise `null`. Pixels without data in all epochs use the same dark purple as frames |
+| `motion` | `pm_reference_arcsec_yr`: SIMBAD proper motion in arcsec/year (`[RA·cos(Dec), Dec]`); `pm_measured_arcsec_yr` remains `null` (measurement from centres not implemented); entirely `null` if motion is unknown |
+| `warnings` | Warning strings (e.g. some images did not download) |
 
-Все пиксельные координаты (`predicted_px`, `measured_px`, `measured_candidates[].xy`) даны в системе PNG: отсчёт с 0, формат `[x, y]`, ось `y` направлена вниз.
+All pixel coordinates (`predicted_px`, `measured_px`, `measured_candidates[].xy`) use PNG coordinates: zero-based `[x, y]`, with `y` increasing downward.
 
-### Режимы diff и trail
+### diff and trail modes
 
-- `diff`: в `image_url` лежит разность кадра и медианы ОСТАЛЬНЫХ эпох (без самого кадра), нормированная по робастному масштабу остатка (MAD), `robust_residual_scale`. Это относительная шкала, **не откалиброванная статистическая значимость в σ**: дисперсия интерполированных пикселей, корреляции, фон и PSF полностью не распространены. Движущийся объект может дать пару «плюс в текущем положении, минус в опорном». Плюс и минус выделяются отдельно (`measured_candidates[].sign`), центроид выбирается только по плюсу; сама пара не доказывает движение. В `trail_url` лежит цветная визуализация положительных остатков.
-- `trail`: кадры такие же, как в `coadd`, плюс `trail_url`.
-- Оба режима требуют минимум 2 эпохи, иначе в `warnings` будет пояснение (для `diff` кадры не строятся).
+- `diff`: `image_url` contains the frame minus the median of the OTHER epochs (excluding the frame itself), normalized by robust residual scale (MAD), `robust_residual_scale`. This is a relative scale, **not calibrated statistical significance in σ**: interpolated-pixel variance, correlations, background and PSF are not fully propagated. A moving object may produce a positive lobe at its current position and a negative lobe at the reference position. Lobes are detected separately (`measured_candidates[].sign`); only the positive one is used for centroid selection. The pair alone does not prove motion. `trail_url` contains a colour visualization of positive residuals.
+- `trail`: frames are as in `coadd`, plus `trail_url`.
+- Both modes need at least 2 epochs; otherwise `warnings` explains the limitation (for `diff`, no frames are produced).
 
-Пример `/api/view?target=wise0855&fov=3&det=6&mode=diff` (первый кадр из четырёх, полный ответ в `mock/view_diff_trail.json`):
+Example `/api/view?target=wise0855&fov=3&det=6&mode=diff` (first of four frames; full response in `mock/view_diff_trail.json`):
 
 ```json
 {
@@ -404,19 +385,20 @@ RA 360° (24 часа) нормализуется к 0°. Явная пара з
 }
 ```
 
-### Центр объекта: `measured_candidates`
+### Object centre: `measured_candidates`
 
-Алгоритм не знает заранее размер и тип объекта. Он выбирает два кандидата:
-- `largest`: самый большой объект в кадре;
-- `central`: объект под центром кадра (если такого нет, ближайший к центру);
-- `largest+central`: это один и тот же объект, кандидат один.
+The algorithm does not know object size or type in advance. It chooses two candidates:
+- `largest`: largest object in the frame;
+- `central`: object beneath the frame centre, or the nearest to it;
+- `largest+central`: the same object fulfils both roles, so there is one candidate.
 
-Если кандидатов нет, список пуст. Если `largest` и `central` разные или два объекта одинаково близки к центру, `measurement.status` равен `ambiguous`, а `measured_px` равен `null`: сервер не угадывает один из них.
+If there are no candidates, the list is empty. If `largest` and `central` differ or two objects are equally close to the centre, `measurement.status` is `ambiguous` and `measured_px` is `null`; the server does not guess.
 
-Метод (`processing.measurement`): робастный фон и шум (медиана/MAD с 3σ-клиппингом), сглаживание σ=1 пикс., порог 3σ только по валидным пикселям, связные области, центроид как взвешенный по потоку первый момент. Пиксели без данных (NaN, inf) входят в объект, только если он их окружает (насыщенное ядро), и получают значение ближайшего валидного соседа, поэтому не тянут центр; маска у края кадра или рядом с объектом объектом не становится.
+Method (`processing.measurement`): robust background and noise (median/MAD with 3σ clipping), σ=1 pixel smoothing, a 3σ threshold on valid pixels only, connected regions, and a flux-weighted first-moment centroid. No-data pixels (NaN, inf) belong to an object only if surrounded by it (saturated core) and receive the nearest valid neighbour's value, so they do not pull the centre; a mask at the frame edge or next to an object does not become an object.
 
-Поля кандидата: `kind`, `sign` (`1`/`-1` в `diff`, иначе `null`), `xy`, `err_px`, `area_px`, `snr`, `quality`, `flags`. Флаги: `masked_pixels`, `saturated_core`, `touches_nodata` и `touches_edge` (центр смещён внутрь видимой части, качество `poor`), `elongated` (соприкасающиеся объекты или след, качество `fair`). Пятна с S/N < 5 не выбираются: на чистом шуме порог 3σ находит такие примерно в каждом третьем кадре. PSF-фиттинг, деблендинг и нейросети не используются (следующий этап).
-Пример (eps Ind B, первый кадр из четырёх, остальные в `mock/view_ready_two_candidates.json`):
+Candidate fields: `kind`, `sign` (`1`/`-1` in `diff`, otherwise `null`), `xy`, `err_px`, `area_px`, `snr`, `quality`, `flags`. Flags: `masked_pixels`, `saturated_core`, `touches_nodata` and `touches_edge` (centre shifted toward the visible part, quality `poor`), `elongated` (touching objects or trail, quality `fair`). Spots with S/N < 5 are not selected: a 3σ threshold finds them in roughly one in three pure-noise frames. PSF fitting, deblending and neural networks are not used (next stage).
+
+Example (eps Ind B, first of four frames; the rest are in `mock/view_ready_two_candidates.json`):
 
 ```json
 {
@@ -509,23 +491,21 @@ RA 360° (24 часа) нормализуется к 0°. Явная пара з
 }
 ```
 
-### 200: ошибка задачи или пустой результат
+### 200: job error or empty result
 
-- Ошибка в задаче: `200 {"status": "error", "message": "..."}`. Задача после этого удаляется, повторный запрос запускает её заново.
-- Снимков нет: `200` с `"frames": []` и предупреждением `"SPHEREx ещё не наблюдал эту область"`. Такой результат не кэшируется, чтобы новые релизы SPHEREx подхватывались.
-- Режим `diff` требует минимум 2 эпохи, иначе `frames` пустые и есть предупреждение.
+- Job error: `200 {"status": "error", "message": "..."}`. The job is then deleted and a repeated request starts it again.
+- No images: `200` with `"frames": []` and a warning that SPHEREx has not yet observed the region. This result is not cached so new SPHEREx releases can be picked up.
+- `diff` requires at least 2 epochs; otherwise `frames` is empty and a warning is returned.
 
 ## GET /api/export.gif
 
-Анимированный GIF из уже готовых кадров. Параметры такие же, как у `/api/view`.
-Работает только по кэшу: если результата нет, отвечает `409 not_ready` (сначала откройте `/api/view`).
+Animated GIF from completed frames. Parameters are the same as `/api/view`. It uses the cache only: if no result exists, it returns `409 not_ready` (open `/api/view` first).
 
-Ответ: `image/gif`. Пример ошибки: `mock/error_not_ready.json`.
+Response: `image/gif`. Error example: `mock/error_not_ready.json`.
 
 ## GET /api/sources
 
-Какие локальные таблицы эпох загружены (папка `tables/`, либо `SPHEREX_TABLES`). Если таблица покрывает точку, эпохи берутся из неё (быстро), иначе запрашивается IRSA TAP.
-Таблица это экспорт IRSA «Spectral Images» в формате `.tbl`; файлы перечитываются при изменении, перезапуск не нужен.
+Lists loaded local epoch tables (`tables/` or `SPHEREX_TABLES`). If a table covers the position, epochs are taken from it quickly; otherwise IRSA TAP is queried. A table is an IRSA “Spectral Images” export in `.tbl` format; changed files are re-read without restart.
 
 ```json
 [
@@ -546,19 +526,15 @@ RA 360° (24 часа) нормализуется к 0°. Явная пара з
 
 ## GET /api/spectrum
 
-Спектр «на лету»: фотометрия в точке цели по всем экспозициям всех 6 детекторов (`src/processing.build_spectrum`).
-Тот же механизм, что у `/api/view`: `202` с прогрессом (`stage`: `query`, `download`, `process`, `render`), опрос того же URL до `200`, результат кэшируется.
+On-demand spectrum: photometry at the target position across all exposures from all 6 detectors (`src/processing.build_spectrum`). The same mechanism as `/api/view`: `202` with progress (`stage`: `query`, `download`, `process`, `render`), polling the same URL until `200`, and caching the result.
 
-| Параметр | Описание |
+| Parameter | Description |
 |---|---|
-| `target` или `ra`+`dec` | как в «Общих параметрах» |
+| `target` or `ra`+`dec` | As in “Common parameters” |
 
-Положение цели на дату каждой экспозиции берётся из собственного движения (SIMBAD); для `ra`+`dec` без имени цель считается неподвижной.
-Для каждого детектора берётся по 2 снимка на эпоху, поэтому первый холодный запрос долгий (десятки вырезок).
-Поля точки: `wave_um` и `bw_um` (длина волны и ширина полосы в точке цели), `flux_ujy` и `err_ujy` (апертурная фотометрия, мкЯн; `null`, если все пиксели апертуры плохие),
-`mjd`, `det`, `obs_id`, `ok` (`false`, если в апертуре есть плохие пиксели, например насыщение у ярких звёзд: такие точки показываются, но помечены), `flags` (имена флагов в апертуре).
-`n_saturated` это число точек с `ok = false`. В примере оставлены первые 3 точки из `n_points`.
-Кроме `points` ответ содержит плоские массивы `wavelength`, `flux`, `flux_err` только из надёжных точек (`ok = true`): их напрямую рисует фронтенд. В примере они опущены.
+The target position at each exposure date uses proper motion (SIMBAD); `ra`+`dec` without a name is treated as stationary. Two images per epoch are used for each detector, so the first cold request is long (dozens of cutouts).
+
+Point fields: `wave_um` and `bw_um` (wavelength and bandwidth at target), `flux_ujy` and `err_ujy` (aperture photometry in µJy; `null` if all aperture pixels are bad), `mjd`, `det`, `obs_id`, `ok` (`false` for bad aperture pixels, such as saturation of bright stars; such points are shown but flagged), `flags` (aperture flag names). `n_saturated` is the number of points with `ok = false`. The example includes the first 3 of `n_points`. In addition to `points`, flat arrays `wavelength`, `flux`, `flux_err` contain only reliable (`ok = true`) points for direct frontend plotting; they are omitted from the example.
 
 ```json
 {
@@ -643,17 +619,15 @@ RA 360° (24 часа) нормализуется к 0°. Явная пара з
 
 ## GET /api/lightcurve
 
-Поток по времени в узком окне длин волн: окно берётся из того же (кэшированного) спектра. Если спектр ещё считается, приходит его `202`.
+Flux over time in a narrow wavelength window from the same cached spectrum. If the spectrum is still processing, its `202` is returned.
 
-| Параметр | По умолчанию | Описание |
+| Parameter | Default | Description |
 |---|---|---|
-| `target` или `ra`+`dec` | нет | как в «Общих параметрах» |
-| `wave_min`, `wave_max` | `±5%` вокруг середины полосы детектора `det` | окно, мкм; нужно `0 < wave_min < wave_max` |
-| `det` | `3` | детектор, по которому считается окно по умолчанию |
+| `target` or `ra`+`dec` | none | As in “Common parameters” |
+| `wave_min`, `wave_max` | `±5%` around the centre of detector `det`'s band | window in µm; requires `0 < wave_min < wave_max` |
+| `det` | `3` | detector used for the default window |
 
-Окно узкое намеренно: из-за линейного фильтра на разных длинах волн поток отличается, и без окна переменность спуталась бы с формой спектра.
-Как и у спектра, ответ содержит плоские массивы надёжных точек: `dates` (`YYYY-MM-DD`), `flux`, `flux_err`.
-`warnings` повторяет предупреждения спектра; если в окне нет надёжных точек, в конец добавляется предупреждение об этом.
+The window is intentionally narrow: the linear filter produces different fluxes at different wavelengths, and without a window variability would be confused with the spectral shape. As with the spectrum, the response contains flat arrays of reliable points: `dates` (`YYYY-MM-DD`), `flux`, `flux_err`. `warnings` repeats spectrum warnings and appends a warning if no reliable points fall within the window.
 
 ```json
 {
@@ -711,194 +685,110 @@ RA 360° (24 часа) нормализуется к 0°. Явная пара з
 }
 ```
 
-## Статика
+## Static files
 
-- `/cache/<key>/f<i>.png` и `/cache/<key>/f<i>_flags.png`: картинки из `image_url` и `flags_url`.
-- `/` : фронтенд. Понимает параметры в адресной строке: `/?target=barnard&fov=3&det=3&mode=coadd`.
+- `/cache/<key>/f<i>.png` and `/cache/<key>/f<i>_flags.png`: images from `image_url` and `flags_url`.
+- `/`: frontend. It accepts URL parameters, e.g. `/?target=barnard&fov=3&det=3&mode=coadd`.
 
-## Переменные окружения
+## Environment variables
 
-| Переменная | По умолчанию | Назначение |
+| Variable | Default | Purpose |
 |---|---|---|
-| `CACHE_DIR` | `cache/` | папка кэша (результаты, вырезки FITS, справочные данные) |
-| `PREWARM` | `1` | `0` отключает прогрев пяти пресетов при старте |
-| `CENTER_MJD` | сегодня | закрепляет дату пересчёта центра (стабильные ключи кэша для демо) |
-| `SPHEREX_TABLES` | `tables/` | папка с локальными таблицами эпох |
+| `CACHE_DIR` | `cache/` | Cache directory (results, FITS cutouts, reference data) |
+| `PREWARM` | `1` | `0` disables warming the five presets at startup |
+| `CENTER_MJD` | today | Fixes the centre recalculation date (stable cache keys for demos) |
+| `SPHEREX_TABLES` | `tables/` | Directory of local epoch tables |
 
-## Демо-кэш
+## Demo cache
 
-Чтобы на показе ничего не качалось вживую, кэш собирается заранее скриптом `scripts/prepare_demo_cache.py` (все пресеты, режимы `coadd` и `diff`, спектр и кривая блеска), а сервер запускается через `start_demo.sh`:
+To avoid live downloads during a demonstration, the cache is prepared in advance with `scripts/prepare_demo_cache.py` (all presets, `coadd` and `diff`, spectrum and light curve), and the server starts with `start_demo.sh`:
 
 ```
 CENTER_MJD=61358 PORT=8000 bash start_demo.sh <папка_кэша> 61358
 .venv/bin/python scripts/prepare_demo_cache.py --base http://127.0.0.1:8000
 ```
 
-Ключ кэша зависит от центра поля, а центр пересчитывается на дату `CENTER_MJD` (по умолчанию «сегодня»). Поэтому собранный кэш работает только с той же датой: готовый кэш собран для `CENTER_MJD=61358` (14 ноября 2026). Без закрепления даты ключи меняются каждый день.
+The cache key depends on field centre, which is recalculated for `CENTER_MJD` (default “today”). The prepared cache works only with the same date: the ready cache uses `CENTER_MJD=61358` (November 14, 2026). Without a fixed date the keys change daily.
 
-## Известные ограничения
+## Known limitations
 
-- Собственное движение по измеренным центрам (`motion.pm_measured_arcsec_yr`) не считается.
-- Спектр и кривая блеска используют загрузчик из `src/Exposure` (свой лимит параллельных загрузок и повторы при 503), а не поиск `api/irsa.py`; локальная таблица эпох на них не влияет.
-- Метановый индекс не реализован.
-- Очень яркие цели насыщают снимки: у Барнарда во всех точках спектра стоят флаги насыщения (поток измеряется только у 8 из 48 точек), у R Dra потока нет ни в одной точке. Такие точки возвращаются, но помечены `ok: false`.
-- Окно кривой блеска по умолчанию узкое (±5% вокруг середины детектора), поэтому у части целей в него не попадает ни одной точки (в кэше: RW Aur, R Dra и Barnard дают 0 точек, WISE 0855 и eps Ind B по 3). Чтобы увидеть больше точек, задайте `wave_min` и `wave_max` вручную.
-- Холодный запрос занимает от десятков секунд до нескольких минут (около 4 МБ и 13 секунд на вырезку); из кэша ответ приходит за миллисекунды.
-- Центр объекта определяется по порогу 3 сигма и первому моменту, без PSF-фиттинга и нейросетей; на очень шумных кадрах порог стоит менять (константы в `api/centroid.py`). `err_px` учитывает только шум.
-- Соприкасающиеся объекты не разделяются (флаг `elongated`); у объекта у края маски центр смещён (флаг `touches_nodata`).
-- В `diff` соседний «минус» подъедает крыло «плюса»: при сдвиге ~5 пикс. смещение центра около 0.35 пикс., при меньших сдвигах больше.
-- Из каждой экспозиции вычитается только постоянный остаточный фон; градиент на больших полях остаётся.
+- Proper motion from measured centres (`motion.pm_measured_arcsec_yr`) is not calculated.
+- Spectrum and light curve use the `src/Exposure` loader (its own concurrency limit and 503 retries), not `api/irsa.py` search; local epoch tables do not affect them.
+- The methane index is not implemented.
+- Very bright targets saturate images: all Barnard spectrum points have saturation flags (flux is measured for only 8 of 48 points); R Dra has no flux in any point. These points are returned but marked `ok: false`.
+- The default light-curve window is narrow (±5% around the detector midpoint), so some targets have no points in it (cached: RW Aur, R Dra and Barnard have 0, WISE 0855 and eps Ind B have 3 each). Set `wave_min` and `wave_max` manually to see more.
+- A cold request takes tens of seconds to several minutes (about 4 MB and 13 seconds per cutout); cached responses take milliseconds.
+- The object centre uses a 3σ threshold and first moment, without PSF fitting or neural networks; the threshold may need adjustment on very noisy frames (constants in `api/centroid.py`). `err_px` includes noise only.
+- Touching objects are not separated (`elongated`); an object near a mask edge has a shifted centre (`touches_nodata`).
+- In `diff`, a nearby negative lobe eats into the positive lobe: at ~5 pixels displacement the centroid bias is about 0.35 pixels, and greater for smaller displacements.
+- Only constant residual background is subtracted from each exposure; gradients remain in large fields.
 
+## Dilayla's contract clarification (November 14, 2026)
 
-## Уточнение контракта Дилайлы (14 ноября 2026)
+`/api/resolve` retains `ra`, `dec`, PM and `source`, and adds `source_id` (string), `source_url`, `ref_epoch_format`, `ref_epoch_scale`, `coordinate_model`, `assumptions`, and, for the team catalogue, component, limitations and available errors. `ref_epoch` retains the original value: for WISE this is **57633.39 MJD**, not a year. Unknown values return `null`; conditional RV=0 remains only a model assumption. WISE's unspecified source epoch scale remains `null`; UTC use appears in `assumptions`.
 
-`/api/resolve` сохраняет `ra`, `dec`, PM и `source`, добавляет `source_id` (строка),
-`source_url`, `ref_epoch_format`, `ref_epoch_scale`, `coordinate_model`, `assumptions`,
-а для командного каталога — компонент, ограничения и доступные ошибки.
-`ref_epoch` хранит исходное значение: для WISE это **57633.39 MJD**, а не год.
-Неизвестные значения возвращаются как `null`; условное RV=0 остаётся только допущением модели.
-Неуказанная шкала исходной эпохи WISE остаётся `null`, применение UTC отражено в `assumptions`.
+The five targets use `sky_motion.predict_position`: geometric geocentric direction in ICRS axes, without aberration or spacecraft-orbit correction. This is a prediction, not a measurement. For arbitrary Sesame responses, J2000 is not treated as a verified motion reference epoch: coordinates are fixed (`fixed_catalogue`), and PM is retained as a catalogue value. With a reliable epoch and PM the adapter supports motion propagation using the specified scale. The full name is encoded in the outgoing URL; service errors are distinguished from a missing name.
 
-Пять целей используют `sky_motion.predict_position`: геометрическое геоцентрическое направление
-в осях ICRS, без аберрации и поправки на орбиту аппарата. Это прогноз, а не измерение.
-Для произвольного Sesame-ответа J2000 не считается доказанной опорной эпохой движения:
-координаты фиксированы (`fixed_catalogue`), PM сохраняется как каталожная величина.
-При достоверных эпохе и PM адаптер поддерживает перенос движения с указанной шкалой.
-Полное имя кодируется в исходящем URL; ошибки сервиса отличаются от отсутствия имени.
+`/api/view` adds `target_info`, `center_mjd` (MJD UTC for the centre of a name query), `data_status`, and `exposure_counts` (`selected`, `failed`, `used`; absent before exposure search). States: `no_archive_results`, `download_failed`, `unusable_data`, `partial`, `single_epoch`, `available`. For diff with one epoch there are no frames and a warning explains the limitation. An empty archive response does not prove absence of observations for all time. A poor-quality measurement does not populate `measured_px`; candidates are retained separately. An out-of-frame prediction is hidden with a warning. Pixels are zero-based `[x,y]`, y downward.
 
-`/api/view` добавляет `target_info`, `center_mjd` (MJD UTC для центра запроса по имени),
-`data_status` и `exposure_counts` (`selected`, `failed`, `used`; отсутствует до поиска экспозиций).
-Состояния: `no_archive_results`, `download_failed`, `unusable_data`, `partial`,
-`single_epoch`, `available`. Для diff с одной эпохой кадров нет, ограничение объясняется предупреждением.
-Пустой ответ архива не доказывает отсутствие наблюдений за всё время.
-Измерение плохого качества не заполняет `measured_px`; кандидаты сохраняются отдельно.
-Внекадровый прогноз скрывается с предупреждением. Пиксели — `[x,y]`, с нуля, y вниз.
+FITS time is normalized to MJD UTC accounting for `TIMESYS`; `MJD-AVG` takes priority, followed by `DATE-AVG`. A frame contains exposure `time_sources` with source keys and assumptions. `archive_hint` may be an observation's lower bound. A missing TIMESYS means an explicit UTC assumption. Unknown time must not be interpreted as a verified midpoint.
 
-Время FITS нормализуется в MJD UTC с учётом `TIMESYS`; приоритет имеют `MJD-AVG`,
-затем `DATE-AVG`. Кадр содержит `time_sources` по экспозициям с исходным ключом и допущениями.
-`archive_hint` может быть нижней границей наблюдения. Отсутствующий TIMESYS означает явное
-допущение UTC. Неизвестное время нельзя интерпретировать как проверенную середину.
+Target information and spectrum warnings are retained when obtaining a light curve. Cache version 11 invalidates previous results; fixed and tracked queries with the same centre have different keys. Original FITS are retained. On the main page, plots start via buttons; an empty form loads only presets. URL parameters include `max_per_epoch`, `api`, `mock`. Synthetic data are explicitly labelled.
 
-Сведения о цели и предупреждения спектра сохраняются при получении кривой блеска.
-Версия кэша 11 инвалидирует прежние результаты; фиксированные и отслеживаемые запросы
-с одинаковым центром имеют разные ключи. Исходные FITS сохраняются.
-На основной странице графики запускаются кнопками; пустая форма загружает только пресеты.
-URL поддерживает `max_per_epoch`, `api`, `mock`. Искусственные данные явно подписаны.
-
-Воспроизводимая ограниченная проверка:
+Reproducible limited check:
 
 ```sh
 PREWARM=0 .venv/bin/python -m uvicorn api.main:app --host 127.0.0.1 --port 8011
 .venv/bin/python scripts/validate_targets.py --images --timeout 120
 ```
 
-Ответы проверки — в `data/validation/responses/`; реальный HTTP-запрос может использовать
-серверный кэш. Примеры `mock/` относятся к исторической версии формата.
+Validation responses are in `data/validation/responses/`; a real HTTP request may use the server cache. `mock/` examples use a historical format version.
 
-### Дополнение: покрытие, качество и актуальность
+### Supplement: coverage, quality and freshness
 
-Версия runtime-кэша — **11**. Каждый кадр содержит:
+Runtime cache version is **11**. Each frame contains:
 
-- `quality`: `status` (`limited`/`unchecked`), `verified=false`, доля конечных пикселей `coverage_fraction`, коды `reasons`;
-- `prediction_status`: `in_frame`, `outside_field` или `no_model`;
-- `wavelength_samples`: реальные λ/ширины полосы по каждой использованной экспозиции, `obs_id`, источник `spectral_wcs` либо `approximate_detector_position`;
-- `time_sources`: только экспозиции, действительно использованные в кадре; нормализация в UTC и допущения времени;
-- общие `exposure_counts`: `selected`, `failed`, `used`, `rejected`;
-- общий `spectral_sampling`: `wave_min_um`, `wave_max_um`, `channel_width_um` (медианная ширина канала), `n_samples` (число пригодных отсчётов λ использованных экспозиций), `different_channels` — `true`, если λ цели в разных кадрах различаются больше ширины канала (тогда в `warnings` есть предупреждение: разница яркости может зависеть от формы спектра; переменность не подтверждена).
+- `quality`: `status` (`limited`/`unchecked`), `verified=false`, finite-pixel fraction `coverage_fraction`, and `reasons` codes;
+- `prediction_status`: `in_frame`, `outside_field`, or `no_model`;
+- `wavelength_samples`: actual λ/bandwidth for every used exposure, `obs_id`, and source `spectral_wcs` or `approximate_detector_position`;
+- `time_sources`: only exposures actually used in the frame, UTC normalization, and time assumptions;
+- overall `exposure_counts`: `selected`, `failed`, `used`, `rejected`;
+- overall `spectral_sampling`: `wave_min_um`, `wave_max_um`, `channel_width_um` (median channel width), `n_samples` (number of usable λ samples of used exposures), and `different_channels`, `true` if target wavelengths in different frames differ by more than a channel width (with a `warnings` notice that brightness differences may depend on spectral shape and variability is not confirmed).
 
-Для `/api/view` длины волн и ширина канала в `spectral_sampling` округляются до 4 знаков.
-Без пригодных отсчётов `n_samples=0`, остальные четыре поля равны `null` (включая
-`different_channels`). Если ширина канала неизвестна, сравнение использует 5% средней λ.
+For `/api/view`, wavelengths and channel width in `spectral_sampling` are rounded to 4 decimal places. Without usable samples `n_samples=0` and the other four fields are `null` (including `different_channels`). When channel width is unknown, comparison uses 5% of mean λ.
 
-У `/api/lightcurve` диагностика относится только к пригодным точкам выбранного окна:
-`wave_min_um`, `wave_max_um`, `channel_width_um` передаются без округления, `n_samples`
-отсутствует. `different_channels` — булево значение; при отсутствии пригодных точек
-это `false`, а три числовых поля — `null`. Если ширина канала неизвестна,
-`different_channels=false` не подтверждает совпадение полос. Для обоих эндпоинтов
-`false` не означает пригодности данных для количественного сравнения потоков.
+For `/api/lightcurve`, diagnostics concern only usable points in the selected window: `wave_min_um`, `wave_max_um`, and `channel_width_um` are unrounded; `n_samples` is absent. `different_channels` is boolean; with no usable points it is `false` and the three numeric fields are `null`. If channel width is unknown, `different_channels=false` does not establish matching bands. For either endpoint, `false` does not establish suitability for quantitative flux comparison.
 
-При `measurement.target_association=prediction_outside_field` модель ставит цель за
-границей кадра: `measured_px=null`, `offset_from_prediction_px=null`; видимые источники
-остаются в `measured_candidates`, интерфейс явно сообщает об отсутствии прогноза в поле.
+With `measurement.target_association=prediction_outside_field`, the model places the target outside the frame: `measured_px=null`, `offset_from_prediction_px=null`; visible sources remain in `measured_candidates`, and the interface explicitly reports no prediction in the field.
 
-`quality.verified=false` сохраняется даже при полном покрытии: это не научная сертификация
-изображения. `measured_candidates` и однозначно выбранный алгоритмом центроид не подтверждают идентичность звезды.
-Разностная шкала — `robust_residual_scale`, без откалиброванной вероятности/значимости.
-Для разностей без общих пригодных пикселей PNG не выдаётся как полезный кадр.
+`quality.verified=false` remains even with complete coverage: this is not scientific certification of an image. `measured_candidates` and an unambiguously algorithm-selected centroid do not establish the star's identity. The difference scale is `robust_residual_scale`, without calibrated probability/significance. A difference with no common usable pixels is not presented as a useful PNG frame.
 
-`processing.registration` описывает только перепроецирование по WCS заголовка:
-`name=header_wcs_reprojection`, `independently_verified=false`,
-`astrometric_precision_arcsec=null`. Независимая регистрация по опорным звёздам
-и точность измерений не подтверждены. Предупреждения передаются основной странице:
-центроиды являются кандидатами, а изменение яркости и разностные остатки требуют
-сопоставимых полос/откликов и проверки качества. Ограничение действует и при
-различии λ меньше 5% или одинаковой средней λ. WCS-WAVE задаёт полосу для просмотра;
-количественный анализ требует проверки спектральной калибровки/отклика и PSF.
+`processing.registration` describes only header-WCS reprojection: `name=header_wcs_reprojection`, `independently_verified=false`, `astrometric_precision_arcsec=null`. Independent registration using reference stars and measurement accuracy are not confirmed. Warnings reach the main page: centroids are candidates, and brightness changes and difference residuals require comparable bands/responses and quality checks. This applies even when λ differs by less than 5% or mean λ matches. WCS-WAVE provides a band for viewing; quantitative analysis requires checking spectral calibration/response and PSF.
 
-Спектральные точки добавляют `quality_reasons`, `coverage`, `wavelength_source`,
-`time_source`, `time_assumptions`. Неполная апертура/фоновое кольцо и загрязнение апертуры
-дают `ok=false`. Вырезка рассчитывается с запасом для движения и кольца на выбранных датах.
-Недоступная спектральная калибровка даёт `wave_um=null`, а не JSON NaN.
-`n_saturated` считает флаги OVERFLOW/NONLINEAR; `n_flagged` — все непригодные точки.
-Ошибка потока включает дисперсию пикселей апертуры и ошибку медианы фонового кольца (`method.error_components`); не включены апертурная поправка, калибровка потока, ошибка положения цели и форма канала (`method.error_not_included`). Фоновое кольцо, замаскированное больше чем наполовину, даёт `background_annulus_mostly_masked`. Кривая блеска возвращает `spectral_sampling` и предупреждает, если её точки из разных каналов. Значение `different_channels=false` — только результат эвристики по центрам/ширинам, а не подтверждение одинаковых откликов или пригодности фотометрии.
+Spectral points add `quality_reasons`, `coverage`, `wavelength_source`, `time_source`, and `time_assumptions`. Incomplete apertures/background annuli and aperture contamination produce `ok=false`. The cutout includes a margin for motion and the annulus on selected dates. Unavailable spectral calibration gives `wave_um=null`, not JSON NaN. `n_saturated` counts OVERFLOW/NONLINEAR flags; `n_flagged` counts all unusable points. Flux error includes aperture-pixel variance and background-annulus median error (`method.error_components`); aperture correction, flux calibration, target-position error, and channel shape are excluded (`method.error_not_included`). A background annulus more than half masked yields `background_annulus_mostly_masked`. The light curve returns `spectral_sampling` and warns if points use different channels. `different_channels=false` is only a centre/width heuristic result, not confirmation of identical responses or usable photometry.
 
-Обычный поиск использует архив. `SPHEREX_SOURCE=tables` явно включает ограниченный локальный
-набор; его ключи отделены от архива. Готовые результаты и списки экспозиций обновляются
-через 3600 секунд, частичные и пустые — через 60 секунд; параметры указаны в
-[DEPLOYMENT.md](DEPLOYMENT.md).
+Normal search uses the archive. `SPHEREX_SOURCE=tables` explicitly enables a limited local set with keys separate from archive keys. Completed results and exposure lists refresh after 3600 seconds, partial and empty results after 60 seconds; settings are in [DEPLOYMENT.md](DEPLOYMENT.md).
 
-HTTP 503 `busy` означает заполненную очередь, `timeout` — превышение срока работы.
-Во время завершения уже начавшихся сетевых операций та же задача не запускается повторно.
-После ошибки клиента можно повторить запрос. Два одинаковых запроса используют одну задачу;
-повторная проверка кэша под блокировкой устраняет гонку публикации результата.
+HTTP 503 `busy` means the queue is full; `timeout` means the job time limit was exceeded. The same job is not restarted while already-started network operations finish. The client may retry after an error. Two identical requests use one job; rechecking the cache under a lock eliminates the result-publication race.
 
-### Отказ TAP и переключение на SIA2
+### TAP failure and SIA2 fallback
 
-`/api/view` сначала делает один GET-запрос к IRSA TAP с ограничением 12 секунд.
-При 502, таймауте или непригодном CSV автоматически выполняется официальный поиск
-IRSA SIA2 по коллекциям `spherex_dr1` и `spherex_qr3`. Повторяющиеся наблюдения
-на одном детекторе объединяются с приоритетом DR1. Это живой запрос к архиву,
-а не возврат старой версии результата. Прямые FITS-ссылки SIA2 загружаются без
-ошибочной попытки прочитать их как XML datalink.
+`/api/view` first sends one GET request to IRSA TAP with a 12-second limit. On 502, timeout or unusable CSV, official IRSA SIA2 search automatically queries collections `spherex_dr1` and `spherex_qr3`. Duplicate observations on the same detector are combined with DR1 priority. This is a live archive request, not an old result. Direct SIA2 FITS links are downloaded without incorrectly attempting to parse them as XML datalink.
 
-`archive_source` в ответе вида — `tap`, `sia2` или `tables`. При `sia2` в `warnings`
-передаётся ограничение: новые наблюдения могут попадать в SIA2 примерно на сутки
-позже TAP. Источник и предупреждение сохраняются в кэше, в том числе для пустой
-выборки. Ошибки `QUERY_STATUS=ERROR` и обрезанные ответы `OVERFLOW` не выдаются
-как отсутствие покрытия и не кэшируются как успешные результаты.
+`archive_source` in the view response is `tap`, `sia2`, or `tables`. With `sia2`, `warnings` notes that new observations may appear in SIA2 roughly a day later than TAP. Source and warning are cached even for an empty set. `QUERY_STATUS=ERROR` and truncated `OVERFLOW` responses are not represented as absent coverage or cached as successful results.
 
-Один неудачный пробный запрос TAP отключает его на 300 секунд для всех задач
-этого процесса; затем TAP проверяется снова. `TAP_PROBE_TIMEOUT` и
-`TAP_RETRY_SECONDS` позволяют изменить эти интервалы. FITS-загрузки сохраняют
-повторы для 408, 429 и 5xx; постоянные 4xx не повторяются.
+One failed TAP probe disables TAP for all jobs in the process for 300 seconds; TAP is then checked again. `TAP_PROBE_TIMEOUT` and `TAP_RETRY_SECONDS` configure these intervals. FITS downloads retain retries for 408, 429, and 5xx; permanent 4xx responses are not retried.
 
-Спектр, кривая блеска и Python-библиотека используют SIA2 напрямую. Их поисковые
-запросы также имеют конечный таймаут (45 секунд) и до трёх попыток для временных
-ошибок с паузами 2 и 4 секунды. Неудача поиска классифицируется как отказ архива,
-а не ошибка локальной обработки. Загрузка FITS сохраняет собственные повторы и кэш.
+Spectrum, light curve and Python library use SIA2 directly. Their searches also have a finite timeout (45 seconds) and up to three attempts for temporary errors, with 2- and 4-second delays. Search failure is classified as archive failure, not a local processing error. FITS downloads retain their own retries and cache.
 
-Основания: [документация IRSA TAP](https://irsa.ipac.caltech.edu/docs/program_interface/TAP.html)
-и [официальное описание доступа SPHEREx](https://caltech-ipac.github.io/spherex-archive-documentation/spherex-data-access/).
+References: [IRSA TAP documentation](https://irsa.ipac.caltech.edu/docs/program_interface/TAP.html) and [official SPHEREx data access](https://caltech-ipac.github.io/spherex-archive-documentation/spherex-data-access/).
 
+## Rate limiting and public errors
 
-## Ограничение частоты и публичные ошибки
+`/api/view`, `/api/spectrum`, `/api/lightcurve`, `/api/resolve`, and `/api/export.gif` share a token bucket per network client. By default, bursts of up to 120 requests are allowed, then the budget refills at 120 per minute. `API_RATE_LIMIT_PER_MINUTE` sets a positive limit; 202 polling counts toward the same budget. PNGs, the home page, healthcheck and CORS OPTIONS are exempt.
 
-На `/api/view`, `/api/spectrum`, `/api/lightcurve`, `/api/resolve` и `/api/export.gif`
-действует общий для каждого сетевого клиента token bucket. По умолчанию допускается
-всплеск до 120 запросов, затем бюджет пополняется со скоростью 120 в минуту.
-`API_RATE_LIMIT_PER_MINUTE` задаёт положительный лимит; опрос 202 учитывается в том же
-бюджете. PNG, главная страница, healthcheck и CORS OPTIONS не ограничиваются этим правилом.
+When exhausted: HTTP 429, `error.code=rate_limited`, and `Retry-After` in seconds; processing does not start. 503 `busy`/`timeout` responses also include `Retry-After: 5`. CORS allows clients to read this header.
 
-При исчерпании бюджета: HTTP 429, `error.code=rate_limited`, `Retry-After` в секундах;
-запрос к обработке не запускается. Ответы 503 `busy`/`timeout` также содержат
-`Retry-After: 5`. CORS разрешает клиенту прочитать этот заголовок.
+Unexpected HTTP 500 and background-worker errors contain a generic message. Exception details remain in server logs and are not sent to visitors. The limiter uses `request.client` and does not trust arbitrary X-Forwarded-For. Behind a reverse proxy, trusted forwarding addresses must be configured explicitly on the server; otherwise clients of one proxy share a budget. Limiter state is stored in one process and capped at 4096 client entries; multiple replicas require a shared ingress limiter.
 
-Неожиданный HTTP 500 и ошибки фонового обработчика содержат общее сообщение.
-Подробности исключения сохраняются в серверном журнале, а не передаются посетителю.
-Ограничение использует адрес `request.client`, не доверяет произвольному X-Forwarded-For.
-За reverse proxy доверие адресам пересылки нужно явно настроить на сервере;
-иначе клиенты одного proxy разделяют бюджет. Состояние ограничителя хранится в одном
-процессе и ограничено 4096 клиентскими записями; несколько реплик требуют общего
-ограничителя на входе.
-
-Флаг SOURCE сам по себе не удаляется даже эвристикой одиночных выбросов: без независимой проверки такой пиксель не объявляется дефектом. Совместный HARD_BAD-флаг по-прежнему исключает пиксель.
+SOURCE alone is not removed even by the isolated-outlier heuristic: without independent verification, such a pixel is not declared defective. An accompanying HARD_BAD flag still excludes the pixel.

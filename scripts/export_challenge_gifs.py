@@ -40,7 +40,7 @@ SNAPSHOTS = {
     "rwaur": "66f189f43ec22f35",
     "rdra": "3face6ff239f7a34",
 }
-NAMES = {"barnard": "Звезда Барнарда", "epsindib": "Epsilon Indi B",
+NAMES = {"barnard": "Barnard's Star", "epsindib": "Epsilon Indi B",
          "wise0855": "WISE 0855", "rwaur": "RW Aurigae", "rdra": "R Draconis"}
 AUDIT = ROOT / "data/validation/science-remediation/measurements.json"
 
@@ -70,7 +70,7 @@ def font(size, bold=False):
     for path in paths:
         if path.exists():
             return ImageFont.truetype(str(path), size)
-    raise FileNotFoundError("Install a Cyrillic font or edit font() with its path")
+    raise FileNotFoundError("Install a suitable font or edit font() with its path")
 
 
 def annotate(response, raw_frames, out, name):
@@ -81,11 +81,11 @@ def annotate(response, raw_frames, out, name):
         canvas = Image.new("RGB", (720, 940), "#101722")
         d = ImageDraw.Draw(canvas)
         d.text((40, 24), name, font=font(32, True), fill="white")
-        d.text((40, 70), f"{frame['date']} UTC    Кадр {i+1}/{len(raw_frames)}", font=font(24), fill="#dce5f2")
-        wave = f"{frame['wave_um']:.3f}" if frame["wave_um"] is not None else "неизвестна"
-        d.text((40, 108), f"D{frame['det']}    λ = {wave} мкм    Экспозиций: {frame['n_exp']}",
+        d.text((40, 70), f"{frame['date']} UTC    Frame {i+1}/{len(raw_frames)}", font=font(24), fill="#dce5f2")
+        wave = f"{frame['wave_um']:.3f}" if frame["wave_um"] is not None else "unknown"
+        d.text((40, 108), f"D{frame['det']}    λ = {wave} µm    Exposures: {frame['n_exp']}",
                font=font(22), fill="#c4d2e5")
-        d.text((40, 145), "Север сверху, восток слева", font=font(19), fill="#94a6bf")
+        d.text((40, 145), "North up, east left", font=font(19), fill="#94a6bf")
         # The 640-pixel square is a display enlargement, not extra resolution.
         canvas.paste(sky.resize((640, 640), Image.Resampling.NEAREST), (40, 180))
         pred = frame.get("predicted_px")
@@ -93,10 +93,10 @@ def annotate(response, raw_frames, out, name):
             x = 40 + (pred[0] + .5) * 640 / sky.width
             y = 180 + (pred[1] + .5) * 640 / sky.height
             d.ellipse((x-19, y-19, x+19, y+19), outline="#55efc4", width=3)
-        label = "Кольцо: прогноз по каталогу" if pred is not None else "Поле по заданным RA / Dec"
+        label = "Ring: catalogue-predicted position" if pred is not None else "Field at the supplied RA / Dec"
         d.text((40, 831), label, font=font(19), fill="#55efc4")
-        d.text((40, 861), "NASA SPHEREx / IRSA    Фиолетовый: нет данных", font=font(18), fill="#a7b7cd")
-        d.text((40, 901), "Разные полосы. Движение и переменность не подтверждены.",
+        d.text((40, 861), "NASA SPHEREx / IRSA    Violet: no usable data", font=font(18), fill="#a7b7cd")
+        d.text((40, 901), "Different bands. Motion and variability are unconfirmed.",
                font=font(18), fill="#ffe1a8")
         images.append(canvas)
     images[0].save(out, save_all=True, append_images=images[1:], duration=900, loop=0,
@@ -249,72 +249,72 @@ def write_reports(out, targets, objective, science):
         writer.writerows(targets)
     table = "\n".join(f"| {t['name']} | {t['frames']} | {t['exposures']} | D{t['detector']} | {t['first_exposure_utc'][:10]} — {t['last_exposure_utc'][:10]} | {t['exposure_baseline_days']:.1f} |" for t in targets)
     science_table = "\n".join(f"| {t['name']} | {t['unique_products']} | {t['accepted']} | {t['rejected']} | {t['unavailable']} |" for t in science["targets"])
-    md = f"""# GIF и статистика пяти целей SPHEREx
+    md = f"""# GIFs and statistics for five SPHEREx targets
 
-Повторная обработка сохранённых реальных FITS текущим кодом приложения, 15 ноября 2026 года.
-Новый поиск IRSA не выполнялся. Все GIF получены через `/api/view` и `/api/export.gif`.
+Saved real FITS observations reprocessed using the application code on 15 November 2026.
+No new IRSA archive search was performed. All GIFs were generated using `/api/view` and `/api/export.gif`.
 
-## Просмотр приложения
+## Application view
 
-| Цель | Кадров GIF | Экспозиций | Детектор | Даты исходных экспозиций, UTC | База, сут |
+| Target | GIF frames | Exposures | Detector | Original exposure dates, UTC | Baseline, days |
 |---|---:|---:|---|---|---:|
 {table}
-| **Всего** | **{total_frames}** | **{total_exps}** | | | |
+| **Total** | **{total_frames}** | **{total_exps}** | | | |
 
-Число кадров означает число эпох после группировки. Один кадр может объединять несколько экспозиций.
-Дата в GIF — средняя дата кадра, границы таблицы — даты крайних исходных экспозиций.
-Кольцо показывает прогноз каталожной модели. Поле каждого GIF фиксировано между эпохами.
-Одинаковая шкала яркости действует на всю последовательность, без интерполяции между датами.
-Фиолетовые пиксели обозначают отсутствие пригодных данных. Увеличение не добавляет разрешения.
-Разные спектральные каналы и маски могут менять внешний вид. Подтверждённых астрометрических кадров: 0.
+The frame count is the number of epochs after grouping. A frame can combine multiple exposures.
+The date in a GIF is the mean frame date; the table lists the dates of the earliest and latest original exposures.
+The ring shows the catalogue model prediction. Each GIF uses a fixed field across epochs.
+A consistent brightness scale is used throughout each sequence, with no interpolation between dates.
+Violet pixels indicate no usable data. Magnification does not add resolution.
+Different spectral channels and masks can affect appearance. Validated astrometric frames: 0.
 
-## Отдельная научная проверка
+## Separate scientific assessment
 
-Эта проверка включает другие экспозиции и все детекторы. Её объём не равен объёму GIF.
-Источник: `{science['source']}`, проверка `{science['checked_at_utc']}` UTC.
-Повторные вырезки одного продукта исключены по полному URL продукта.
+This assessment includes different exposures and all detectors; it does not cover the same sample as the GIFs.
+Source: `{science['source']}`; checked at `{science['checked_at_utc']}` UTC.
+Repeated cutouts of the same product were excluded using the full product URL.
 
-| Цель | Уникальных продуктов | Принятая фотометрия | Отклонено | Недоступно |
+| Target | Unique products | Accepted photometry | Rejected | Unavailable |
 |---|---:|---:|---:|---:|
 {science_table}
-| **Всего** | **214** | **6** | **188** | **20** |
+| **Total** | **214** | **6** | **188** | **20** |
 
-Принятая фотометрия WISE 0855 выполнена в каталожно заданной позиции.
-Собственное движение и переменность ни одной из пяти целей в этом наборе не подтверждены.
-Числа относятся к ограниченным сохранённым выборкам, а не ко всему архиву SPHEREx.
+Accepted WISE 0855 photometry was measured at the catalogue position.
+Neither proper motion nor variability is confirmed for any of the five targets in this dataset.
+These numbers describe limited saved samples, not the entire SPHEREx archive.
 
-## Проверка точного ввода координат WISE 0855
+## Exact WISE 0855 coordinate input check
 
-RA `08h55m10.831s`, Dec `-7d14m42.53s` переданы в `/api/view` без имени цели.
-Дополнительная последовательность `wise0855-coordinates/blink.gif`: {objective['frames']} кадра,
-{objective['exposures']} экспозиции, D6, поле 6′. Это фиксированное поле без модели движения.
-Она не включена в итог {total_frames} кадров и {total_exps} экспозиций пяти основных GIF.
+RA `08h55m10.831s` and Dec `-7d14m42.53s` were passed to `/api/view` without a target name.
+The additional `wise0855-coordinates/blink.gif` sequence contains {objective['frames']} frames,
+{objective['exposures']} exposures, D6, and a 6′ field. This is a fixed field without a motion model.
+It is excluded from the total of {total_frames} frames and {total_exps} exposures in the five main GIFs.
 
-## Файлы
+## Files
 
-- `index.html`: общая галерея, доступная по `/challenge-demo/` при запуске приложения.
-- `<target>/blink.gif`: версия с названием, датой, длиной волны и каталожным прогнозом.
-- `<target>/api.gif`: исходный GIF-экспорт приложения без подписей и увеличения.
-- `<target>/api_response.json`: полный ответ приложения. Его `/cache/` URL относятся к изолированному прогону.
-- `<target>/frame_*.png`: локальные копии кадров и масок для просмотра без временного кэша.
-- `<target>/inputs.json`: исходные продукты, контрольные суммы FITS и сохранённых метаданных.
-- `statistics.json`, `statistics.csv`: статистика приложения и отдельная научная проверка.
+- `index.html`: the gallery, available at `/challenge-demo/` when the application is running.
+- `<target>/blink.gif`: version with title, date, wavelength and catalogue prediction.
+- `<target>/api.gif`: original application GIF export without labels or enlargement.
+- `<target>/api_response.json`: complete application response; its `/cache/` URLs refer to the isolated run.
+- `<target>/frame_*.png`: local copies of frames and masks for viewing without the temporary cache.
+- `<target>/inputs.json`: source products and checksums of the FITS files and saved metadata.
+- `statistics.json`, `statistics.csv`: application statistics and the separate scientific assessment.
 
-Воспроизведение из корня проекта: `.venv/bin/python scripts/export_challenge_gifs.py`.
-Нужен исходный локальный FITS-кэш, указанный в манифестах. Обращения к сети запрещены самим экспортом.
+To reproduce from the project root, run `.venv/bin/python scripts/export_challenge_gifs.py`.
+The original local FITS cache listed in the manifests is required. The export itself disables network access.
 """
     (out / "STATISTICS.md").write_text(md)
-    cards = "\n".join(f'''<article><h2>{t['name']}</h2><img src="{t['gif']}" alt="Последовательность SPHEREx: {t['name']}"><p>{counted(t['frames'], ('кадр','кадра','кадров'))} из {counted(t['exposures'], ('экспозиции','экспозиций','экспозиций'))}, D{t['detector']}<br>{t['first_exposure_utc'][:10]} — {t['last_exposure_utc'][:10]} UTC</p><a href="{t['gif']}" download>Скачать GIF</a> · <a href="{t['api_gif']}" download>Исходный GIF приложения</a></article>''' for t in targets)
+    cards = "\n".join(f'''<article><h2>{t['name']}</h2><img src="{t['gif']}" alt="SPHEREx sequence: {t['name']}"><p>{t['frames']} frames from {t['exposures']} exposures, D{t['detector']}<br>{t['first_exposure_utc'][:10]} — {t['last_exposure_utc'][:10]} UTC</p><a href="{t['gif']}" download>Download GIF</a> · <a href="{t['api_gif']}" download>Original application GIF</a></article>''' for t in targets)
     rows = "\n".join(f"<tr><td>{t['name']}</td><td>{t['unique_products']}</td><td>{t['accepted']}</td><td>{t['rejected']}</td><td>{t['unavailable']}</td></tr>" for t in science["targets"])
-    html = f'''<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>Пять целей SPHEREx</title>
+    html = f'''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>Five SPHEREx targets</title>
 <style>body{{margin:0;background:#101722;color:#e6edf8;font:17px/1.6 system-ui,sans-serif}}main{{max-width:1280px;margin:auto;padding:40px 24px}}h1{{font-size:38px;line-height:1.2}}h2{{font-size:24px}}a{{color:#55efc4}}.gallery{{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:36px}}article img{{width:100%;height:auto}}p{{max-width:1000px;color:#bccbdf}}table{{border-collapse:collapse;width:100%;margin:24px 0}}td,th{{padding:12px;text-align:left;border-bottom:1px solid #344255}}.scroll{{overflow:auto}}.note{{color:#ffe1a8}}footer{{margin-top:50px;color:#94a6bf}}</style>
-<main><h1>Пять целей SPHEREx во времени</h1><p>{counted(total_frames, ('кадр','кадра','кадров'))} из {counted(total_exps, ('экспозиции','экспозиций','экспозиций'))}. Повторная обработка сохранённых реальных FITS кодом приложения от 15 ноября 2026 года.</p>
-<p class="note">Кольцо показывает каталожный прогноз положения. Движение и переменность по этим GIF не подтверждены. Спектральные полосы меняются между кадрами. Фиолетовый обозначает отсутствие пригодных данных.</p>
-<p><a href="statistics.csv" download>Статистика CSV</a> · <a href="statistics.json" download>Полные данные JSON</a> · <a href="STATISTICS.md">Научная записка</a></p>
-<section class="gallery">{cards}</section><h2>Отдельная научная проверка</h2><p>Другая, более широкая выборка по всем детекторам. Повторные вырезки исключены. Принятая фотометрия относится к измерению потока в каталожной позиции и не подтверждает движение.</p>
-<div class="scroll"><table><thead><tr><th>Цель</th><th>Продуктов</th><th>Принято</th><th>Отклонено</th><th>Недоступно</th></tr></thead><tbody>{rows}<tr><th>Всего</th><th>214</th><th>6</th><th>188</th><th>20</th></tr></tbody></table></div>
-<h2>Проверка ввода RA и Dec</h2><p>Для WISE 0855 отдельно проверены координаты из задания: RA 08h55m10.831s, Dec −7d14m42.53s. Фиксированное поле 6′, D6, {objective['frames']} кадра. <a href="wise0855-coordinates/blink.gif">Открыть GIF координатного запроса</a>.</p>
-<footer>NASA SPHEREx via NASA/IPAC IRSA. Сохранённые реальные FITS, новый поиск архива не выполнялся.</footer></main></html>'''
+<main><h1>Five SPHEREx targets over time</h1><p>{total_frames} frames from {total_exps} exposures. Saved real FITS observations reprocessed using the application code on 15 November 2026.</p>
+<p class="note">The ring shows the catalogue-predicted position. These GIFs do not confirm motion or variability. Spectral bands vary between frames. Violet indicates no usable data.</p>
+<p><a href="statistics.csv" download>Statistics CSV</a> · <a href="statistics.json" download>Full data JSON</a> · <a href="STATISTICS.md">Scientific notes</a></p>
+<section class="gallery">{cards}</section><h2>Separate scientific assessment</h2><p>A different, broader sample across all detectors. Duplicate cutouts were excluded. Accepted photometry measures flux at the catalogue position and does not establish motion.</p>
+<div class="scroll"><table><thead><tr><th>Target</th><th>Products</th><th>Accepted</th><th>Rejected</th><th>Unavailable</th></tr></thead><tbody>{rows}<tr><th>Total</th><th>214</th><th>6</th><th>188</th><th>20</th></tr></tbody></table></div>
+<h2>RA and Dec input check</h2><p>The supplied WISE 0855 coordinates were checked separately: RA 08h55m10.831s, Dec −7d14m42.53s. Fixed 6′ field, D6, {objective['frames']} frames. <a href="wise0855-coordinates/blink.gif">Open the coordinate-query GIF</a>.</p>
+<footer>NASA SPHEREx via NASA/IPAC IRSA. Saved real FITS observations; no new archive search was performed.</footer></main></html>'''
     (out / "index.html").write_text(html)
     return report
 

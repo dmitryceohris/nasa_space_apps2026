@@ -23,6 +23,7 @@ from Exposure.irsa import archive_collections
 
 from .cache import CACHE
 from .errors import ApiError
+from runtime_storage import current_workspace
 
 log = logging.getLogger("irsa")
 IRSA = "https://irsa.ipac.caltech.edu"
@@ -216,7 +217,11 @@ def exposures(ra, dec, det):
             if r["band"] == f"SPHEREx-D{det}" and _inside(r["poly"], ra, dec)]
 
 
-def _atomic_write(path, payload):
+def _atomic_write(path, payload, workspace=None):
+    workspace = workspace or current_workspace()
+    if workspace is not None:
+        workspace.atomic_write(path, [payload])
+        return
     with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as stream:
         temporary = Path(stream.name)
         try:
@@ -232,7 +237,7 @@ def _atomic_write(path, payload):
 
 
 # ---------- cutouts ----------
-def _fits_url(uri: str) -> str:
+def _fits_url(uri: str, workspace=None) -> str:
     """TAP gives a relative IBE path; tables give a datalink URL whose '#this' row is the FITS."""
     if not uri.startswith("http"):
         return f"{IRSA}/{uri}"
@@ -241,13 +246,13 @@ def _fits_url(uri: str) -> str:
     p = CACHE / f"dl_{hashlib.md5(uri.encode()).hexdigest()}.txt"
     if not p.exists():
         t = parse_single_table(io.BytesIO(_send("GET", uri).content)).to_table()
-        p.write_text(str(next(r["col_1"] for r in t if r["col_4"] == "#this")))  # col_1=access_url, col_4=semantics
+        _atomic_write(p, str(next(r["col_1"] for r in t if r["col_4"] == "#this")).encode(), workspace)
     return p.read_text()
 
 
-def cutout(uri: str, ra: float, dec: float, size_deg: float) -> Path:
+def cutout(uri: str, ra: float, dec: float, size_deg: float, *, workspace=None) -> Path:
     h = hashlib.md5(f"{uri}{ra:.4f}{dec:.4f}{size_deg:.3f}".encode()).hexdigest()
-    p = CACHE / f"cut_{h}.fits"
+    p = (workspace.path if workspace is not None else CACHE) / f"cut_{h}.fits"
     try:
         with fits.open(p) as hdul:
             hdul.verify("exception")
@@ -256,7 +261,7 @@ def cutout(uri: str, ra: float, dec: float, size_deg: float) -> Path:
         return p
     except (OSError, KeyError, ValueError, TypeError, VerifyError):
         pass
-    r = _send("GET", _fits_url(uri), params=dict(center=f"{ra},{dec}", size=f"{size_deg}deg", gzip="false"))
+    r = _send("GET", _fits_url(uri, workspace), params=dict(center=f"{ra},{dec}", size=f"{size_deg}deg", gzip="false"))
     try:
         with fits.open(io.BytesIO(r.content)) as hdul:
             hdul.verify("exception")
@@ -264,5 +269,5 @@ def cutout(uri: str, ra: float, dec: float, size_deg: float) -> Path:
                 raise ValueError("missing image")
     except (OSError, KeyError, ValueError, TypeError, VerifyError) as error:
         raise ApiError(502, "upstream", "IRSA вернул повреждённый FITS") from error
-    _atomic_write(p, r.content)
+    _atomic_write(p, r.content, workspace)
     return p

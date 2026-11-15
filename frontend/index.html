@@ -60,6 +60,7 @@
   #target-info, #field-center, #frame-quality, #warnings, #method { overflow-wrap: anywhere; }
 </style>
 <link rel="stylesheet" href="design.css">
+<script src="viewer-text.js"></script>
 </head>
 <body>
 <canvas id="stars" aria-hidden="true"></canvas>
@@ -73,41 +74,54 @@
 </div>
 <h2>SPHEREx Blink</h2>
 <div id="layout"><div id="col-left">
-<p><a style="color:#8fd7ff" href="/challenge-demo/">Five targets · saved GIF gallery</a></p>
+<nav class="secondary-nav" aria-label="Gallery"><a href="/challenge-demo/">Five targets · Saved GIF gallery</a></nav>
 
 <!-- INPUT -->
-<div class="row">
-  <select id="preset">
-    <option value="">Test objects...</option>
-    <option value="133.7951,-7.2451">WISE 0855</option>
-  </select>
-  <input id="target" placeholder="Object name, e.g. Barnard's Star" size="24">
+<div class="view-settings">
+  <div class="settings-row target-row">
+    <div class="field"><label for="preset">Test object</label>
+      <select id="preset">
+        <option value="">Test objects...</option>
+        <option value="133.7951,-7.2451">WISE 0855</option>
+      </select>
+    </div>
+    <div class="field"><label for="target">Object name</label><input id="target" placeholder="e.g. Barnard's Star"></div>
+  </div>
+  <div class="settings-row coordinates-row">
+    <div class="field"><label for="ra">RA</label><input id="ra" aria-describedby="ra-hint"><small id="ra-hint">Degrees or hh:mm:ss</small></div>
+    <div class="field"><label for="dec">Dec</label><input id="dec" aria-describedby="dec-hint"><small id="dec-hint">Degrees or dd:mm:ss</small></div>
+  </div>
+  <div class="settings-row scale-row">
+    <div class="field field-scale"><div class="field-heading"><label for="fov">Field of view (arcmin)</label><output id="fov-value" for="fov">5′</output></div>
+      <input id="fov" type="range" min="1" max="20" value="5" aria-describedby="settings-note">
+    </div>
+    <div class="field"><label for="det">Detector</label><select id="det"><option>1</option><option>2</option><option>3</option>
+      <option>4</option><option>5</option><option>6</option></select></div>
+  </div>
+  <div class="field"><label for="snapshot">Image source</label>
+    <select id="snapshot"><option value="">Latest IRSA</option><option value="2026-11-15">Saved observations · 15 Nov 2026</option></select>
+  </div>
+  <p id="settings-note" role="status"></p>
+  <div id="modes" role="group" aria-label="Image mode"></div>
+  <details id="share" hidden><summary>Share or embed this view</summary>
+    <div class="share-content">
+      <div class="field"><label for="share-url">View URL</label><input id="share-url" readonly></div>
+      <div class="field"><label for="share-html">Embed HTML</label><textarea id="share-html" readonly rows="3"></textarea></div>
+    </div>
+  </details>
 </div>
-<div class="row">
-  <input id="ra" placeholder="RA (deg or hh:mm:ss)" size="18">
-  <input id="dec" placeholder="Dec (deg or dd:mm:ss)" size="18">
-</div>
-<div class="row">
-  <label>Field of view (arcmin) <input id="fov" type="range" min="1" max="20" value="5"></label>
-  <label>Detector
-    <select id="det"><option>1</option><option>2</option><option>3</option>
-    <option>4</option><option>5</option><option>6</option></select>
-  </label>
-</div>
-
-<label>Image source
-  <select id="snapshot"><option value="">Latest IRSA</option><option value="2026-11-15">Saved observations · 15 Nov 2026</option></select>
-</label>
-<details id="share" hidden><summary>Share or embed this view</summary>
-  <label>View URL <input id="share-url" readonly style="width:100%"></label>
-  <label>Embed HTML <textarea id="share-html" readonly rows="3" style="width:100%;box-sizing:border-box"></textarea></label>
-</details>
-
-<!-- MODES -->
-<div class="row" id="modes"></div>
 
 <!-- IMAGE -->
+<h3 class="section-title">SPHEREx observations</h3>
+<section id="view-loading" class="view-loading" role="status" aria-live="polite" aria-atomic="true" hidden>
+  <h3>Loading…</h3>
+  <p id="loading-detail">Finding SPHEREx images and preparing your field. This may take a minute.</p>
+</section>
 <div id="wrap">
+  <div id="image-loading" class="image-loading" aria-hidden="true" hidden>
+    <div class="loading-signal"><span></span><span></span><span></span><span></span></div>
+    <div class="loading-track"><span></span></div>
+  </div>
   <img id="frame">
   <img id="flagimg">
   <div id="flagbox"></div>
@@ -123,21 +137,30 @@
   <button id="next">Next date →</button>
   <label>Speed <input id="speed" type="range" min="100" max="1500" value="600"></label>
 </div>
-<div id="info" role="status"></div>
-<div id="warnings" role="status"></div>
-<div id="field-center"></div>
-<div id="target-info"></div>
-<div id="frame-quality"></div>
+<fieldset id="overlay-controls" class="overlay-controls">
+  <legend>Overlays on this image</legend>
+  <small id="overlays-note">Load this image first.</small>
+  <div><label><input type="checkbox" id="flags" disabled> Show flags</label><small id="flags-note"></small></div>
+  <div><label><input type="checkbox" id="mk" disabled> Show expected position</label><small id="mk-note"></small></div>
+  <div><label><input type="checkbox" id="ms" disabled> Show centroid / candidates</label><small id="ms-note"></small></div>
+</fieldset>
+<div id="view-message" role="alert" hidden></div>
+<details id="observation-details">
+  <summary>Observation details and data quality</summary>
+  <div class="observation-details-body">
+    <div id="info"></div>
+    <div id="warnings"></div>
+    <div id="field-center"></div>
+    <div id="target-info"></div>
+    <div id="frame-quality"></div>
+    <details id="method" hidden><summary>How positions are measured</summary><div id="method-body"></div></details>
+  </div>
+</details>
 <div id="demo-note" hidden>Synthetic demonstration data — not SPHEREx observations.</div>
-<details id="method" hidden><summary>How positions are measured</summary><div id="method-body"></div></details>
-
-<div class="row">
-  <label><input type="checkbox" id="flags"> Show flags</label>
-  <label><input type="checkbox" id="mk"> Show expected position</label>
-  <label><input type="checkbox" id="ms"> Show centroid / candidates</label>
-</div>
 
 </div><div id="col-right">
+<h3 class="section-title">Sky reference map</h3>
+<p class="map-note">Optical reference survey for orientation. SPHEREx observations and overlays are shown on the left.</p>
 <div id="aladin"></div>
 <!-- GRAPHS -->
 <div class="row">
@@ -153,6 +176,8 @@
 const P = new URLSearchParams(location.search);
 const API = P.get("api") || "";
 let imageSourceChosen = P.has("snapshot");
+let snapshotProfiles = null;
+let snapshotProfilesReady;
 // Double-click the file (no ?api=) -> fake data. Any server address -> real data.
 const USE_MOCK = P.get("mock") === "1" || (location.protocol === "file:" && !P.get("api"));
 document.getElementById("demo-note").hidden = !USE_MOCK;
@@ -162,7 +187,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function apiJson(path) {
   const r = await fetch(API + path);
   const d = await r.json();
-  if (!r.ok) throw new Error(d.error ? d.error.message : "HTTP " + r.status);
+  if (!r.ok) throw new Error(d.error ? englishText(d.error.message, "The request could not be completed. Please retry.") : "HTTP " + r.status);
   return d;
 }
 // Long jobs (/api/spectrum, /api/lightcurve) answer 202 with progress until the result is ready:
@@ -173,9 +198,9 @@ async function pollJson(path, isCurrent, onProgress) {
     const r = await fetch(API + path);
     const d = await r.json();
     if (!isCurrent()) return null;
-    if (!r.ok) throw new Error(d.error ? d.error.message : "HTTP " + r.status);
+    if (!r.ok) throw new Error(d.error ? englishText(d.error.message, "The request could not be completed. Please retry.") : "HTTP " + r.status);
     if (r.status === 202) { onProgress(d); await sleep(2500); continue; }
-    if (d.status === "error") throw new Error(d.message);
+    if (d.status === "error") throw new Error(englishText(d.message));
     return d;
   }
 }
@@ -231,20 +256,23 @@ async function getFrames(ra, dec, fov, det, mode, my) {
     const r = await fetch(url);
     const d = await r.json();
     if (my !== reqId) return null;
-    if (!r.ok) throw new Error(d.error ? d.error.message : "HTTP " + r.status);
+    if (!r.ok) throw new Error(d.error ? englishText(d.error.message, "The request could not be completed. Please retry.") : "HTTP " + r.status);
     if (r.status === 202) {
-      $("info").textContent = d.message + (d.total ? ` (${d.done}/${d.total})` : "");
+      const progress = englishText(d.message) + (d.total ? ` (${d.done}/${d.total})` : "");
+      $("info").textContent = progress;
+      setViewLoading(true, progress, my);
       await sleep(2000);
       continue;
     }
-    if (d.status === "error") throw new Error(d.message);
-    $("warnings").textContent = (d.warnings || []).join(" ");
+    if (d.status === "error") throw new Error(englishText(d.message));
+    $("warnings").innerHTML = (d.warnings || []).length
+      ? `<ul>${d.warnings.map(w => `<li>${esc(englishText(w))}</li>`).join("")}</ul>` : "";
     $("field-center").textContent = `Field centre: RA ${d.query.ra.toFixed(6)}°, Dec ${d.query.dec.toFixed(6)}°.` +
       (d.center_mjd != null ? ` Query reference date: MJD UTC ${d.center_mjd.toFixed(5)}.` : " Fixed sky coordinates.");
     const t = d.target_info;
-    $("target-info").textContent = t ? `${t.name}: ${t.source}; reference epoch: ${t.ref_epoch ?? "unknown"} ${t.ref_epoch_format || ""} ${t.ref_epoch_scale || "(scale unknown)"}. Model: ${t.coordinate_model}. ${t.limitations || ""} Assumptions: ${(t.assumptions || []).join(", ")}`
+    $("target-info").textContent = t ? `${t.name}: ${t.source}; reference epoch: ${t.ref_epoch ?? "unknown"} ${t.ref_epoch_format || ""} ${t.ref_epoch_scale || "(scale unknown)"}. Model: ${t.coordinate_model}. ${englishText(t.limitations)} Assumptions: ${(t.assumptions || []).join(", ")}`
       : `Fixed field: RA ${d.query.ra.toFixed(6)}°, Dec ${d.query.dec.toFixed(6)}°. No catalogue tracking.`;
-    if (!d.frames.length) throw new Error((d.warnings || []).join(" ") || "No frames for this area");
+    if (!d.frames.length) throw new Error((d.warnings || []).map(text => englishText(text)).join(" ") || "No frames for this area");
 
     const g = d.grid; lastGrid = g;
     // API pixels start at 0, so the pixel centre is x + 0.5; convert to fractions 0..1
@@ -264,6 +292,7 @@ async function getFrames(ra, dec, fov, det, mode, my) {
       out = [{displayDate: `${out[0].displayDate} → ${out[n - 1].displayDate}`, date: `${out[0].date} → ${out[n - 1].date}`, url: viewAPI + d.trail_url, trail: true, epochs: n}];
     }
     $("info").textContent = "Loading pictures...";
+    setViewLoading(true, "Almost ready — loading your images…", my);
     await Promise.all(out.map(f => new Promise((res, reject) => {   // preload: no flicker while blinking
       const im = new Image(); im.onload = res; im.onerror = () => reject(new Error("An image could not be loaded. Please retry.")); im.src = f.url;
     })));
@@ -297,15 +326,15 @@ const esc = t => String(t).replace(/[&<>]/g, c => ({"&": "&amp;", "<": "&lt;", "
 function showMethod(pr) {
   if (!pr || !pr.measurement) { $("method").hidden = true; return; }
   const m = pr.measurement, e = pr.epochs || {};
-  const li = a => (a || []).map(x => `<li>${esc(x)}</li>`).join("");
+  const li = a => (a || []).map(x => `<li>${esc(englishText(x))}</li>`).join("");
   $("method-body").innerHTML =
-    `<p>${esc(m.description)}</p>` +
+    `<p>${esc(englishText(m.description))}</p>` +
     `<p>Epochs: gap &gt; ${e.gap_days} d starts a new one, each at most ${e.max_span_days} d long.</p>` +
-    (pr.background ? `<p>Background: ${esc(pr.background.description)}</p>` : "") +
-    (pr.difference ? `<p>Difference: ${esc(pr.difference.description)}</p>` : "") +
+    (pr.background ? `<p>Background: ${esc(englishText(pr.background.description))}</p>` : "") +
+    (pr.difference ? `<p>Difference: ${esc(englishText(pr.difference.description))}</p>` : "") +
     `<p>Limitations:</p><ul>${li(m.limitations)}${li(pr.background && pr.background.limitations)}` +
     `${li(pr.difference && pr.difference.limitations)}</ul>` +
-    `<p>Not implemented yet: ${esc((m.not_implemented || []).join(", "))}</p>`;
+    `<p>Not implemented yet: ${esc((m.not_implemented || []).map(text => englishText(text)).join(", "))}</p>`;
   $("method").hidden = false;
 }
 function measuredText(f) {
@@ -325,19 +354,47 @@ function measuredText(f) {
     const fl = m.flags && m.flags.length ? ` (${m.flags.join(", ")})` : "";
     return `  |  centroid candidate: ${m.quality}${err}${fl}`;
   }
-  return `  |  ${m.status === "ambiguous" ? "ambiguous" : "not measured"}: ${m.reason}`;
+  return `  |  ${m.status === "ambiguous" ? "ambiguous" : "not measured"}: ${englishText(m.reason)}`;
 }
 
 // ================= PLAYER =================
+function validOverlayPoint(p) {
+  return Array.isArray(p) && p.length === 2 && p.every(v => Number.isFinite(v) && v >= 0 && v <= 1);
+}
+function syncOverlayControls(f) {
+  const available = Boolean(f && !f.trail);
+  const unavailable = f?.trail ? "Unavailable in the combined trail image." : "Load this image first.";
+  $("overlays-note").hidden = available;
+  $("overlays-note").textContent = available ? "" : unavailable;
+  const set = (id, enabled, note) => {
+    $(id).disabled = !enabled;
+    $(id).title = note;
+    $(id + "-note").textContent = available ? note : "";
+  };
+  const flags = available && (Boolean(f.flagsUrl) || USE_MOCK);
+  const emptyMask = !USE_MOCK && Array.isArray(f?.quality?.reasons) && !f.quality.reasons.includes("contaminated_pixels");
+  set("flags", flags && !emptyMask, !available ? unavailable : emptyMask
+    ? "No flagged pixels in this frame." : flags ? "Orange overlay: saturated or contaminated pixels." : "No flag mask was returned for this frame.");
+  const predicted = available && validOverlayPoint(f.expected);
+  set("mk", predicted, !available ? unavailable : predicted ? "Green ring: catalogue-predicted position."
+    : f.predictionStatus === "outside_field" ? "The prediction is outside this field." : "No predicted position is available for this field.");
+  const measured = available && validOverlayPoint(f.measured);
+  const candidates = available ? (f.candidates || []).filter(c => validOverlayPoint(c.xy)).length : 0;
+  set("ms", measured || candidates > 0, !available ? unavailable : measured ? "Yellow ring: centroid candidate, not a confirmed target position."
+    : candidates ? `${candidates} cyan candidate ${candidates === 1 ? "marker" : "markers"} (C1${candidates > 1 ? `–C${candidates}` : ""}). Detections are not confirmed target positions.`
+    : "No centroid or candidate positions were returned for this frame.");
+}
 function put(el, p, on) {
-  el.style.display = (on && p) ? "block" : "none";
-  if (p) { el.style.left = (p[0] * 100) + "%"; el.style.top = (p[1] * 100) + "%"; }
+  const valid = validOverlayPoint(p);
+  el.style.display = (on && valid) ? "block" : "none";
+  if (valid) { el.style.left = (p[0] * 100) + "%"; el.style.top = (p[1] * 100) + "%"; }
 }
 function show(n) {
   if (!frames.length) return;
   document.querySelectorAll(".candidate").forEach(el => el.remove());
   i = (n + frames.length) % frames.length;
   const f = frames[i];
+  syncOverlayControls(f);
   $("frame-date").textContent = `${f.trail ? "Observation dates" : "Observation date"} (UTC): ${f.displayDate || f.date}`;
   $("date-step").textContent = f.trail ? `All ${f.epochs} epochs combined` : `Date ${i + 1} of ${frames.length}`;
   const quality = f.quality;
@@ -348,9 +405,9 @@ function show(n) {
   if (f.predictionStatus === "no_model") details.push("No motion prediction for this fixed field.");
   if (f.predictionStatus === "outside_field") details.push("Predicted position is outside this frame; marker hidden.");
   if (f.timeSources?.length) details.push("Time source: " + [...new Set(f.timeSources.map(t => t.source))].join(", ") + ". " + [...new Set(f.timeSources.flatMap(t => t.assumptions || []))].join(", "));
-  if (f.wavelengthSamples?.some(s => s.source !== "spectral_wcs")) details.push("Wavelength is approximate; the spectral WCS is unavailable.");
+  if (f.wavelengthSamples?.some(s => !["spectral_wcs", "cwave_cband"].includes(s.source))) details.push("Wavelength is approximate; calibrated wavelength information is unavailable for some exposures.");
   $("frame-quality").textContent = USE_MOCK ? "Synthetic demonstration data." : details.join(" ");
-  $("frame").src = f.url;
+  if ($("frame").getAttribute("src") !== f.url) $("frame").src = f.url;
   if (f.trail) {                       // trail: a single picture, no per-epoch flags or markers
     $("info").textContent = `All ${f.epochs} epochs on one picture  |  ${f.date}  |  blue = earliest, green = middle, yellow = latest`;
     ["flagimg", "flagbox", "marker", "measured"].forEach(id => $(id).style.display = "none");
@@ -361,9 +418,20 @@ function show(n) {
   const ms = measuredText(f);
   $("info").textContent = `Frame ${i + 1} / ${frames.length}  |  ${f.date}${wl}${ne}  |  mode: ${mode}${ms}`;
 
-  const flagsOn = $("flags").checked;
+  const flagsOn = $("flags").checked && !$("flags").disabled;
   if (f.flagsUrl) {                      // real mask picture from the API
-    $("flagimg").src = f.flagsUrl;
+    $("flagimg").onload = () => {
+      if (frames[i] === f && $("flags").checked && !$("flags").disabled)
+        $("flags-note").textContent = "Orange overlay: saturated or contaminated pixels.";
+    };
+    $("flagimg").onerror = () => {
+      if (frames[i] === f && $("flags").checked && !$("flags").disabled) {
+        $("flagimg").style.display = "none";
+        $("flags-note").textContent = "The flag overlay could not be loaded. Try switching it off and on.";
+      }
+    };
+    if ($("flagimg").getAttribute("src") !== f.flagsUrl) $("flagimg").src = f.flagsUrl;
+    if (flagsOn && !$("flagimg").complete) $("flags-note").textContent = "Loading the orange flag overlay…";
     $("flagimg").style.display = flagsOn ? "block" : "none";
     $("flagbox").style.display = "none";
   } else {                               // fake red box for the demo
@@ -371,9 +439,12 @@ function show(n) {
     $("flagbox").style.display = USE_MOCK && flagsOn ? "block" : "none";
   }
   put($("marker"), f.expected, $("mk").checked);     // green: where the object should be
-  if ($("ms").checked && !f.measured) for (const c of f.candidates || []) {
+  if ($("ms").checked && !validOverlayPoint(f.measured)) for (const [index, c] of (f.candidates || []).entries()) {
+    if (!validOverlayPoint(c.xy)) continue;
     const el = document.createElement("div"); el.className = "candidate";
-    el.style.cssText = "position:absolute;width:18px;height:18px;border:2px dotted orange;transform:translate(-50%,-50%);pointer-events:none";
+    el.dataset.label = `C${index + 1}${c.sign === 1 ? "+" : c.sign === -1 ? "−" : ""}`;
+    el.title = `Candidate ${index + 1}: ${(c.kind || "detection").replaceAll("+", " and ")}`;
+    el.setAttribute("aria-hidden", "true");
     $("wrap").appendChild(el); put(el, c.xy, true);
   }
   put($("measured"), f.measured, $("ms").checked);   // yellow dashed: where it was measured
@@ -403,8 +474,33 @@ MODES.forEach(m => {
   $("modes").appendChild(b);
 });
 function highlight() {
-  MODES.forEach(m => $("mode-" + m).classList.toggle("active", m === mode));
+  $("modes").style.setProperty("--mode-position", `${MODES.indexOf(mode) * 100}%`);
+  MODES.forEach(m => {
+    const active = m === mode;
+    $("mode-" + m).classList.toggle("active", active);
+    $("mode-" + m).setAttribute("aria-pressed", String(active));
+  });
 }
+
+// Keep the native disclosure semantics while animating both opening and closing.
+const share = $("share"), shareContent = share.querySelector(".share-content");
+let shareAnimation, shareClosing = false;
+share.querySelector("summary").addEventListener("click", event => {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches || !shareContent.animate) return;
+  event.preventDefault();
+  const currentHeight = shareAnimation ? shareContent.getBoundingClientRect().height : null;
+  if (shareAnimation) shareAnimation.cancel();
+  const opening = !share.open || shareClosing;
+  shareClosing = !opening;
+  if (opening) share.open = true;
+  const height = shareContent.scrollHeight;
+  shareAnimation = shareContent.animate(
+    [{height: (currentHeight ?? (opening ? 0 : height)) + "px", opacity: opening ? 0 : 1},
+     {height: (opening ? height : 0) + "px", opacity: opening ? 1 : 0}],
+    {duration: 180, easing: "ease-out"}
+  );
+  shareAnimation.onfinish = () => { if (!opening) share.open = false; shareClosing = false; shareAnimation = null; };
+});
 
 // ================= GRAPHS =================
 const layout = (xt, yt) => ({
@@ -417,7 +513,7 @@ async function drawPlot() {
   const my = ++plotId;                               // a newer graph request cancels this one
   const isCurrent = () => my === plotId;
   const onProgress = d => isCurrent() &&
-    plotMessage(`Building the ${tab === "spec" ? "spectrum" : "light curve"}: ${d.message || "working"}` +
+    plotMessage(`Building the ${tab === "spec" ? "spectrum" : "light curve"}: ${englishText(d.message) || "working"}` +
                 (d.total ? ` (${d.done}/${d.total})` : "") + ". This takes a few minutes the first time.");
   plotMessage("Loading the graph...");
   try {
@@ -433,7 +529,7 @@ async function drawPlot() {
     const counts = {validated: 0, provisional: 0, rejected: 0};
     diagnostics.forEach(p => { const s = displayStatus(p); counts[s] = (counts[s] || 0) + 1; });
     $("plot-quality").textContent = `Validated: ${counts.validated}. Preliminary: ${counts.provisional}. Rejected: ${counts.rejected}. ` +
-      (tab === "lc" ? "Only confirmed matching spectral responses can form a light curve. " : "") + (d.warnings || []).join(" ");
+      (tab === "lc" ? "Only confirmed matching spectral responses can form a light curve. " : "") + (d.warnings || []).map(w => englishText(w)).join(" ");
     const showDiagnostics = $("show-diagnostic-points").checked;
     const hasSeries = tab === "lc" && (d.series || []).some(s => s.dates.length);
     const visibleDiagnostics = diagnostics.filter(p => p.flux_ujy != null && p.wave_um != null && Number.isFinite(p.flux_ujy));
@@ -441,7 +537,7 @@ async function drawPlot() {
       const why = tab === "spec"
         ? "No reliable points are available for this selection."
         : `No reliable points in the window ${(d.wave_window_um || []).join("–")} µm. Try another detector.`;
-      plotMessage(why + ((d.warnings || []).length ? " " + d.warnings.join(" ") : ""));
+      plotMessage(why + ((d.warnings || []).length ? " " + d.warnings.map(w => englishText(w)).join(" ") : ""));
       return;
     }
     const trace = {x, y: d.flux, name: "Validated", mode: tab === "spec" ? "markers" : "lines+markers", type: "scatter",
@@ -460,7 +556,7 @@ async function drawPlot() {
     Plotly.newPlot("plot", traces, tab === "spec" ? layout("Wavelength (µm)", "Flux (µJy)")
                                                    : layout("Date", "Flux (µJy)"),
                    {displayModeBar: false, responsive: true});
-  } catch (err) { if (isCurrent()) plotMessage("Could not load the graph: " + err.message); }
+  } catch (err) { if (isCurrent()) plotMessage("Could not load the graph: " + englishText(err.message)); }
 }
 $("tab-spec").onclick = () => { tab = "spec"; $("tab-spec").classList.add("active"); $("tab-lc").classList.remove("active"); drawPlot(); };
 $("tab-lc").onclick   = () => { tab = "lc";   $("tab-lc").classList.add("active"); $("tab-spec").classList.remove("active"); drawPlot(); };
@@ -490,13 +586,53 @@ function loadUrl() {
   $("fov").value = p.get("fov") || 5;
   $("det").value = p.get("det") || 3;
   mode = MODES.includes(p.get("mode")) ? p.get("mode") : "coadd";
+  refreshViewSettings();
 }
 
 // ================= MAIN UPDATE =================
-let reqId = 0;
+let reqId = 0, visibleFrameController = null;
+function setViewLoading(active, detail = "", request = reqId) {
+  if (request !== reqId) return;
+  $("view-loading").hidden = !active;
+  $("image-loading").hidden = !active;
+  $("wrap").setAttribute("aria-busy", String(active));
+  if (detail) $("loading-detail").textContent = detail;
+}
+function setViewMessage(text) {
+  $("view-message").textContent = text;
+  $("view-message").hidden = !text;
+}
+
+function waitForVisibleFrame(render, signal) {
+  const image = $("frame");
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      image.removeEventListener("load", loaded);
+      image.removeEventListener("error", failed);
+      signal.removeEventListener("abort", cancelled);
+    };
+    const loaded = () => { cleanup(); resolve(true); };
+    const failed = () => { cleanup(); reject(new Error("An image could not be loaded. Please retry.")); };
+    const cancelled = () => { cleanup(); resolve(false); };
+    if (signal.aborted) { resolve(false); return; }
+    image.addEventListener("load", loaded);
+    image.addEventListener("error", failed);
+    signal.addEventListener("abort", cancelled, {once: true});
+    try {
+      render();
+      if (image.complete && image.naturalWidth > 0) loaded();
+    } catch (error) { cleanup(); reject(error); }
+  });
+}
+
 async function update() {
   document.querySelectorAll(".candidate").forEach(el => el.remove());
+  visibleFrameController?.abort();
+  visibleFrameController = null;
   const my = ++reqId;
+  setViewLoading(false);
+  setViewMessage("");
+  syncOverlayControls(null);
   ++plotId;
   clearInterval(timer); timer = null; $("play").textContent = "Play";
   frames = []; lastGrid = null;
@@ -511,32 +647,93 @@ async function update() {
   $("share").hidden = true;
   if (!$("target").value.trim() && !$("ra").value.trim() && !$("dec").value.trim() && !USE_MOCK) {
     $("info").textContent = "Enter RA and Dec, an object name, or choose a test object.";
+    setViewMessage($("info").textContent);
     return;
   }
   syncUrl();
   const ra = $("ra").value.trim(), dec = $("dec").value.trim();
   if (Boolean(ra) !== Boolean(dec)) {
     $("info").textContent = "Please enter both RA and Dec coordinates.";
+    setViewMessage($("info").textContent);
     plotMessage("Please enter both RA and Dec coordinates.");
     return;
   }
   $("share").hidden = location.protocol === "file:";
   $("info").textContent = "Loading...";
+  setViewLoading(true, $("snapshot").value
+    ? "Opening your saved SPHEREx observations…"
+    : "Finding SPHEREx images and preparing your field. This may take a minute.", my);
+  const controller = new AbortController();
+  visibleFrameController = controller;
   try {
     const f = await getFrames(ra, dec, $("fov").value, $("det").value, mode, my);
     if (f === null || my !== reqId) return;      // a newer request replaced this one
-    frames = f; show(0);
+    frames = f;
+    const displayed = waitForVisibleFrame(() => show(0), controller.signal);
     syncAladin();
+    if (!await displayed || my !== reqId) return;
+    if (/^(Loading|Switched to) Latest IRSA/.test($("settings-note").textContent))
+      $("settings-note").textContent = "Latest IRSA observations.";
   } catch (err) {
-    if (my === reqId) $("info").textContent = "Could not load frames: " + err.message;
+    if (my === reqId) {
+      $("info").textContent = "Could not load frames: " + englishText(err.message);
+      setViewMessage($("info").textContent);
+    }
+  } finally {
+    if (visibleFrameController === controller) visibleFrameController = null;
+    setViewLoading(false, "", my);
   }
 
 }
-["ra", "dec", "fov", "det"].forEach(id => $(id).onchange = update);
-$("snapshot").onchange = () => { imageSourceChosen = true; update(); };
+// ================= VIEW SETTINGS =================
+function refreshViewSettings(note = "") {
+  $("fov-value").textContent = `${$("fov").value}′`;
+  $("settings-note").textContent = note;
+}
+
+function restoreSnapshotSettings() {
+  const ra = $("ra").value.trim(), dec = $("dec").value.trim();
+  const target = $("target").value.trim();
+  // Coordinate queries take precedence over object names, just as in /api/view.
+  const profile = (snapshotProfiles || []).find(p => ra || dec
+    ? p.ra === ra && p.dec === dec
+    : p.target === target);
+  if (profile) {
+    $("fov").value = String(profile.fov);
+    $("det").value = String(profile.det);
+  }
+  refreshViewSettings(profile
+    ? "Saved observations use this fixed field of view and detector. Changing either loads Latest IRSA."
+    : "No saved observations match this field. Choose Latest IRSA to load it.");
+}
+
+$("fov").oninput = () => { $("fov-value").textContent = `${$("fov").value}′`; };
+["fov", "det"].forEach(id => $(id).onchange = () => {
+  const wasSaved = Boolean($("snapshot").value);
+  $("snapshot").value = "";
+  imageSourceChosen = true;
+  refreshViewSettings(wasSaved
+    ? "Switched to Latest IRSA for the selected field of view and detector. Processing may take some time."
+    : "Loading Latest IRSA for the selected field of view and detector. Processing may take some time.");
+  update();
+});
+["ra", "dec"].forEach(id => $(id).onchange = () => { refreshViewSettings(); update(); });
+$("snapshot").onchange = async () => {
+  imageSourceChosen = true;
+  const source = $("snapshot").value;
+  if (source) {
+    if (snapshotProfiles === null) await snapshotProfilesReady;
+    if ($("snapshot").value !== source) return;
+    restoreSnapshotSettings();
+  } else {
+    refreshViewSettings("Loading Latest IRSA. Processing may take some time.");
+  }
+  update();
+};
 $("target").onchange = () => {
   $("ra").value = ""; $("dec").value = "";
   if (!imageSourceChosen) $("snapshot").value = "";
+  refreshViewSettings();
   update();
 };
 
@@ -550,6 +747,7 @@ $("preset").onchange = () => {
   } else {                                 // the demo option with coordinates
     const [ra, dec] = o.value.split(","); $("ra").value = ra; $("dec").value = dec; $("target").value = "";
   }
+  refreshViewSettings();
   update();
 };
 async function loadPresets() {
@@ -561,8 +759,23 @@ async function loadPresets() {
   } catch (e) { console.warn("presets failed", e); }
 }
 
+async function loadSnapshotProfiles() {
+  if (USE_MOCK) return [];
+  try {
+    // Saved observations always belong to this publication, including with ?api=.
+    const response = await fetch("/challenge-demo/snapshots/manifest.json");
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    const manifest = await response.json();
+    return manifest.entries.map(entry => entry.request);
+  } catch (e) {
+    console.warn("saved observation settings unavailable", e);
+    return [];
+  }
+}
+
 // ================= ALADIN (sky map next to the player) =================
 let aladin = null;
+let mapHasSynced = false;
 function loadScript(src) {
   return new Promise((res, rej) => {
     const s = document.createElement("script");
@@ -588,6 +801,7 @@ async function initAladin() {
     const Lib = await getAladinLib();
     await Lib.init;
     aladin = Lib.aladin("#aladin", {survey: "https://irsa.ipac.caltech.edu/data/hips/CDS/DSS2/color", target: "269.452 4.693", fov: 0.15});
+    $("aladin").classList.add("map-ready");
     syncAladin();                                  // frames may have loaded before the map was ready
   } catch (e) {
     console.warn("Aladin could not be loaded", e);
@@ -598,12 +812,29 @@ function syncAladin() {
   if (!aladin || !lastGrid) return;                // demo data has no real sky position
   try {
     const ra = lastGrid.wcs.CRVAL1, dec = lastGrid.wcs.CRVAL2;
-    aladin.gotoRaDec(ra, dec);
     const fovDeg = Math.max(0.05, (+$("fov").value / 60) * 1.5);   // arcmin to degrees, a bit wider than the picture
-    (aladin.setFoV || aladin.setFov).call(aladin, fovDeg);
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    aladin.stopAnimation?.();
+    if (!mapHasSynced || reducedMotion) {
+      aladin.gotoRaDec(ra, dec);
+      (aladin.setFoV || aladin.setFov).call(aladin, fovDeg);
+    } else {
+      const current = aladin.getRaDec();
+      const raDistance = Math.abs(((current[0] - ra + 540) % 360) - 180);
+      if (raDistance > 1e-7 || Math.abs(current[1] - dec) > 1e-7) {
+        if (aladin.animateToRaDec) aladin.animateToRaDec(ra, dec, .55);
+        else aladin.gotoRaDec(ra, dec);
+      }
+      if (Math.abs(aladin.getFov()[0] - fovDeg) > 1e-7) {
+        if (aladin.zoomToFoV) aladin.zoomToFoV(fovDeg, .4);
+        else (aladin.setFoV || aladin.setFov).call(aladin, fovDeg);
+      }
+    }
+    mapHasSynced = true;
   } catch (e) { console.warn("Aladin sync failed", e); }
 }
 initAladin();
+snapshotProfilesReady = loadSnapshotProfiles().then(profiles => { snapshotProfiles = profiles; });
 loadPresets(); loadUrl(); highlight(); update();
 </script>
 <script>
