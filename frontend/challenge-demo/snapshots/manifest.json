@@ -1,0 +1,718 @@
+{
+  "snapshot_date": "2026-11-15",
+  "cache_version": 12,
+  "center_mjd": 61358,
+  "network_requests": 0,
+  "entries": [
+    {
+      "key": "20e94d70447a8b39",
+      "request": {
+        "target": "barnard",
+        "fov": 3.0,
+        "det": 3,
+        "mode": "single",
+        "max_per_epoch": 6
+      },
+      "frames": 5,
+      "exposures": 5,
+      "inputs_manifest": "barnard/inputs.json",
+      "result_sha256": "86c4708471f6c6881f08817a798c0348ffe9a2ae28dc0a85725562fcf614547b"
+    },
+    {
+      "key": "08e6182e8643a70c",
+      "request": {
+        "target": "barnard",
+        "fov": 3.0,
+        "det": 3,
+        "mode": "coadd",
+        "max_per_epoch": 6
+      },
+      "frames": 5,
+      "exposures": 23,
+      "inputs_manifest": "barnard/inputs.json",
+      "result_sha256": "f635f675ae934288bb763c7a50e839a007fd543991e20ad8be0964f2fec53ddb"
+    },
+    {
+      "key": "1c1747e70157f30e",
+      "request": {
+        "target": "barnard",
+        "fov": 3.0,
+        "det": 3,
+        "mode": "diff",
+        "max_per_epoch": 6
+      },
+      "frames": 5,
+      "exposures": 23,
+      "inputs_manifest": "barnard/inputs.json",
+      "result_sha256": "6a8a92c10805ee49a4fdcea6fcd104ea37a21c937adbfbbb980a3c620ff634e0"
+    },
+    {
+      "key": "f0e8d448d4110656",
+      "request": {
+        "target": "barnard",
+        "fov": 3.0,
+        "det": 3,
+        "mode": "trail",
+        "max_per_epoch": 6
+      },
+      "frames": 5,
+      "exposures": 23,
+      "inputs_manifest": "barnard/inputs.json",
+      "result_sha256": "af0ff88df667cfa864a3e5b26040f2abd61f6769b421c572e3690778d5fc96a6"
+    },
+    {
+      "key": "67de00e003e52c52",
+      "request": {
+        "target": "barnard",
+        "fov": 3.0,
+        "det": 3,
+        "mode": "single",
+        "max_per_epoch": 1
+      },
+      "frames": 5,
+      "exposures": 5,
+      "inputs_manifest": "barnard/inputs.json",
+      "result_sha256": "00353936913f31e1f5d1c923a1eb5661f927c66a8219687a0533d32c72c0f496"
+    },
+    {
+      "key": "6a91fde4f28a4395",
+      "request": {
+        "target": "barnard",
+        "fov": 3.0,
+        "det": 3,
+        "mode": "coadd",
+        "max_per_epoch": 1
+      },
+      "frames": 5,
+      "exposures": 5,
+      "inputs_manifest": "barnard/inputs.json",
+      "result_sha256": "6eb96fdbdcf0d075e5db3b9ed0e14a4cd4f1d38fb460eed6a9cc5fc4e969edb4"
+    },
+    {
+      "key": "ad856f3b14f5290b",
+      "request": {
+        "target": "barnard",
+        "fov": 3.0,
+        "det": 3,
+        "mode": "diff",
+        "max_per_epoch": 1
+      },
+      "frames": 5,
+      "exposures": 5,
+      "inputs_manifest": "barnard/inputs.json",
+      "result_sha256": "43aecf5d522f21f4a25f1eff502375dc4de737b050debacd529bea3d86c26e9b"
+    },
+    {
+      "key": "be1d412c9a22a998",
+      "request": {
+        "target": "barnard",
+        "fov": 3.0,
+        "det": 3,
+        "mode": "trail",
+        "max_per_epoch": 1
+      },
+      "frames": 5,
+      "exposures": 5,
+      "inputs_manifest": "barnard/inputs.json",
+      "result_sha256": "f8a4e9de6743e7534cf24d0bef448e51fd480839ef985c73ba6b498c21113283"
+    },
+    {
+      "key": "6bea44a85199ac33",
+      "request": {
+        "target": "epsindib",
+        "fov": 5.0,
+        "det": 3,
+        "mode": "single",
+        "max_per_epoch": 6
+      },
+      "frames": 7,
+      "exposures": 7,
+      "inputs_manifest": "epsindib/inputs.json",
+      "result_sha256": "ff39108b09909fc7ab25e7c210bb7abfe9ded8ddd2682f160b46f12c43df4252"
+    },
+    {
+      "key": "7906fc5eb012df88",
+      "request": {
+        "target": "epsindib",
+        "fov": 5.0,
+        "det": 3,
+        "mode": "coadd",
+        "max_per_epoch": 6
+      },
+      "frames": 7,
+      "exposures": 32,
+      "inputs_manifest": "epsindib/inputs.json",
+      "result_sha256": "aaf52a2269bb4cdbd828485ab6e86e100f2251e1f858b2e0d561260ace690448"
+    },
+    {
+      "key": "4516c1ff7538265c",
+      "request": {
+        "target": "epsindib",
+        "fov": 5.0,
+        "det": 3,
+        "mode": "diff",
+        "max_per_epoch": 6
+      },
+      "frames": 7,
+      "exposures": 32,
+      "inputs_manifest": "epsindib/inputs.json",
+      "result_sha256": "761da9751dcd1dd79b4921cdaf15603d55a1884186c75ee7c307ec0bfed104ed"
+    },
+    {
+      "key": "82471270949e63eb",
+      "request": {
+        "target": "epsindib",
+        "fov": 5.0,
+        "det": 3,
+        "mode": "trail",
+        "max_per_epoch": 6
+      },
+      "frames": 7,
+      "exposures": 32,
+      "inputs_manifest": "epsindib/inputs.json",
+      "result_sha256": "ca00fa59268c609a2c7668d92e817fb75e1489d7ec88fd32920ad76381647c79"
+    },
+    {
+      "key": "d7ee171f75a98a73",
+      "request": {
+        "target": "epsindib",
+        "fov": 5.0,
+        "det": 3,
+        "mode": "single",
+        "max_per_epoch": 1
+      },
+      "frames": 7,
+      "exposures": 7,
+      "inputs_manifest": "epsindib/inputs.json",
+      "result_sha256": "0a659ad6265266d11e488134bf92a954f303eac90b674096ea71d39a61a7c47a"
+    },
+    {
+      "key": "c4daeeb48e7f1691",
+      "request": {
+        "target": "epsindib",
+        "fov": 5.0,
+        "det": 3,
+        "mode": "coadd",
+        "max_per_epoch": 1
+      },
+      "frames": 7,
+      "exposures": 7,
+      "inputs_manifest": "epsindib/inputs.json",
+      "result_sha256": "3d35f2a60bb29a7997839130d177330021a4d659170394fd9e26d5f6bad46ba8"
+    },
+    {
+      "key": "2a80feb77c2b7ca2",
+      "request": {
+        "target": "epsindib",
+        "fov": 5.0,
+        "det": 3,
+        "mode": "diff",
+        "max_per_epoch": 1
+      },
+      "frames": 7,
+      "exposures": 7,
+      "inputs_manifest": "epsindib/inputs.json",
+      "result_sha256": "e48b775e4103639975cd29c5b9ae9f675a29df879f86ed8260032ae5f1ce480a"
+    },
+    {
+      "key": "bf593107ea5e0bcb",
+      "request": {
+        "target": "epsindib",
+        "fov": 5.0,
+        "det": 3,
+        "mode": "trail",
+        "max_per_epoch": 1
+      },
+      "frames": 7,
+      "exposures": 7,
+      "inputs_manifest": "epsindib/inputs.json",
+      "result_sha256": "1c21b424501abcc260805167e54ae32c28f996dbe016f13e5dd9608a60742a07"
+    },
+    {
+      "key": "5eea6912c6281471",
+      "request": {
+        "target": "wise0855",
+        "fov": 3.0,
+        "det": 6,
+        "mode": "single",
+        "max_per_epoch": 6
+      },
+      "frames": 4,
+      "exposures": 4,
+      "inputs_manifest": "wise0855/inputs.json",
+      "result_sha256": "e515d6fd2375375b7a603874f91e7553e5362fef4f76b8a937355bae512bf98b"
+    },
+    {
+      "key": "19aace5c498b685a",
+      "request": {
+        "target": "wise0855",
+        "fov": 3.0,
+        "det": 6,
+        "mode": "coadd",
+        "max_per_epoch": 6
+      },
+      "frames": 4,
+      "exposures": 18,
+      "inputs_manifest": "wise0855/inputs.json",
+      "result_sha256": "39e905c291cf4e4171802b8f503ea88e18e7e69fe34b016142b49a3c68ed06a6"
+    },
+    {
+      "key": "2493610b3b30b125",
+      "request": {
+        "target": "wise0855",
+        "fov": 3.0,
+        "det": 6,
+        "mode": "diff",
+        "max_per_epoch": 6
+      },
+      "frames": 4,
+      "exposures": 18,
+      "inputs_manifest": "wise0855/inputs.json",
+      "result_sha256": "6508c7e0781df336f397ab57718cb6a77e2db96f57bb1915ab6c225a3b635041"
+    },
+    {
+      "key": "5efb713bcc321464",
+      "request": {
+        "target": "wise0855",
+        "fov": 3.0,
+        "det": 6,
+        "mode": "trail",
+        "max_per_epoch": 6
+      },
+      "frames": 4,
+      "exposures": 18,
+      "inputs_manifest": "wise0855/inputs.json",
+      "result_sha256": "620a4efaded722051a37a533a10683effd74735cb2ad151274a033fa8985cf77"
+    },
+    {
+      "key": "0f94d0786c13cceb",
+      "request": {
+        "target": "wise0855",
+        "fov": 3.0,
+        "det": 6,
+        "mode": "single",
+        "max_per_epoch": 1
+      },
+      "frames": 4,
+      "exposures": 4,
+      "inputs_manifest": "wise0855/inputs.json",
+      "result_sha256": "29c8ec57f6b9704d1e0ac4dfeb88d5562eb135c7974a3f6fe4b0f3b39722f86f"
+    },
+    {
+      "key": "ed5f2a465a4fbae2",
+      "request": {
+        "target": "wise0855",
+        "fov": 3.0,
+        "det": 6,
+        "mode": "coadd",
+        "max_per_epoch": 1
+      },
+      "frames": 4,
+      "exposures": 4,
+      "inputs_manifest": "wise0855/inputs.json",
+      "result_sha256": "d73a52c919f563d113fe728c3407312b5090933f163a0f820c72514b275af97f"
+    },
+    {
+      "key": "bf2aea8d87bcd9ae",
+      "request": {
+        "target": "wise0855",
+        "fov": 3.0,
+        "det": 6,
+        "mode": "diff",
+        "max_per_epoch": 1
+      },
+      "frames": 4,
+      "exposures": 4,
+      "inputs_manifest": "wise0855/inputs.json",
+      "result_sha256": "940fd95db273feda096d19dda14d0ca79dea2532899cb1ade626ef6529e117db"
+    },
+    {
+      "key": "6d974fd55226ebe1",
+      "request": {
+        "target": "wise0855",
+        "fov": 3.0,
+        "det": 6,
+        "mode": "trail",
+        "max_per_epoch": 1
+      },
+      "frames": 4,
+      "exposures": 4,
+      "inputs_manifest": "wise0855/inputs.json",
+      "result_sha256": "33fb9371a2668f2bc4ee1cc787b0420192a60ad244d2e86f3cd2f1e835a8b17b"
+    },
+    {
+      "key": "eb2ae7ff1b08df24",
+      "request": {
+        "target": "rwaur",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "single",
+        "max_per_epoch": 6
+      },
+      "frames": 3,
+      "exposures": 3,
+      "inputs_manifest": "rwaur/inputs.json",
+      "result_sha256": "52d53f828516d4110430e43d2d7a92a3ddb1ce10a6f8037d376b47c589561491"
+    },
+    {
+      "key": "66f189f43ec22f35",
+      "request": {
+        "target": "rwaur",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "coadd",
+        "max_per_epoch": 6
+      },
+      "frames": 3,
+      "exposures": 18,
+      "inputs_manifest": "rwaur/inputs.json",
+      "result_sha256": "78867e46bee37589d8a51c69be00e9ad6cd6cb385365aa04025dd7efe0dcabc0"
+    },
+    {
+      "key": "79834feb7f9634fd",
+      "request": {
+        "target": "rwaur",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "diff",
+        "max_per_epoch": 6
+      },
+      "frames": 3,
+      "exposures": 18,
+      "inputs_manifest": "rwaur/inputs.json",
+      "result_sha256": "cd90f5f76e3a3c154cab07068c6dd93de1727591b22cb971f9f49a0462b4346c"
+    },
+    {
+      "key": "7846a27bb842e471",
+      "request": {
+        "target": "rwaur",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "trail",
+        "max_per_epoch": 6
+      },
+      "frames": 3,
+      "exposures": 18,
+      "inputs_manifest": "rwaur/inputs.json",
+      "result_sha256": "dafef6b76ae77ada83d5d258d404164a1e7ebecd6370e1c0febbee39e60d7df6"
+    },
+    {
+      "key": "287730e5d09c812f",
+      "request": {
+        "target": "rwaur",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "single",
+        "max_per_epoch": 1
+      },
+      "frames": 3,
+      "exposures": 3,
+      "inputs_manifest": "rwaur/inputs.json",
+      "result_sha256": "599cb501af76833b9f3943c552492a154f6d099ddb9ed686bbbdedad1a198a0a"
+    },
+    {
+      "key": "91ef4e4b63368fa5",
+      "request": {
+        "target": "rwaur",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "coadd",
+        "max_per_epoch": 1
+      },
+      "frames": 3,
+      "exposures": 3,
+      "inputs_manifest": "rwaur/inputs.json",
+      "result_sha256": "c8a3c6937104747f04471a93021c1744937def6bb569cc6696ad61dd9317fb4c"
+    },
+    {
+      "key": "215ae3a66c1dd6e1",
+      "request": {
+        "target": "rwaur",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "diff",
+        "max_per_epoch": 1
+      },
+      "frames": 3,
+      "exposures": 3,
+      "inputs_manifest": "rwaur/inputs.json",
+      "result_sha256": "10ebcd12e02b7b557ac7eb4d1720554a9ebe4264e0315e6cfa51be68a3e7ba8b"
+    },
+    {
+      "key": "ae1e5b073109c183",
+      "request": {
+        "target": "rwaur",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "trail",
+        "max_per_epoch": 1
+      },
+      "frames": 3,
+      "exposures": 3,
+      "inputs_manifest": "rwaur/inputs.json",
+      "result_sha256": "29efd1665220f7eaf669e28cf736991aca89e77b7274089eb1a98203e2014d4c"
+    },
+    {
+      "key": "3d5cb6216a08f1ed",
+      "request": {
+        "target": "rdra",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "single",
+        "max_per_epoch": 6
+      },
+      "frames": 5,
+      "exposures": 5,
+      "inputs_manifest": "rdra/inputs.json",
+      "result_sha256": "6bb1f3e509a4c441e9dd7707448a2b4b8bee4a20c1f36d51003810f6dc7ccecc"
+    },
+    {
+      "key": "3face6ff239f7a34",
+      "request": {
+        "target": "rdra",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "coadd",
+        "max_per_epoch": 6
+      },
+      "frames": 5,
+      "exposures": 30,
+      "inputs_manifest": "rdra/inputs.json",
+      "result_sha256": "f4837faac6c3c88bac628a7247dfa724810eedaf8b7e87d7d9d962b564c223ff"
+    },
+    {
+      "key": "ccdf01fad1ea9cc4",
+      "request": {
+        "target": "rdra",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "diff",
+        "max_per_epoch": 6
+      },
+      "frames": 5,
+      "exposures": 30,
+      "inputs_manifest": "rdra/inputs.json",
+      "result_sha256": "d5a330bfdf9f677a15908838e951a23e048be8505394becae47cb08a5b2ff450"
+    },
+    {
+      "key": "c395d6457f058899",
+      "request": {
+        "target": "rdra",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "trail",
+        "max_per_epoch": 6
+      },
+      "frames": 5,
+      "exposures": 30,
+      "inputs_manifest": "rdra/inputs.json",
+      "result_sha256": "1d44f6dff2c5a532c2ca67c006734f32774cc92acf5cc750b4180df9785f4267"
+    },
+    {
+      "key": "7c37bf756bbb2018",
+      "request": {
+        "target": "rdra",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "single",
+        "max_per_epoch": 1
+      },
+      "frames": 5,
+      "exposures": 5,
+      "inputs_manifest": "rdra/inputs.json",
+      "result_sha256": "fd6dc6d257f1c3e710edf827ac69ba64fde0fcd76b2abd7e62b52477f5985927"
+    },
+    {
+      "key": "dc2caa4563002937",
+      "request": {
+        "target": "rdra",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "coadd",
+        "max_per_epoch": 1
+      },
+      "frames": 5,
+      "exposures": 5,
+      "inputs_manifest": "rdra/inputs.json",
+      "result_sha256": "3cfcc573832ac1edd1a8ed5cdc8bc89e85937e794653d3c2613c0d549f661ccd"
+    },
+    {
+      "key": "b1940eaa5e8b6dcb",
+      "request": {
+        "target": "rdra",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "diff",
+        "max_per_epoch": 1
+      },
+      "frames": 5,
+      "exposures": 5,
+      "inputs_manifest": "rdra/inputs.json",
+      "result_sha256": "01bb58856a1d6f57c6a01399615b3878fecb46ddfbbf085c97b3aa6270c4c1cc"
+    },
+    {
+      "key": "519a9ef3218cdd70",
+      "request": {
+        "target": "rdra",
+        "fov": 3.0,
+        "det": 2,
+        "mode": "trail",
+        "max_per_epoch": 1
+      },
+      "frames": 5,
+      "exposures": 5,
+      "inputs_manifest": "rdra/inputs.json",
+      "result_sha256": "7deb18b0bf07d3b1958a75a035323a67b7304b58002cd13ecd84a145eef50460"
+    },
+    {
+      "key": "eed3a1c8193b06c5",
+      "request": {
+        "ra": "08h55m10.831s",
+        "dec": "-7d14m42.53s",
+        "fov": 6,
+        "det": 6,
+        "mode": "single",
+        "max_per_epoch": 6
+      },
+      "frames": 4,
+      "exposures": 4,
+      "inputs_manifest": "wise0855-coordinates/inputs.json",
+      "result_sha256": "03c0621300be5b4fe4168d0640b23731f2a641e0bd9559f9d523456525efe335"
+    },
+    {
+      "key": "ed19545b6f3fa998",
+      "request": {
+        "ra": "08h55m10.831s",
+        "dec": "-7d14m42.53s",
+        "fov": 6,
+        "det": 6,
+        "mode": "coadd",
+        "max_per_epoch": 6
+      },
+      "frames": 4,
+      "exposures": 4,
+      "inputs_manifest": "wise0855-coordinates/inputs.json",
+      "result_sha256": "e86e1008e0b3e4a40edfdb64fa8f6dcff2eded0a8cb986cd7caf97b0046b9009"
+    },
+    {
+      "key": "7c99e9cd5548b545",
+      "request": {
+        "ra": "08h55m10.831s",
+        "dec": "-7d14m42.53s",
+        "fov": 6,
+        "det": 6,
+        "mode": "diff",
+        "max_per_epoch": 6
+      },
+      "frames": 4,
+      "exposures": 4,
+      "inputs_manifest": "wise0855-coordinates/inputs.json",
+      "result_sha256": "019acbdd2082d1929dff331ded4cb0ce14d1a1134b81c8ffc766dfb290ce9376"
+    },
+    {
+      "key": "78005c255597622b",
+      "request": {
+        "ra": "08h55m10.831s",
+        "dec": "-7d14m42.53s",
+        "fov": 6,
+        "det": 6,
+        "mode": "trail",
+        "max_per_epoch": 6
+      },
+      "frames": 4,
+      "exposures": 4,
+      "inputs_manifest": "wise0855-coordinates/inputs.json",
+      "result_sha256": "63984d3b9930b3f51ed681b0e7d1deba4e2c92f7cbf39945c31ab9575d0c8517"
+    },
+    {
+      "key": "9311849669e1a9d7",
+      "request": {
+        "ra": "08h55m10.831s",
+        "dec": "-7d14m42.53s",
+        "fov": 6,
+        "det": 6,
+        "mode": "single",
+        "max_per_epoch": 1
+      },
+      "frames": 4,
+      "exposures": 4,
+      "inputs_manifest": "wise0855-coordinates/inputs.json",
+      "result_sha256": "229665b54e7a8997c589d631289274da0b4d37d8b5b55e55b51aa5f27fce0920"
+    },
+    {
+      "key": "fb8db5255b4039a2",
+      "request": {
+        "ra": "08h55m10.831s",
+        "dec": "-7d14m42.53s",
+        "fov": 6,
+        "det": 6,
+        "mode": "coadd",
+        "max_per_epoch": 1
+      },
+      "frames": 4,
+      "exposures": 4,
+      "inputs_manifest": "wise0855-coordinates/inputs.json",
+      "result_sha256": "2dd14e78af512a9ca723074d6ed440de0bb71b54c1d8c630af73b70ad4071df7"
+    },
+    {
+      "key": "3b13ef11d2b78aa2",
+      "request": {
+        "ra": "08h55m10.831s",
+        "dec": "-7d14m42.53s",
+        "fov": 6,
+        "det": 6,
+        "mode": "diff",
+        "max_per_epoch": 1
+      },
+      "frames": 4,
+      "exposures": 4,
+      "inputs_manifest": "wise0855-coordinates/inputs.json",
+      "result_sha256": "39351ac76ae02145e69b5be50e6ab33edcc8b756264ea865c38dacab00fa4d34"
+    },
+    {
+      "key": "857857f9c451201a",
+      "request": {
+        "ra": "08h55m10.831s",
+        "dec": "-7d14m42.53s",
+        "fov": 6,
+        "det": 6,
+        "mode": "trail",
+        "max_per_epoch": 1
+      },
+      "frames": 4,
+      "exposures": 4,
+      "inputs_manifest": "wise0855-coordinates/inputs.json",
+      "result_sha256": "094cfb3693e8d1e7cf2e79db9778f20ea70ecb6ecc86f1d19d4cc4cebc85ae00"
+    }
+  ],
+  "processing_sha256": {
+    "api/params.py": "9a6ad396f12997c12f80a0680a6d74c651bda68de72031dbd9d71ca4c3ef0a3a",
+    "api/resolve.py": "a21c1fa63a8aedbf429e99d895ed9cb05926ba677ae12a7ee179194bfc8834cd",
+    "api/irsa.py": "d694db49153c1a6877fffff05cecb2199ab0bfc613c19b88124711471d30a959",
+    "api/limits.py": "f69a6c64a3d029a4f3750a695f02f723b14dd76872810adc1a17406ff566ac2f",
+    "api/render.py": "752fc039f391a50af8ed209e081f9d75cdb1e5eb724da63ef5edeb07d58952d7",
+    "api/centroid.py": "ce5116255caa884947f37adc9c13295994abdc162f56ab152c6cac6e13ef3bb9",
+    "api/cache.py": "63dd0008e7b444718dba8c56f81de665f39a414a2f4ba2d7ee895f4f360e9cf2",
+    "api/__init__.py": "68e84a98808663fe1b650b0a5b914cdb5252b9c6418892c12d4278fad3e6afac",
+    "api/jobs.py": "c48501aba2e7a503424c452a392f2b056cc61c7790330f28eb6a00827ab1c705",
+    "api/postgres.py": "7500f9075601e5380f5d30abf66be4c0e2813d7eef57aa69b11d45dd00273d79",
+    "api/errors.py": "474d6a2bec157fd2609a8bfde981466c5fc04b1c34b64b2c53e58a4a7403b857",
+    "api/main.py": "4cc063da717bf4696cb18e525ac50498afcc50ce3b211b22e072e2d7aa018a81",
+    "src/processing/observer.py": "2f6fc368098ed4a48995e762c36c8a11b2d34fdbaeb3cf48c806260a35b5645e",
+    "src/processing/targets.py": "c472bd0717d4298d9c68c0f8d3faaa300f846bb35dbe825c91cc948d0cc5fe4d",
+    "src/processing/epochs.py": "a8bc5c1637b9c569f8aada2899866251c3e16de22823882be3755eb7efb7e5ea",
+    "src/processing/references.py": "98d234f52f1b38a2f0f0e05ed336688c76ace486c6ee6d85de8fdcc77c773027",
+    "src/processing/render.py": "a47bfba099211c90447e9e720aa1b774242abd6b1a6f34cbfaf64bfc76c090f1",
+    "src/processing/observations.py": "833a4e73c9e8282b2481d6e6e6ba53a8b5521138f00b498d45a8fff7f8db5a6e",
+    "src/processing/centroid.py": "2425917370cdd96355701d02c25d5d90178d65094c81929b8a6542cdd54a62a1",
+    "src/processing/__init__.py": "1799c9f9da263ad35c7334ccc6ce8d12ffb87890bbcc3121c11747f230de294c",
+    "src/processing/psf.py": "6771b1fbea98c5d10785d10fe0632c5652059a1e8ef5d016b601a232f3ea7757",
+    "src/processing/astrometry.py": "4b66f6f340f496c8e4b9d70d5b8ee526478691cc4d23ee7e1f3eee9ba4763f7f",
+    "src/processing/frames.py": "f22d55822c9bfb6027ddad8fabcb5cba083a42d3eff386278f94af8a67709db9",
+    "src/processing/pipeline.py": "a346f5380970a49072faf8bc2f42f832723faa4963473fdcae0d4d4e10e808a0",
+    "src/processing/spectral.py": "4894624f42d4e61ff5c41367618869f86686330109b465efd77b4fd49fb51195",
+    "src/processing/statistics.py": "9dc3389c4c04f6edd768b4701a1c89cc83f5251533e965419c4b7d547ef0b83c",
+    "src/processing/photometry.py": "93608fb9fd579961b0df5bf4f40ef1e78cd16ec3b07766f2cec5f9dd7ed96b32",
+    "src/processing/validation.py": "d6de6b746f572b652ee6981ae5aa2a61c0272f8ce977f7adf8163f46c3de2c38"
+  }
+}

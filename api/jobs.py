@@ -16,6 +16,7 @@ import uuid
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import numpy as np
 from astropy import units as u
@@ -156,6 +157,14 @@ def snapshot_result(p: Params, snapshot):
     if snapshot != "2026-11-15":
         raise ApiError(400, "bad_param", "Неизвестная дата сохранённой выборки")
     key = _view_key(p, resolve.for_params(p, epoch=61358), source="archive")
+    # Ship the bounded real-data replay with the app, including every display mode.
+    # Preview deployments and local runs must not depend on a production database.
+    path = Path(__file__).resolve().parent.parent / "frontend/challenge-demo/snapshots" / key / "result.json"
+    if path.is_file():
+        result = json.loads(path.read_text())
+        if (result.get("snapshot_date") == snapshot and result.get("snapshot_version") == cache.VERSION
+                and result.get("archive_source") == "saved_sia2_replay"):
+            return result
     if os.environ.get("SPHEREX_DATABASE_URL"):
         from . import postgres
         with postgres.connect() as conn:
@@ -170,7 +179,10 @@ def gif(p: Params, snapshot=None) -> bytes:
     if not res or not res.get("frames"):
         raise ApiError(409, "not_ready", "результат ещё не готов: сначала откройте /api/view")
     paths = [cache.CACHE / f["image_url"].removeprefix("/cache/") for f in res["frames"]]
-    if os.environ.get("SPHEREX_DATABASE_URL"):
+    if snapshot and res["frames"][0]["image_url"].startswith("/challenge-demo/snapshots/"):
+        frontend = Path(__file__).resolve().parent.parent / "frontend"
+        paths = [frontend / f["image_url"].lstrip("/") for f in res["frames"]]
+    elif os.environ.get("SPHEREX_DATABASE_URL"):
         from . import postgres
         data = [postgres.read_image(path.parent.name, path.name) for path in paths]
         if any(image is None for image in data):

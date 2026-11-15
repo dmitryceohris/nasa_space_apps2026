@@ -3,10 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SPHEREx Sky Viewer</title>
+<title>SPHEREx Blink</title>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <style>
-  body { font-family: sans-serif; background: #111; color: #eee; max-width: 560px; margin: 16px auto; padding: 0 12px; }
+  /* ---------- space background ---------- */
+  html { min-height: 100%; background-color: #000; background-attachment: fixed;
+         background-image: radial-gradient(ellipse 80% 60% at 70% 20%, #0d0b24 0%, transparent 70%),
+                           radial-gradient(ellipse 70% 50% at 15% 85%, #0a1424 0%, transparent 70%); }
+  #stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+  .decor { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+  .decor img { position: absolute; height: auto; filter: drop-shadow(0 0 18px rgba(170, 190, 255, .25)); user-select: none; }
+  .decor .earth     { width: 270px; left: 3vw;  top: 9vh;     opacity: .9; }
+  .decor .saturn    { width: 330px; right: 2vw; top: 44vh;    opacity: .9; }
+  .decor .gas-giant { width: 210px; left: 7vw;  bottom: 6vh;  opacity: .85; }
+  .decor .nebula    { width: 360px; right: 5vw; top: 2vh;     opacity: .45; }
+  .decor .eclipse   { width: 190px; left: 4vw;  top: 50vh;    opacity: .55; }
+  .decor .galaxy    { width: 380px; right: 8vw; bottom: 3vh;  opacity: .6; }
+  .float { animation: float 7s ease-in-out infinite alternate; will-change: transform; }
+  .decor .saturn.float    { animation-duration: 9s;   animation-delay: -3s; }
+  .decor .gas-giant.float { animation-duration: 8s;   animation-delay: -5s; }
+  @keyframes float { from { transform: translateY(-16px); } to { transform: translateY(16px); } }
+  @media (max-width: 1180px) {               /* narrower screens: smaller, dimmer, only the planets */
+    .decor .nebula, .decor .eclipse, .decor .galaxy { display: none; }
+    .decor .earth { width: 150px; left: -40px; opacity: .45; }
+    .decor .saturn { width: 190px; right: -50px; opacity: .45; }
+    .decor .gas-giant { width: 120px; left: -30px; opacity: .4; }
+  }
+  @media (prefers-reduced-motion: reduce) { .float { animation: none; } }
+
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #e8eaf4; max-width: 560px;
+         margin: 24px auto; padding: 16px 18px 24px; background: rgba(6, 8, 20, .82); border: 1px solid rgba(140, 160, 255, .16);
+         border-radius: 14px; box-shadow: 0 0 60px rgba(60, 80, 200, .12); }
+  /* no filter/backdrop-filter on body: it would trap the fixed background layers inside the panel */
+  @media (max-width: 620px) { body { margin: 0; border-radius: 0; border-left: 0; border-right: 0; padding: 12px 16px 20px; } }
+  h2 { margin: 4px 0 14px; font-size: 26px; letter-spacing: .06em; text-transform: uppercase;
+       background: linear-gradient(90deg, #fff, #9fb4ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  input, select, button { background: rgba(255, 255, 255, .06); color: #eef; border: 1px solid rgba(160, 175, 255, .28); border-radius: 8px; }
+  button { cursor: pointer; }
+  button:hover { border-color: rgba(160, 185, 255, .6); }
+  option { background: #0b0d1c; }
   input, select, button { padding: 8px; margin: 3px 0; font-size: 16px; max-width: 100%; box-sizing: border-box; }
   .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   button.active { background: #2a6; color: #fff; }
@@ -27,6 +62,15 @@
 <link rel="stylesheet" href="design.css">
 </head>
 <body>
+<canvas id="stars" aria-hidden="true"></canvas>
+<div class="decor" aria-hidden="true">
+  <img class="nebula" src="assets/nebula.png" alt="">
+  <img class="galaxy" src="assets/galaxy.png" alt="">
+  <img class="eclipse" src="assets/eclipse.png" alt="">
+  <img class="earth float" src="assets/earth.png" alt="">
+  <img class="saturn float" src="assets/saturn.png" alt="">
+  <img class="gas-giant float" src="assets/gas-giant.png" alt="">
+</div>
 <h2>SPHEREx Blink</h2>
 <div id="layout"><div id="col-left">
 <p><a style="color:#8fd7ff" href="/challenge-demo/">Five targets · saved GIF gallery</a></p>
@@ -108,6 +152,7 @@
 // ================= DATA LAYER (the only part that changes later) =================
 const P = new URLSearchParams(location.search);
 const API = P.get("api") || "";
+let imageSourceChosen = P.has("snapshot");
 // Double-click the file (no ?api=) -> fake data. Any server address -> real data.
 const USE_MOCK = P.get("mock") === "1" || (location.protocol === "file:" && !P.get("api"));
 document.getElementById("demo-note").hidden = !USE_MOCK;
@@ -175,8 +220,11 @@ async function getFrames(ra, dec, fov, det, mode, my) {
   if (ra !== "" && dec !== "") { q.set("ra", ra); q.set("dec", dec); }
   else if (target) q.set("target", target);
   else throw new Error("Pick a test object or type a name or RA and Dec");
-  if ($("snapshot").value) q.set("snapshot", $("snapshot").value);
-  const url = `${API}/api/view?${q}`;
+  const snapshot = $("snapshot").value;
+  if (snapshot) q.set("snapshot", snapshot);
+  // Saved frames belong to this release; a separate live API may be an older build.
+  const viewAPI = snapshot ? "" : API;
+  const url = `${viewAPI}/api/view?${q}`;
 
   while (true) {                                   // ask again until the job is ready
     if (my !== reqId) return null;                 // user changed something: stop
@@ -203,7 +251,7 @@ async function getFrames(ra, dec, fov, det, mode, my) {
     const fr = p => p ? [(p[0] + 0.5) / g.width_px, (p[1] + 0.5) / g.height_px] : null;
     let out = d.frames.map(f => ({
       displayDate: f.date, date: f.mjd_span ? `${f.date} (MJD UTC ${f.mjd_span.join("–")})` : f.date, wavelength: f.wave_um != null ? f.wave_um.toFixed(2) : "", n_exp: f.n_exp,
-      url: API + f.image_url, flagsUrl: f.flags_url ? API + f.flags_url : null,
+      url: viewAPI + f.image_url, flagsUrl: f.flags_url ? viewAPI + f.flags_url : null,
       expected: fr(f.predicted_px), measured: fr(f.measured_px),
       candidates: (f.measured_candidates || []).map(c => ({...c, xy: fr(c.xy)})), measurement: f.measurement || null,
       quality: f.quality, predictionStatus: f.prediction_status,
@@ -213,7 +261,7 @@ async function getFrames(ra, dec, fov, det, mode, my) {
     if (mode === "trail" && d.trail_url) {
       // one picture with every epoch: residuals coloured by time (blue = first, yellow = last)
       const n = out.length;
-      out = [{displayDate: `${out[0].displayDate} → ${out[n - 1].displayDate}`, date: `${out[0].date} → ${out[n - 1].date}`, url: API + d.trail_url, trail: true, epochs: n}];
+      out = [{displayDate: `${out[0].displayDate} → ${out[n - 1].displayDate}`, date: `${out[0].date} → ${out[n - 1].date}`, url: viewAPI + d.trail_url, trail: true, epochs: n}];
     }
     $("info").textContent = "Loading pictures...";
     await Promise.all(out.map(f => new Promise((res, reject) => {   // preload: no flicker while blinking
@@ -361,7 +409,7 @@ function highlight() {
 // ================= GRAPHS =================
 const layout = (xt, yt) => ({
   xaxis: {title: xt}, yaxis: {title: yt},
-  paper_bgcolor: "#111", plot_bgcolor: "#111", font: {color: "#eee"}, margin: {t: 20}
+  paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", font: {color: "#eee"}, margin: {t: 20}
 });
 let plotId = 0;
 function plotMessage(text) { if (window.Plotly) Plotly.purge("plot"); $("plot").textContent = text; }
@@ -484,8 +532,13 @@ async function update() {
   }
 
 }
-["ra", "dec", "fov", "det", "snapshot"].forEach(id => $(id).onchange = update);
-$("target").onchange = () => { $("ra").value = ""; $("dec").value = ""; update(); };
+["ra", "dec", "fov", "det"].forEach(id => $(id).onchange = update);
+$("snapshot").onchange = () => { imageSourceChosen = true; update(); };
+$("target").onchange = () => {
+  $("ra").value = ""; $("dec").value = "";
+  if (!imageSourceChosen) $("snapshot").value = "";
+  update();
+};
 
 $("preset").onchange = () => {
   const o = $("preset").selectedOptions[0];
@@ -493,6 +546,7 @@ $("preset").onchange = () => {
   if (o.dataset.fov) {                     // real presets from /api/targets
     $("target").value = o.value; $("ra").value = ""; $("dec").value = "";
     $("fov").value = o.dataset.fov; $("det").value = o.dataset.det;
+    if (!imageSourceChosen) $("snapshot").value = "2026-11-15";
   } else {                                 // the demo option with coordinates
     const [ra, dec] = o.value.split(","); $("ra").value = ra; $("dec").value = dec; $("target").value = "";
   }
@@ -551,6 +605,33 @@ function syncAladin() {
 }
 initAladin();
 loadPresets(); loadUrl(); highlight(); update();
+</script>
+<script>
+// ================= STARFIELD (decoration only) =================
+(() => {
+  const c = document.getElementById("stars"), g = c.getContext("2d");
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let stars = [], w = 0, h = 0;
+  function build() {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    w = innerWidth; h = innerHeight; c.width = w * dpr; c.height = h * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    stars = Array.from({length: Math.round(w * h / 1800)}, () => ({
+      x: Math.random() * w, y: Math.random() * h, r: Math.random() ** 3 * 1.4 + 0.25,
+      a: 0.25 + Math.random() * 0.75, tw: Math.random() < 0.3 ? 0.6 + Math.random() * 1.6 : 0, ph: Math.random() * 6.28,
+      hue: Math.random() < 0.15 ? "200,215,255" : Math.random() < 0.08 ? "255,225,200" : "255,255,255"}));
+  }
+  function draw(t) {
+    g.clearRect(0, 0, w, h);
+    for (const s of stars) {
+      const a = s.tw ? s.a * (0.55 + 0.45 * Math.sin(s.ph + t / 1000 * s.tw)) : s.a;
+      g.fillStyle = `rgba(${s.hue},${a.toFixed(3)})`;
+      g.beginPath(); g.arc(s.x, s.y, s.r, 0, 6.2832); g.fill();
+    }
+    if (!still) requestAnimationFrame(draw);
+  }
+  build(); draw(0);
+  addEventListener("resize", () => { build(); if (still) draw(0); });
+})();
 </script>
 </body>
 </html>

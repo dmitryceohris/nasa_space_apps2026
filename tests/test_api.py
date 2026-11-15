@@ -112,7 +112,7 @@ def test_spectrum_flat_arrays_keep_only_reliable_points():
 
 def test_root_serves_team_frontend_and_dev_page():
     r = c.get("/")
-    assert r.status_code == 200 and "SPHEREx Sky Viewer" in r.text and "pollJson" in r.text
+    assert r.status_code == 200 and "SPHEREx Blink" in r.text and "pollJson" in r.text
     assert c.get("/dev/").status_code == 200
 
 
