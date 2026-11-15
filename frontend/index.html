@@ -88,6 +88,8 @@
   <button id="tab-spec" class="active">Spectrum</button>
   <button id="tab-lc">Light curve</button>
 </div>
+<label><input type="checkbox" id="show-diagnostic-points"> Show preliminary and rejected measurements</label>
+<p id="plot-quality" aria-live="polite"></p>
 <div id="plot" style="height:300px"></div>
 
 <script>
@@ -361,23 +363,47 @@ async function drawPlot() {
     const d = tab === "spec" ? await getSpectrum(isCurrent, onProgress) : await getLightCurve(isCurrent, onProgress);
     if (d === null || !isCurrent()) return;
     const x = tab === "spec" ? d.wavelength : d.dates;
-    if (!x || !x.length) {
+    const diagnostics = tab === "spec" ? (d.points || []) : (d.diagnostic_points || []);
+    const comparableIds = new Set((d.series || []).flatMap(s => s.obs_ids || []));
+    const displayStatus = p => {
+      const status = p.validation?.status || "provisional";
+      return tab === "lc" && status === "validated" && !comparableIds.has(p.obs_id) ? "provisional" : status;
+    };
+    const counts = {validated: 0, provisional: 0, rejected: 0};
+    diagnostics.forEach(p => { const s = displayStatus(p); counts[s] = (counts[s] || 0) + 1; });
+    $("plot-quality").textContent = `Validated: ${counts.validated}. Preliminary: ${counts.provisional}. Rejected: ${counts.rejected}. ` +
+      (tab === "lc" ? "Only confirmed matching spectral responses can form a light curve. " : "") + (d.warnings || []).join(" ");
+    const showDiagnostics = $("show-diagnostic-points").checked;
+    const hasSeries = tab === "lc" && (d.series || []).some(s => s.dates.length);
+    const visibleDiagnostics = diagnostics.filter(p => p.flux_ujy != null && p.wave_um != null && Number.isFinite(p.flux_ujy));
+    if ((!x || !x.length) && !hasSeries && !(showDiagnostics && visibleDiagnostics.length)) {
       const why = tab === "spec"
         ? "No reliable points are available for this selection."
         : `No reliable points in the window ${(d.wave_window_um || []).join("–")} µm. Try another detector.`;
       plotMessage(why + ((d.warnings || []).length ? " " + d.warnings.join(" ") : ""));
       return;
     }
-    const trace = {x, y: d.flux, mode: tab === "spec" ? "markers" : "lines+markers", type: "scatter",
+    const trace = {x, y: d.flux, name: "Validated", mode: tab === "spec" ? "markers" : "lines+markers", type: "scatter",
                    error_y: d.flux_err ? {type: "data", array: d.flux_err, thickness: 1, width: 0} : undefined};
+    const traces = hasSeries ? d.series.map((s, i) => ({x:s.dates, y:s.flux, name:`Validated band ${i + 1}`,
+      mode:"lines+markers", type:"scatter", error_y:{type:"data", array:s.flux_err}})) : [trace];
+    if (showDiagnostics) ["provisional", "rejected"].forEach(status => {
+      const pts = visibleDiagnostics.filter(p => displayStatus(p) === status);
+      if (!pts.length) return;
+      traces.push({x:pts.map(p => tab === "spec" ? p.wave_um : new Date((p.mjd - 40587) * 86400000).toISOString()),
+        y:pts.map(p => p.flux_ujy), name:status === "provisional" ? "Preliminary" : "Rejected", mode:"markers", type:"scatter",
+        marker:{symbol:status === "rejected" ? "x" : "circle-open", color:status === "rejected" ? "#ee7777" : "#e4b566"},
+        text:pts.map(p => `${p.obs_id}: ${(p.quality_reasons || []).join(", ")}${tab === "lc" && p.validation?.status === "validated" && displayStatus(p) !== "validated" ? " spectral comparability unconfirmed" : ""}`), hovertemplate:"%{text}<br>%{y} µJy<extra></extra>"});
+    });
     $("plot").textContent = "";
-    Plotly.newPlot("plot", [trace], tab === "spec" ? layout("Wavelength (µm)", "Flux (µJy)")
+    Plotly.newPlot("plot", traces, tab === "spec" ? layout("Wavelength (µm)", "Flux (µJy)")
                                                    : layout("Date", "Flux (µJy)"),
                    {displayModeBar: false, responsive: true});
   } catch (err) { if (isCurrent()) plotMessage("Could not load the graph: " + err.message); }
 }
 $("tab-spec").onclick = () => { tab = "spec"; $("tab-spec").classList.add("active"); $("tab-lc").classList.remove("active"); drawPlot(); };
 $("tab-lc").onclick   = () => { tab = "lc";   $("tab-lc").classList.add("active"); $("tab-spec").classList.remove("active"); drawPlot(); };
+$("show-diagnostic-points").onchange = drawPlot;
 
 // ================= URL SYNC =================
 function syncUrl() {

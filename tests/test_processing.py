@@ -120,7 +120,8 @@ def test_forced_photometry_recovers_flux():
     e = fake_exposure(CENTER, 61000, flux_mjysr=amp, sigma_px=sigma, noise=0.01)
     p = forced_photometry(e, CENTER, r_ap=4.0, r_in=7, r_out=12)
     true_ujy = amp * 2 * np.pi * sigma ** 2 * Exposure.mjysr_to_ujy_per_pixel()
-    assert p["ok"] and p["flux_ujy"] == pytest.approx(true_ujy, rel=0.03)
+    assert not p["ok"] and p["validation"]["status"] == "provisional"
+    assert p["flux_ujy"] == pytest.approx(true_ujy, rel=0.03)
     assert 1.63 < p["wave_um"] < 2.41 and p["det"] == 3
 
 

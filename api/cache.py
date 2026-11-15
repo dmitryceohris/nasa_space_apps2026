@@ -14,7 +14,7 @@ def key(ra, dec, fov, det, mode, max_per_epoch) -> str:
     return hashlib.sha1(s.encode()).hexdigest()[:16]
 
 
-VERSION = 11  # Combined acceptance and outside-field association; FITS remain reusable.
+VERSION = 12  # Scientific validation and corrected masks; old measurements must be recomputed.
 
 
 def key_spectrum(ra, dec) -> str:

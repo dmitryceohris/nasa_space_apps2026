@@ -43,6 +43,7 @@ class Target:
     fov: float = 3.0
     note: str = ""
     source: str = ""
+    parallax_error_mas: float | None = None
 
     def coord_at(self, time: Time | float) -> SkyCoord:
         """Положение на момент `time` (Time или MJD)."""
@@ -92,7 +93,8 @@ def load_targets(path: str | Path = DEFAULT_CATALOG) -> dict[str, Target]:
             pmra=_f(r, "pmra_mas_yr"), pmdec=_f(r, "pmdec_mas_yr"),
             parallax=_f(r, "parallax_mas"), rv=_f(r, "radial_velocity_km_s"),
             ref_epoch=_epoch(r), det=det, fov=fov, note=note,
-            source=(r.get("catalog") or "").strip())
+            source=(r.get("catalog") or "").strip(),
+            parallax_error_mas=_f(r,"parallax_error_mas") if r.get("parallax_error_mas") else None)
     return out
 
 

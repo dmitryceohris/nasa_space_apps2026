@@ -9,7 +9,7 @@
 
     st  = spx.stack(exps, t, fov=3)              # epochs -> coadds on one north-up grid
     st.cube                                      # np.ndarray (N, H, W), MJy/sr; also np.asarray(st), st.to_numpy()
-    d   = spx.diff(st)                           # (N, H, W) in sigma
+    d   = spx.diff(st)                           # (N, H, W), robust residual units
     rgb = spx.trail(st)                          # (H, W, 3)
 
     spx.centroid(img)                            # centre on any 2-D array: xy, err, quality, status
@@ -23,7 +23,7 @@
     spx.to_fits(st, "cube.fits")                 # cube + WCS for DS9 / Aladin
 
 Pixels are numpy ones: [x, y], 0-based, y grows to the north, x to the west (east is left). Every measurement
-carries its method, error and quality; see spx.METHODS. Not done: PSF fitting, deblending, neural networks.
+carries its method, error and quality; see spx.METHODS. Scientific acceptance is explicit.
 """
 from Exposure import Exposure
 from processing.centroid import METHOD as _CENTROID
@@ -37,15 +37,20 @@ from .measure import (LightCurve, Motion, Spectrum, Track, centroid, fit_motion,
                       predict, spectrum, track, windowed_centroid)
 from .show import show
 from .stack import Stack, diff, save, stack, to_fits, trail
+from .native import native_track
+from processing.psf import PSF_METHOD as _PSF, fit_epsf
+from processing.observer import observer_position
+from processing.statistics import constant_flux
 
 __version__ = "0.1.0"
 
-METHODS = {"background": _BACKGROUND, "difference": _DIFF, "centroid": _CENTROID, "photometry": _PHOT}
+METHODS = {"background": _BACKGROUND, "difference": _DIFF, "centroid": _CENTROID,
+           "photometry": _PSF, "preliminary_photometry": _PHOT}
 
 __all__ = [
     "target", "search", "fetch", "load", "epochs",
     "stack", "diff", "trail", "save", "to_fits",
     "centroid", "windowed_centroid", "track", "fit_motion", "predict", "parallax_offset", "spectrum", "lightcurve",
-    "show",
+    "show", "native_track", "fit_epsf", "observer_position", "constant_flux",
     "Exposure", "Target", "Stack", "Track", "Motion", "Spectrum", "LightCurve", "METHODS", "__version__",
 ]

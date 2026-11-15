@@ -247,8 +247,15 @@ def _pipeline(j, p, r):
             if i not in paths:
                 continue
             try:
-                exps.append(load_exposure(str(paths[i]), mjd_hint=meta[i]["mjd"],
-                                          obs_id_hint=irsa.obs_id(meta[i]["uri"]) or ""))
+                exp = load_exposure(str(paths[i]), mjd_hint=meta[i]["mjd"],
+                                    obs_id_hint=irsa.obs_id(meta[i]["uri"]) or "")
+                from processing.observations import product_record
+                from Exposure.calibration import attach_registered_calibration
+                uri = meta[i]["uri"]
+                url = uri if uri.startswith("https://") else irsa.IRSA+"/"+uri.lstrip("/")
+                exp.provenance.update(product_record(url,obs_id=exp.obs_id,detector=exp.detector))
+                attach_registered_calibration(exp,exp.provenance.get("pipeline_version","unknown"))
+                exps.append(exp)
             except Exception as e:
                 failed += 1
                 log.warning("load failed: %s", e)
@@ -341,7 +348,7 @@ def _pipeline(j, p, r):
             limitations.append("incomplete_pixel_coverage")
         if f.contam.any():
             limitations.append("contaminated_pixels")
-        if any(s["source"] != "spectral_wcs" for s in f.wavelength_samples):
+        if any(s["source"] not in ("spectral_wcs","cwave_cband") for s in f.wavelength_samples):
             limitations.append("approximate_wavelength")
         if any(s["wave_um"] is None or s["bw_um"] is None for s in f.wavelength_samples):
             limitations.append("invalid_wavelength")
@@ -368,6 +375,8 @@ def _pipeline(j, p, r):
                             "err_px": None if m["err_px"] is None else [round(e, 3) for e in m["err_px"]]},
             "quality": {"status": "limited" if limitations else "unchecked", "verified": False,
                         "coverage_fraction": round(coverage, 5), "reasons": limitations},
+            "validation": {"status":"provisional","reasons":["visualization_only","independent_registration_missing"],
+                           "checks":{"scientific_astrometry":False}},
             "time_sources": f.time_sources, "wavelength_samples": f.wavelength_samples,
             "span_days": round(f.span_days, 3), "bg_offsets": f.bg_offsets,
             "diff_noise_scale": scales[i] if scales else None,

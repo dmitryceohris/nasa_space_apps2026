@@ -236,12 +236,13 @@ def test_spectrum_and_lightcurve_to_numpy():
     exps = [fake_exposure(CENTER, 60900 + 100 * i, flux_mjysr=40, sigma_px=1.2, noise=0.01, seed=i)
             for i in range(4)]
     sp = spx.spectrum(exps, RADEC)
-    a = sp.to_numpy()
-    assert a.shape == (4, 3) and np.all(a[:, 1] > 0) and sp.ok.all()
-    assert np.asarray(sp).shape == (4, 3) and sp.method["name"] == "forced_aperture_photometry"
+    a = sp.to_numpy(only_ok=False)
+    assert a.shape == (4, 3) and np.all(a[:, 1] > 0) and not sp.ok.any()
+    assert np.asarray(sp).shape == (0, 3)
+    assert all(p['validation']['status']=='provisional' for p in sp)
     lc = spx.lightcurve(sp, 1.9, 2.2)
     b = lc.to_numpy()
-    assert b.shape == (4, 3) and np.all(np.diff(b[:, 0]) > 0)
+    assert b.shape == (0, 3)  # uncalibrated aperture diagnostics are never a scientific light curve
 
 
 # ------------------------------------------------------------------ output
@@ -255,7 +256,8 @@ def test_to_fits_round_trip(tmp_path):
         assert [x.name for x in h[1:]] == ["VARIANCE", "FLAGS", "EPOCHS"] and len(h["EPOCHS"].data) == 3
         assert h[0].header["CTYPE1"] == "RA---TAN"
     p2 = spx.to_fits(st, tmp_path / "d.fits", what="diff")
-    assert fits.getheader(p2)["BUNIT"] == "sigma"
+    assert fits.getheader(p2)["BUNIT"] == "1"
+    assert fits.getheader(p2)["DIFFUNIT"] == "robust_residual_scale"
     with pytest.raises(OSError):
         spx.to_fits(st, p)  # no silent overwrite
 

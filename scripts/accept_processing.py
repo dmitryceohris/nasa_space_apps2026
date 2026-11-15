@@ -24,6 +24,7 @@ os.environ["PREWARM"] = "0"
 
 import httpx
 from astropy.utils import iers
+from astropy.coordinates import SkyCoord
 from fastapi.testclient import TestClient
 
 from Exposure import load_exposure
@@ -160,7 +161,12 @@ def run(fits_cache, download_limit=0):
                                 ref = by_id[frame["obs_ids"][0]]
                                 assert abs(frame["mjd"] - ref["fits_header"]["MJD-AVG"]) <= .00005
                                 assert frame["date"] == ref["date_utc"][:10]
-                                assert abs(frame["wave_um"] - ref["wave_um"]) <= .000051
+                                calibrated = load_exposure(str(paths[ref["cutout_sha256"]]),product_url=ref["product_url"])
+                                expected_wave = calibrated.wavelength_at(*ref["native_xy"])[0]
+                                if exact:
+                                    expected_wave=calibrated.wavelength_at_sky(SkyCoord(result['query']['ra'],result['query']['dec'],unit='deg'))[0]
+                                assert abs(frame["wave_um"] - expected_wave) <= .000051, (saved_input,mode,ref["obs_id"],frame["wave_um"],expected_wave,ref["native_xy"])
+                                assert frame["validation"]["status"] == "provisional"
                                 assert frame["quality"]["verified"] is False
                                 assert frame["time_sources"] == [{"obs_id": ref["obs_id"], "source": "MJD-AVG", "assumptions": []}]
                                 for field in ("image_url", "flags_url"):
@@ -177,6 +183,8 @@ def run(fits_cache, download_limit=0):
                             results.append({"input": saved_input, "exact_wise_coordinates": exact,
                                             "mode": mode, "polls": polls, "response": result})
     return {"checked_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+            "working_tree_diff_sha256":hashlib.sha256(subprocess.check_output(["git","diff","--binary"],cwd=ROOT)).hexdigest(),
+            "source_sha256":{str(p.relative_to(ROOT)):sha(p) for folder in ("src","api") for p in (ROOT/folder).rglob("*.py")},
             "scope": __doc__, "archive_requests": len(missing), "checked_inputs": input_checks,
             "preserved_inputs_sha256": {p: sha(ROOT / p) for p in (
                 "OBJECT_PARAMETERS.csv", "output/predictions.csv", "data/physics_observations.csv")},

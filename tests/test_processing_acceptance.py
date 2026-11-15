@@ -297,7 +297,8 @@ def test_photometry_error_includes_background_and_ring_coverage_counts():
     yy, xx = np.indices(e.shape)
     ap = np.hypot(xx - x0, yy - y0) <= 2.0
     pixel_only = np.sqrt(e.variance[ap].sum()) * k
-    assert p["ok"] and p["err_ujy"] > 1.05 * pixel_only  # + error of the ring median
+    assert not p["ok"] and p['validation']['status']=='provisional'
+    assert p["err_ujy"] > 1.05 * pixel_only  # + error of the ring median
 
     ring = (np.hypot(xx - x0, yy - y0) >= 4) & (np.hypot(xx - x0, yy - y0) <= 7)
     e.flags[ring & (xx < x0 + 3)] |= HOT  # most of the ring masked
@@ -318,7 +319,7 @@ def test_photometry_masks_an_unflagged_spike_in_the_aperture():
     e2.image[y0 + 1, x0 + 1] += 40.0
     p2 = forced_photometry(e2, CENTER)
     assert not p2["ok"] and "masked_aperture_pixels" in p2["quality_reasons"]
-    assert abs(p2["flux_ujy"]) < 0.1 * clean
+    assert p2["flux_ujy"] is None  # incomplete aperture is rejected, never rescaled
 
 
 def test_lightcurve_mixing_channels_is_flagged():

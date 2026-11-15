@@ -236,3 +236,10 @@ def find(img, signed=False, k=K_SIGMA, min_area=MIN_AREA, smooth=SMOOTH, saturat
     """-> list of candidates {kind: 'largest'|'central'|'largest+central', sign, xy, err_px, area, flux, snr,
     quality, flags, ...}. signed=True: "+" and "-" residuals are separate objects (see module docstring)."""
     return measure(img, signed, saturated, k, min_area, smooth)["candidates"]
+
+
+def detect_all(img, *, saturated=None):
+    """All independent positive detections, without the display's largest/central selection."""
+    objects, _, _ = _detect(np.asarray(img,float),K_SIGMA,MIN_AREA,SMOOTH,saturated,None)
+    objects, _ = _split_faint(objects)
+    return objects

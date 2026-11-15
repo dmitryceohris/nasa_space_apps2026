@@ -40,18 +40,18 @@ DEFAULT_FLAG_BITS: dict[str, int] = {
     "MISSING_DATA": 9, "HOT": 10, "COLD": 11, "FULLSAMPLE": 12, "PHANMISS": 14,
     "NONLINEAR": 15, "PERSIST": 17, "OUTLIER": 19, "CROSSTALK": 20, "SOURCE": 21,
     "GHOST": 22, "GHOST_FPA": 23, "GHOST_EXT": 24, "STREAK": 25, "BLOOM": 26,
-    "SNOWBALL": 27, "HALO": 28,
+    "SNOWBALL": 27, "HALO": 28, "SATELLITE_HALO": 29,
 }
 
 # Пиксели с этими флагами не используем НИКОГДА (данных нет или они испорчены).
 HARD_BAD_FLAGS = (
     "TRANSIENT", "OVERFLOW", "SUR_ERROR", "NONFUNC", "MISSING_DATA",
-    "HOT", "COLD", "NONLINEAR", "PERSIST", "OUTLIER",
+    "HOT", "COLD", "PHANMISS", "DICHROIC", "NONLINEAR", "PERSIST", "OUTLIER",
 )
 # Загрязнения: данные есть, но им нельзя доверять для точной фотометрии/центроида.
 # Показываем пользователю отдельным слоем.
 CONTAMINATION_FLAGS = (
-    "CROSSTALK", "GHOST", "GHOST_FPA", "GHOST_EXT", "STREAK", "BLOOM", "SNOWBALL", "HALO",
+    "CROSSTALK", "GHOST", "GHOST_FPA", "GHOST_EXT", "STREAK", "BLOOM", "SNOWBALL", "HALO", "SATELLITE_HALO",
 )
 # ВНИМАНИЕ: "SOURCE" означает «здесь есть источник» — его НЕЛЬЗЯ маскировать,
 # иначе мы выкинем саму цель.
@@ -88,6 +88,17 @@ class Exposure:
 
     time_source: str = "unknown"
     time_assumptions: list[str] = field(default_factory=list)
+    flags_available: bool = True
+    provenance: dict = field(default_factory=dict)
+    calibration: object | None = field(default=None, repr=False)
+    epsf_data: object | None = field(default=None, repr=False)
+    epsf_header: fits.Header | None = field(default=None, repr=False)
+
+    @property
+    def wavelength_source(self) -> str:
+        if self.calibration is not None:
+            return "cwave_cband"
+        return "spectral_wcs" if self.wave_wcs is not None else "approximate_detector_position"
 
     # ---------- геометрия ----------
     @property
@@ -112,6 +123,8 @@ class Exposure:
     # ---------- длина волны ----------
     def wavelength_at(self, x: float, y: float) -> tuple[float, float]:
         """Центральная длина волны и ширина полосы (мкм) в пикселе (x, y)."""
+        if self.calibration is not None:
+            return self.calibration.wavelength_at(self, x, y)
         if self.wave_wcs is None:
             lo, hi, _ = DETECTOR_BANDS[self.detector]
             return 0.5 * (lo + hi), hi - lo  # грубая оценка: середина диапазона детектора
@@ -123,6 +136,11 @@ class Exposure:
 
     def wave_map(self) -> np.ndarray:
         """λ (мкм) для каждого пикселя. Тяжело для 2040x2040 — вызывать только на вырезках."""
+        if self.calibration is not None:
+            from .calibration import parent_pixel, sample
+            y,x = np.indices(self.shape)
+            px,py = parent_pixel(self,x,y)
+            return sample(self.calibration.cwave,px,py).astype(np.float32)
         if self.wave_wcs is None:
             lo, hi, _ = DETECTOR_BANDS[self.detector]
             return np.full(self.shape, 0.5 * (lo + hi), dtype=np.float32)

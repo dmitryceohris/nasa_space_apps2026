@@ -94,15 +94,17 @@ def test_spectrum_job_202_then_200_and_lightcurve(monkeypatch, tmp_path):
         time.sleep(0.05)
     assert r.status_code == 200 and r.json()["n_points"] == 3 and "v" not in r.json()
     lc = c.get("/api/lightcurve?ra=33.3&dec=44.4&wave_min=1.9&wave_max=2.2").json()
-    assert lc["wave_window_um"] == [1.9, 2.2] and [p["mjd"] for p in lc["points"]] == [60000.0, 60100.0]
+    assert lc["wave_window_um"] == [1.9, 2.2]
+    assert [p["mjd"] for p in lc["diagnostic_points"]] == [60000.0, 60100.0]
+    assert lc["points"] == [] and lc["dates"] == []
     # flat arrays the frontend plots directly (frontend/index.html: d.dates / d.flux / d.flux_err)
-    assert lc["dates"] == ["2023-02-25", "2023-06-05"] and lc["flux"] == [5.0, 5.0] and lc["flux_err"] == [1.0, 1.0]
+    assert lc["dates"] == [] and lc["flux"] == [] and lc["flux_err"] == []
 
 
 def test_spectrum_flat_arrays_keep_only_reliable_points():
     from processing.pipeline import _good
 
-    pts = [{"wave_um": 1.0, "flux_ujy": 2.0, "err_ujy": 0.1, "ok": True},
+    pts = [{"wave_um": 1.0, "flux_ujy": 2.0, "err_ujy": 0.1, "ok": True, "validation":{"status":"validated"}},
            {"wave_um": 1.1, "flux_ujy": 9.0, "err_ujy": 0.1, "ok": False},   # saturated: not plotted
            {"wave_um": 1.2, "flux_ujy": None, "err_ujy": None, "ok": True}]
     assert [p["wave_um"] for p in _good(pts)] == [1.0]

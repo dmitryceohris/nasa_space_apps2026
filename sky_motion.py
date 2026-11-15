@@ -43,7 +43,9 @@ OBSERVATION_COLUMNS = (
     "coverage_margin_arcsec", "quality_status", "assumptions", "access_url", "cutout_url",
 )
 COMMON_ASSUMPTIONS = ("geocenter_geometric", "no_aberration", "no_new_covariance")
-BAD_FLAGS = {"OVERFLOW", "NONLINEAR", "SUR_ERROR", "NONFUNC", "MISSING_DATA", "HOT", "COLD"}
+BAD_FLAGS = {"TRANSIENT", "OVERFLOW", "SUR_ERROR", "NONFUNC", "DICHROIC", "MISSING_DATA", "HOT", "COLD",
+             "PHANMISS", "NONLINEAR", "PERSIST", "OUTLIER", "CROSSTALK", "GHOST", "GHOST_FPA", "GHOST_EXT",
+             "STREAK", "BLOOM", "SNOWBALL", "HALO", "SATELLITE_HALO"}
 
 
 @dataclass(frozen=True)

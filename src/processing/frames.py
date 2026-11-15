@@ -178,7 +178,7 @@ def coadd(exps: list[Exposure], wcs: WCS, shape, center: SkyCoord) -> Frame | No
                 waves.append(wave)
             samples.append({"obs_id": e.obs_id, "wave_um": float(wave) if np.isfinite(wave) else None,
                             "bw_um": float(width) if np.isfinite(width) else None,
-                            "source": "spectral_wcs" if e.wave_wcs is not None else "approximate_detector_position"})
+                            "source": e.wavelength_source})
         used.append(e)
     if not used:
         return None

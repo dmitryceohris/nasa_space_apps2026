@@ -73,12 +73,16 @@ def exposure_from_hdul(hdul: fits.HDUList, source: str = "", *,
     zodi_hdu = _find_hdu(hdul, "ZODI")
 
     image = np.asarray(img_hdu.data, dtype=np.float32)
+    if image.ndim != 2:
+        raise ValueError(f"{source}: IMAGE must be two-dimensional")
     if var_hdu is None:  # without variance every pixel would be marked bad and the frame silently empty
         raise ValueError(f"{source}: нет расширения VARIANCE — без дисперсии нельзя маскировать и взвешивать пиксели")
     variance = np.asarray(var_hdu.data, dtype=np.float32)
     flags = (np.asarray(flags_hdu.data, dtype=np.int32) if flags_hdu is not None
              else np.zeros(image.shape, dtype=np.int32))
     zodi = np.asarray(zodi_hdu.data, dtype=np.float32) if zodi_hdu is not None else None
+    if any(a is not None and a.shape != image.shape for a in (variance, flags, zodi)):
+        raise ValueError(f"{source}: IMAGE/FLAGS/VARIANCE/ZODI shape mismatch")
 
     hdr = img_hdu.header
     headers = [hdr, hdul[0].header]
@@ -99,7 +103,8 @@ def exposure_from_hdul(hdul: fits.HDUList, source: str = "", *,
             log.setLevel(old_level)
 
     mjd, time_source, time_assumptions = _read_time_info(headers, mjd_hint)
-    return Exposure(
+    epsf_hdu = _find_hdu(hdul, "EPSF")
+    exp = Exposure(
         image=image, variance=variance, flags=flags, zodi=zodi,
         wcs=wcs, wave_wcs=wave_wcs,
         detector=_read_detector(headers, source),
@@ -107,7 +112,15 @@ def exposure_from_hdul(hdul: fits.HDUList, source: str = "", *,
         obs_id=str(hdr.get("OBSID", hdul[0].header.get("OBSID", obs_id_hint))),
         flag_bits=parse_flag_bits(flags_hdu.header) if flags_hdu is not None else {},
         source=source, header=hdr,
+        flags_available=flags_hdu is not None,
+        epsf_data=epsf_hdu.data.copy() if epsf_hdu is not None else None,
+        epsf_header=epsf_hdu.header.copy() if epsf_hdu is not None else None,
     )
+    from processing.observations import product_record
+    from .calibration import attach_registered_calibration
+    exp.provenance = product_record(source, obs_id=exp.obs_id, detector=exp.detector)
+    exp.provenance["pipeline_version"] = str(hdul[0].header.get("VERSION", "unknown"))
+    return attach_registered_calibration(exp, exp.provenance["pipeline_version"])
 
 
 # Общий на весь процесс лимит одновременных загрузок с IRSA. При ~12 параллельных запросах
@@ -137,11 +150,16 @@ def _download(url: str, cache: bool, timeout: float, retries: int = 5) -> str:
 
 
 def load_exposure(path_or_url: str, *, mjd_hint: float | None = None,
-                  obs_id_hint: str = "", cache: bool = True, timeout: float = 60) -> Exposure:
+                  obs_id_hint: str = "", cache: bool = True, timeout: float = 60,
+                  product_url: str | None = None) -> Exposure:
     """Открывает локальный файл или URL (URL кэшируется на диске средствами astropy)."""
     src = path_or_url
     if path_or_url.startswith(("http://", "https://")):
         src = _download(path_or_url, cache, timeout)
     with fits.open(src, memmap=False) as hdul:
-        return exposure_from_hdul(hdul, source=path_or_url,
-                                  mjd_hint=mjd_hint, obs_id_hint=obs_id_hint)
+        exp = exposure_from_hdul(hdul, source=product_url or path_or_url,
+                                 mjd_hint=mjd_hint, obs_id_hint=obs_id_hint)
+    import hashlib
+    from pathlib import Path
+    exp.provenance["file_sha256"] = hashlib.sha256(Path(src).read_bytes()).hexdigest()
+    return exp

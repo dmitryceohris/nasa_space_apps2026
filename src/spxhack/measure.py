@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import numpy as np
+from scipy.stats import chi2
 from astropy import units as u
 from astropy.coordinates import SkyCoord, get_body_barycentric
 from astropy.time import Time
@@ -89,14 +90,19 @@ def windowed_centroid(img, x0: float, y0: float, r: float = WINDOW_R, iters: int
 
 
 # ------------------------------------------------------------------ annual parallax
-def parallax_offset(ra_deg, dec_deg, mjd, parallax_mas) -> np.ndarray:
+def parallax_offset(ra_deg, dec_deg, mjd, parallax_mas, *, observer_barycentric_au=None) -> np.ndarray:
     """Shift (arcsec, [east, north]) of the geocentric position relative to the barycentric one.
     Standard parallax factors with the Earth's barycentric position (astropy built-in ephemeris).
-    SPHEREx is in low Earth orbit: its own offset from the geocentre is ~1e-5 of this, neglected."""
+    Supply observer_barycentric_au for a verified spacecraft observer; otherwise this is explicitly geocentric."""
     if not parallax_mas:
         return np.zeros((np.size(mjd), 2)).squeeze()
     t = Time(np.atleast_1d(mjd), format="mjd", scale="utc")
-    e = get_body_barycentric("earth", t).xyz.to_value(u.au)  # (3, N), ICRS axes
+    if observer_barycentric_au is None:
+        e = get_body_barycentric("earth", t).xyz.to_value(u.au)
+    else:
+        observer=np.asarray(observer_barycentric_au,float)
+        if observer.size!=3*len(t) or not np.isfinite(observer).all(): raise ValueError("invalid observer positions")
+        e=observer.reshape(-1,3).T
     a, d = np.radians(ra_deg), np.radians(dec_deg)
     p = parallax_mas / 1000
     east = p * (e[0] * np.sin(a) - e[1] * np.cos(a))
@@ -166,7 +172,8 @@ class Track:
         return f"Track({self.target.name!r}, {n}/{len(self.rows)} epochs measured)"
 
 
-def track(st: Stack, diff: bool = False, assoc_px: float = ASSOC_PX, assist: bool = False) -> Track:
+def track(st: Stack, diff: bool = False, assoc_px: float = ASSOC_PX, assist: bool = False,
+          *, reference_catalog=None) -> Track:
     """Measures the target in every epoch of the stack.
 
     Default (same rule as /api/view): the position is taken only when the frame has one unambiguous object
@@ -182,6 +189,9 @@ def track(st: Stack, diff: bool = False, assoc_px: float = ASSOC_PX, assist: boo
     fitted from them is not independent of the catalogue.
     diff=True measures the '+' residual of the difference frames instead of the coadds."""
     from .stack import diff as _diff
+    if not diff and not assist and st.exposures and all(e.epsf_data is not None and e.calibration is not None for e in st.exposures):
+        from .native import native_track
+        return native_track(st.exposures,st.target,reference_catalog=reference_catalog)
 
     imgs = _diff(st) if diff else st.cube
     has_model = bool(st.target.pmra or st.target.pmdec or st.target.parallax)
@@ -216,6 +226,7 @@ def track(st: Stack, diff: bool = False, assoc_px: float = ASSOC_PX, assist: boo
                "err_arcsec": None, "quality": quality if xy is not None else None, "flags": flags if xy else [],
                "pred_xy": pred, "pred_x": pred[0] if pred else None, "pred_y": pred[1] if pred else None,
                "offset_px": None}
+        row["astrometry_validation"]={"status":"provisional","reasons":["resampled_centroid","independent_registration_missing"],"checks":{}}
         if xy is not None:
             ra, dec = st.radec(*xy)
             row.update(x=xy[0], y=xy[1], err_x=err[0], err_y=err[1], ra=float(ra), dec=float(dec),
@@ -250,6 +261,8 @@ class Motion:
     residuals_arcsec: np.ndarray
     used_indices: list[int]
     warnings: list[str] = field(default_factory=list)
+    covariance: np.ndarray | None = None
+    validation: dict = field(default_factory=dict)
     method: str = ("взвешенный МНК по положениям эпох: позиция + собственное движение "
                    "(+ годичный параллакс, если задан или подгоняется)")
 
@@ -274,7 +287,8 @@ class Motion:
 
 
 def fit_motion(tr: Track, parallax: str = "auto", include_poor: bool = False,
-               include_assisted: bool = False) -> Motion:
+               include_assisted: bool = False, *, covariance_arcsec2=None,
+               observer_barycentric_au=None, parallax_error_mas=None) -> Motion:
     """Proper motion from the measured positions of a Track.
 
     Model per axis: offset(t) = p0 + mu*(t - t_mean) + plx * P(t), P = parallax factors.
@@ -310,7 +324,7 @@ def fit_motion(tr: Track, parallax: str = "auto", include_poor: bool = False,
     if mode not in ("catalog", "none", "fit"):
         raise ValueError("parallax: 'auto', 'catalog', 'none' или 'fit'")
 
-    pf = parallax_offset(ra0, dec0, mjd, 1000.0)  # (N, 2) shift for a 1-arcsec parallax
+    pf = parallax_offset(ra0, dec0, mjd, 1000.0, observer_barycentric_au=observer_barycentric_au)
     pf = pf.reshape(len(rows), 2)
     if mode == "catalog":
         east = east - pf[:, 0] * plx_known / 1000
@@ -325,13 +339,27 @@ def fit_motion(tr: Track, parallax: str = "auto", include_poor: bool = False,
     if mode == "fit":
         A[:n, 4], A[n:, 4] = pf[:, 0], pf[:, 1]
     b = np.concatenate([east, north])
-    w = np.concatenate([1 / sig, 1 / sig])
-    Aw, bw = A * w[:, None], b * w
+    C = np.diag(np.tile(sig**2,2)) if covariance_arcsec2 is None else np.asarray(covariance_arcsec2,float).copy()
+    # Matrix ordering is [east_0..east_N, north_0..north_N].
+    if covariance_arcsec2 is None:
+        for i,row in enumerate(rows):
+            if row.get("covariance_arcsec2") is not None:
+                C[np.ix_([i,i+n],[i,i+n])]=row["covariance_arcsec2"]
+    if C.shape!=(2*n,2*n) or not np.isfinite(C).all() or not np.allclose(C,C.T):
+        raise ValueError("invalid astrometric covariance")
+    plx_err = getattr(tr.target,"parallax_error_mas",None) if parallax_error_mas is None else parallax_error_mas
+    if plx_err is not None and (not np.isfinite(plx_err) or plx_err<0): raise ValueError("invalid parallax uncertainty")
+    if mode=="catalog" and plx_err is not None:
+        factors=np.r_[pf[:,0],pf[:,1]]
+        C+=np.outer(factors,factors)*(plx_err/1000)**2
+    L=np.linalg.cholesky(C)
+    Aw,bw=np.linalg.solve(L,A),np.linalg.solve(L,b)
+    if np.linalg.matrix_rank(Aw)<ncol: raise ValueError("degenerate motion/parallax geometry")
     sol, *_ = np.linalg.lstsq(Aw, bw, rcond=None)
-    cov = np.linalg.pinv(Aw.T @ Aw)
+    cov = np.linalg.inv(Aw.T @ Aw)
     res = b - A @ sol
     dof = 2 * n - ncol
-    chi2_red = float(np.sum((res * w) ** 2) / dof) if dof > 0 else None
+    chi2_red = float(np.sum(np.linalg.solve(L,res)**2) / dof) if dof > 0 else None
     scaled = bool(chi2_red is not None and chi2_red > 1)
     if scaled:
         cov = cov * chi2_red
@@ -342,18 +370,31 @@ def fit_motion(tr: Track, parallax: str = "auto", include_poor: bool = False,
     pm = sol[2:4]
     pm_err = np.sqrt(np.diag(cov)[2:4])
     total = float(np.hypot(*pm))
-    total_err = float(np.sqrt((pm[0] * pm_err[0]) ** 2 + (pm[1] * pm_err[1]) ** 2) / total) if total > 0 else 0.0
+    total_err = float(np.sqrt(pm@cov[2:4,2:4]@pm)/total) if total>0 else 0.0
     pa = float(np.degrees(np.arctan2(pm[0], pm[1])) % 360)  # from north through east
     ref = diff = None
     if getattr(tr.target, "pmra", 0) or getattr(tr.target, "pmdec", 0):
         ref = np.array([tr.target.pmra, tr.target.pmdec]) / 1000
         diff = (pm - ref) / np.where(pm_err > 0, pm_err, np.nan)
+    from processing.validation import quality as _quality
+    checks={"unvalidated_astrometry":all(r.get("astrometry_validation",{}).get("status")=="validated" for r in rows),
+            "catalogue_assisted":not any(r["association"] in ASSISTED for r in rows),
+            "difference_centroids":not tr.diff,"observer_unverified":observer_barycentric_au is not None,
+            "cross_epoch_covariance_missing":covariance_arcsec2 is not None,
+            "parallax_uncertainty_missing":mode!="catalog" or plx_err is not None,
+            "unmodelled_parallax":mode!="none" or plx_known<=0,
+            "poor_motion_fit":dof>0 and float(chi2.sf(np.sum(np.linalg.solve(L,res)**2),dof))>=.001,
+            "insufficient_parallax_geometry":mode!="fit" or (
+                len(np.unique(np.floor(mjd)))>=6 and span>=1 and np.linalg.cond(Aw)<1e8
+                and len(np.unique(np.floor((mjd/365.25 % 1)*4)))>=3)}
+    validation=_quality(checks)
+    if validation["status"]!="validated": warn.append("Предварительное движение: "+", ".join(validation["reasons"]))
     return Motion(pm=pm, pm_err=pm_err, total=total, total_err=total_err, position_angle_deg=pa, n_epochs=n,
                   span_years=span, chi2_red=chi2_red, errors_scaled=scaled, parallax_mode=mode,
                   parallax_mas=float(sol[4] * 1000) if mode == "fit" else (plx_known if mode == "catalog" else None),
                   reference_pm=ref, difference_sigma=diff,
                   residuals_arcsec=np.stack([res[:n], res[n:]], axis=1), used_indices=[r["index"] for r in rows],
-                  warnings=warn)
+                  warnings=warn,covariance=cov,validation=validation)
 
 
 # ------------------------------------------------------------------ spectrum and light curve
@@ -364,7 +405,8 @@ class _Points:
         self.points = points
 
     def _arr(self, key, only_ok):
-        pts = [p for p in self.points if p.get("ok") or not only_ok]
+        from processing.validation import accepted
+        pts = [p for p in self.points if accepted(p) or not only_ok]
         return np.array([np.nan if p.get(key) is None else p[key] for p in pts], float)
 
     @property
@@ -386,7 +428,7 @@ class _Points:
 
 class Spectrum(_Points):
     """Spectrum points: wave_um, flux_ujy, err_ujy, ok (False = bad/saturated pixels in the aperture), det, mjd."""
-    method = PHOTOMETRY_METHOD
+    from processing.psf import PSF_METHOD as method
 
     def to_numpy(self, only_ok: bool = True) -> np.ndarray:
         """(N, 3): wavelength um, flux uJy, error uJy; only reliable points unless only_ok=False."""
@@ -440,7 +482,7 @@ def spectrum(exps: list[Exposure], where) -> Spectrum:
     return Spectrum(_spectrum(exps, lambda mjd: predict(t, mjd)))
 
 
-def lightcurve(spec: Spectrum, wave_min: float, wave_max: float) -> LightCurve:
+def lightcurve(spec: Spectrum, wave_min: float, wave_max: float, *, include_diagnostics: bool = False) -> LightCurve:
     """Points of the spectrum inside [wave_min, wave_max] um, sorted by time. A narrow window keeps the
     spectral shape from being mistaken for variability."""
-    return LightCurve(_light_curve(spec.points, wave_min, wave_max), wave_min, wave_max)
+    return LightCurve(_light_curve(spec.points, wave_min, wave_max, include_diagnostics=include_diagnostics), wave_min, wave_max)

@@ -78,11 +78,14 @@ def test_spherical_footprint_and_ra_wrap():
     assert sky.footprint_margin(region, SkyCoord(2 * u.deg, 0 * u.deg)) < 0
 
 
-@pytest.mark.parametrize("bad_name", ["OVERFLOW", "NONLINEAR", "NONFUNC", "MISSING_DATA"])
+@pytest.mark.parametrize("bad_name", ["OVERFLOW", "NONLINEAR", "NONFUNC", "MISSING_DATA", "PHANMISS", "DICHROIC", "SATELLITE_HALO"])
 def test_local_flags_use_product_bit_definitions(bad_name):
     # Deliberately use arbitrary bits, rather than the current archive bit numbers.
     definitions = {"MSKN0003": "OVERFLOW", "MSKN0007": "NONLINEAR", "MSKN0009": "NONFUNC", "MSKN0011": "MISSING_DATA",
                    "MSKN0000": "SUR_ERROR", "MSKN0002": "HOT", "MSKN0005": "COLD"}
+    unused=iter(i for i in range(32) if i not in {int(k[4:]) for k in definitions})
+    for name in sorted(sky.BAD_FLAGS-set(definitions.values())):
+        definitions[f'MSKN{next(unused):04d}']=name
     header = fits.Header(definitions)
     data = np.zeros((15, 15), dtype=np.uint32)
     data[0, 0] = 1 << 3  # A bad pixel outside the target region must not reject it.

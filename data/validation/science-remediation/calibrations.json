@@ -1,0 +1,102 @@
+{
+  "source": "IRSA DR1 release calibration inventory, accessed 2026-11-15",
+  "matching_policy": "explicit release and pipeline version; never inferred from observation date",
+  "calibrations": [
+    {
+      "detector": 1,
+      "releases": [
+        "dr1",
+        "qr3"
+      ],
+      "pipeline_versions": [
+        "7.0.5"
+      ],
+      "wave_file": "spectral_wcs_D1_spx_cal-swcs-v5-2026-191.fits",
+      "wave_url": "https://nasa-irsa-spherex.s3.us-east-1.amazonaws.com/dr1/spectral_wcs/cal-swcs-v5-2026-191/1/spectral_wcs_D1_spx_cal-swcs-v5-2026-191.fits",
+      "wave_sha256": "44fb48b236e25a99d42c8986da0064cc58359527e1fc76e182eda52371a1ae23",
+      "solid_angle_file": "solid_angle_pixel_map_D1_spx_cal-sapm-v3-2026-191.fits",
+      "solid_angle_url": "https://nasa-irsa-spherex.s3.us-east-1.amazonaws.com/dr1/solid_angle_pixel_map/cal-sapm-v3-2026-191/1/solid_angle_pixel_map_D1_spx_cal-sapm-v3-2026-191.fits",
+      "solid_angle_sha256": "f2439d694c68766d0c488af6f051924aea886c2c015af80f10dc5f760a0aa193"
+    },
+    {
+      "detector": 2,
+      "releases": [
+        "dr1",
+        "qr3"
+      ],
+      "pipeline_versions": [
+        "7.0.5"
+      ],
+      "wave_file": "spectral_wcs_D2_spx_cal-swcs-v5-2026-191.fits",
+      "wave_url": "https://nasa-irsa-spherex.s3.us-east-1.amazonaws.com/dr1/spectral_wcs/cal-swcs-v5-2026-191/2/spectral_wcs_D2_spx_cal-swcs-v5-2026-191.fits",
+      "wave_sha256": "0eb4e27f351e6161e21372818f9e811480a7ab8bab9295722f180791e151a463",
+      "solid_angle_file": "solid_angle_pixel_map_D2_spx_cal-sapm-v3-2026-191.fits",
+      "solid_angle_url": "https://nasa-irsa-spherex.s3.us-east-1.amazonaws.com/dr1/solid_angle_pixel_map/cal-sapm-v3-2026-191/2/solid_angle_pixel_map_D2_spx_cal-sapm-v3-2026-191.fits",
+      "solid_angle_sha256": "231bcdab0aa31d0ee9c9349b10e6c871070bf3ed860b7dc799745c0f9d1c8bc0"
+    },
+    {
+      "detector": 3,
+      "releases": [
+        "dr1",
+        "qr3"
+      ],
+      "pipeline_versions": [
+        "7.0.5"
+      ],
+      "wave_file": "spectral_wcs_D3_spx_cal-swcs-v5-2026-191.fits",
+      "wave_url": "https://nasa-irsa-spherex.s3.us-east-1.amazonaws.com/dr1/spectral_wcs/cal-swcs-v5-2026-191/3/spectral_wcs_D3_spx_cal-swcs-v5-2026-191.fits",
+      "wave_sha256": "51750c8f948a30541d391e54930279aa067c62c398a7cc2679e592bc6044427a",
+      "solid_angle_file": "solid_angle_pixel_map_D3_spx_cal-sapm-v3-2026-191.fits",
+      "solid_angle_url": "https://nasa-irsa-spherex.s3.us-east-1.amazonaws.com/dr1/solid_angle_pixel_map/cal-sapm-v3-2026-191/3/solid_angle_pixel_map_D3_spx_cal-sapm-v3-2026-191.fits",
+      "solid_angle_sha256": "4c731f195020b227ae05afc38463d30a0d18cab5a3786bc7af0bd49c46f87ea5"
+    },
+    {
+      "detector": 4,
+      "releases": [
+        "dr1",
+        "qr3"
+      ],
+      "pipeline_versions": [
+        "7.0.5"
+      ],
+      "wave_file": "spectral_wcs_D4_spx_cal-swcs-v5-2026-191.fits",
+      "wave_url": "https://nasa-irsa-spherex.s3.us-east-1.amazonaws.com/dr1/spectral_wcs/cal-swcs-v5-2026-191/4/spectral_wcs_D4_spx_cal-swcs-v5-2026-191.fits",
+      "wave_sha256": "dbdcb8addb4ffe817f31786c8cb359b1f47df3528173e9d4602b94c84f7d7c1a",
+      "solid_angle_file": "solid_angle_pixel_map_D4_spx_cal-sapm-v3-2026-191.fits",
+      "solid_angle_url": "https://nasa-irsa-spherex.s3.us-east-1.amazonaws.com/dr1/solid_angle_pixel_map/cal-sapm-v3-2026-191/4/solid_angle_pixel_map_D4_spx_cal-sapm-v3-2026-191.fits",
+      "solid_angle_sha256": "b5ede34463ab365ce4b97fdb10a98eba85c8d628141e7e6df1b3e84d50831204"
+    },
+    {
+      "detector": 5,
+      "releases": [
+        "dr1",
+        "qr3"
+      ],
+      "pipeline_versions": [
+        "7.0.5"
+      ],
+      "wave_file": "spectral_wcs_D5_spx_cal-swcs-v5-2026-191.fits",
+      "wave_url": "https://nasa-irsa-spherex.s3.us-east-1.amazonaws.com/dr1/spectral_wcs/cal-swcs-v5-2026-191/5/spectral_wcs_D5_spx_cal-swcs-v5-2026-191.fits",
+      "wave_sha256": "3361428284bddad1dcdce42081ebfbd225acb0b19f6caa94fba3e133bbabfc1c",
+      "solid_angle_file": "solid_angle_pixel_map_D5_spx_cal-sapm-v3-2026-191.fits",
+      "solid_angle_url": "https://nasa-irsa-spherex.s3.us-east-1.amazonaws.com/dr1/solid_angle_pixel_map/cal-sapm-v3-2026-191/5/solid_angle_pixel_map_D5_spx_cal-sapm-v3-2026-191.fits",
+      "solid_angle_sha256": "1081fd45e39f96297589e9c4f8cec4fd212c081798fb62886dbb9607b8c865e2"
+    },
+    {
+      "detector": 6,
+      "releases": [
+        "dr1",
+        "qr3"
+      ],
+      "pipeline_versions": [
+        "7.0.5"
+      ],
+      "wave_file": "spectral_wcs_D6_spx_cal-swcs-v5-2026-191.fits",
+      "wave_url": "https://nasa-irsa-spherex.s3.us-east-1.amazonaws.com/dr1/spectral_wcs/cal-swcs-v5-2026-191/6/spectral_wcs_D6_spx_cal-swcs-v5-2026-191.fits",
+      "wave_sha256": "19195d253892883586aa2183cb66238b32f6032ade62d490b36b85b0dd18f212",
+      "solid_angle_file": "solid_angle_pixel_map_D6_spx_cal-sapm-v3-2026-191.fits",
+      "solid_angle_url": "https://nasa-irsa-spherex.s3.us-east-1.amazonaws.com/dr1/solid_angle_pixel_map/cal-sapm-v3-2026-191/6/solid_angle_pixel_map_D6_spx_cal-sapm-v3-2026-191.fits",
+      "solid_angle_sha256": "0986595851aab50dcc984b2d2f1c66a57d7726c5996368ed449bf89cf44346f7"
+    }
+  ]
+}

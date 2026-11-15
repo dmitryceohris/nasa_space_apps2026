@@ -15,6 +15,7 @@ from .frames import (BACKGROUND_METHOD, DIFF_METHOD, Frame, coadd, difference, g
                      spectral_sampling, trail)
 from .photometry import PHOTOMETRY_METHOD, light_curve, spectrum
 from .targets import Target
+from .validation import accepted
 
 Progress = Callable[[str, int, int, str], None]  # (stage, done, total, message)
 CREDITS = "NASA SPHEREx via NASA/IPAC IRSA"
@@ -139,7 +140,7 @@ def build_spectrum(center: SkyCoord, coord_at: Callable[[float], SkyCoord], per_
         warnings.append(f"Не удалось загрузить {len(rows) - len(exps)} из {len(rows)} экспозиций")
     if len(pts) < len(exps):
         warnings.append(f"Для {len(exps) - len(pts)} экспозиций нет пригодного покрытия апертуры/фонового кольца")
-    if any(p["wavelength_source"] != "spectral_wcs" for p in pts):
+    if any(p["wavelength_source"] not in ("spectral_wcs", "cwave_cband") for p in pts):
         warnings.append("Длина волны части точек приблизительна: спектральный WCS недоступен")
     if not rows:
         warnings.append("По этим параметрам нет доступных кадров в ответе архива")
@@ -149,12 +150,17 @@ def build_spectrum(center: SkyCoord, coord_at: Callable[[float], SkyCoord], per_
         warnings.append("Надёжных измерений для графика нет; проверьте покрытие, маски и флаги качества")
     state = ("no_archive_results" if not rows else "download_failed" if not exps else
              "unusable_data" if not good else "partial" if len(exps) < len(rows) else "available")
+    counts = {s:sum(p["validation"]["status"]==s for p in pts) for s in ("validated","provisional","rejected")}
     return {"status": "ready", "points": pts, "n_points": len(pts), "warnings": warnings,
+            "quality_counts": counts,
             "data_status": state, "exposure_counts": {"selected": len(rows), "downloaded": len(exps),
                                                         "with_measurements": len(pts), "reliable": len(good)},
             "cutout_size_deg": size_deg, "max_prediction_offset_arcsec": max_offset,
             "n_saturated": sum(1 for p in pts if {"OVERFLOW", "NONLINEAR"} & set(p["flags"])),
-            "n_flagged": sum(1 for p in pts if not p["ok"]), "credits": CREDITS, "method": PHOTOMETRY_METHOD,
+            "n_flagged": sum(1 for p in pts if not p["ok"]), "credits": CREDITS,
+            "method": {"name":"native_epsf_with_preliminary_aperture_fallback",
+                       "description":"Native ePSF measurements when calibrated; aperture diagnostics remain provisional",
+                       "limitations":PHOTOMETRY_METHOD["limitations"],"not_implemented":[]},
             "bands": {str(k): [v[0], v[1]] for k, v in DETECTOR_BANDS.items()},
             # плоские массивы только надёжных точек (ok): их напрямую рисует frontend/index.html
             "wavelength": [p["wave_um"] for p in good], "flux": [p["flux_ujy"] for p in good],
@@ -162,23 +168,34 @@ def build_spectrum(center: SkyCoord, coord_at: Callable[[float], SkyCoord], per_
 
 
 def _good(pts: list[dict]) -> list[dict]:
-    return [p for p in pts if p.get("ok") and p.get("flux_ujy") is not None]
+    return [p for p in pts if accepted(p)]
 
 
 def lightcurve_from_spectrum(spec: dict, wave_min: float, wave_max: float) -> dict:
     from astropy.time import Time
 
+    diagnostics = light_curve(spec["points"], wave_min, wave_max, include_diagnostics=True)
     pts = light_curve(spec["points"], wave_min, wave_max)
     good = _good(pts)
-    w = np.array([p["wave_um"] for p in good], float)
-    bw = np.array([p["bw_um"] for p in good if p.get("bw_um")], float)
+    w = np.array([p["wave_um"] for p in diagnostics if p.get("wave_um") is not None], float)
+    bw = np.array([p["bw_um"] for p in diagnostics if p.get("bw_um")], float)
     width = float(np.median(bw)) if bw.size else None
     mixed = bool(w.size > 1 and width and np.ptp(w) > width)
     lc_warn = []
     if mixed:
         lc_warn.append(f"Точки кривой блеска сняты в разных спектральных каналах ({w.min():.3f}–{w.max():.3f} мкм при "
                        f"ширине канала ≈ {width:.3f} мкм): изменение потока не доказывает переменность")
+    from .spectral import compatible_groups
+    groups = compatible_groups([p for p in diagnostics if accepted(p)])
+    series = [{"dates":[Time(p["mjd"],format="mjd").isot for p in g],
+               "flux":[p["flux_ujy"] for p in g],"flux_err":[p["err_ujy"] for p in g],
+               "obs_ids":[p["obs_id"] for p in g]} for g in groups]
+    if diagnostics and not groups:
+        lc_warn.append("Нет принятых измерений с подтверждённой сопоставимостью спектральных откликов")
     return {"status": "ready", "wave_window_um": [wave_min, wave_max], "points": pts,
+            "diagnostic_points": diagnostics,
+            "series":series,"spectral_comparison":{"status":"validated" if groups else "provisional",
+                                                       "n_groups":len(groups)},
             "spectral_sampling": {"wave_min_um": float(w.min()) if w.size else None,
                                   "wave_max_um": float(w.max()) if w.size else None,
                                   "channel_width_um": width, "different_channels": mixed},

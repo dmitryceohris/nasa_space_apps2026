@@ -30,6 +30,7 @@ class Stack:
     wcs: object
     target: Target
     params: dict = field(default_factory=dict)
+    exposures: list[Exposure] = field(default_factory=list,repr=False)
 
     # ---- arrays
     @cached_property
@@ -118,12 +119,12 @@ def stack(exps: list[Exposure], where=None, fov: float = 3.0, gap: float = GAP_D
     frames, wcs, shape = frames_from_exposures(exps, t.at(mjd), fov, gap, max_span)
     wcs.pixel_shape = (shape[1], shape[0])
     return Stack(frames, wcs, t, {"fov_arcmin": fov, "gap_days": gap, "max_span_days": max_span,
-                                  "n_exposures": len(exps), "center_mjd": mjd})
+                                  "n_exposures": len(exps), "center_mjd": mjd},exposures=list(exps))
 
 
 def diff(st: Stack, info: bool = False):
-    """(N, H, W) difference frames in sigma units: each epoch minus the median of the OTHER epochs, noise
-    renormalised so that 1 = 1 sigma. Red/positive = brighter now, negative = was here before.
+    """(N, H, W) difference frames in robust residual units, not calibrated statistical sigma.
+    Each epoch minus the median of the OTHER epochs. Positive = brighter now.
     info=True -> (cube, {noise_scale, template, method})."""
     if st._diff is None:
         raise ValueError("для разности нужно минимум 2 эпохи")
@@ -152,7 +153,7 @@ def save(st: Stack, out_dir, url_prefix: str = ".") -> dict:
 
 def to_fits(st: Stack, path, what: str = "coadd", overwrite: bool = False) -> Path:
     """FITS cube with the celestial WCS, for DS9 / Aladin / astropy.
-    HDUs: PRIMARY (N, H, W) image (what='coadd') or difference in sigma (what='diff'), VARIANCE, FLAGS (uint8),
+    HDUs: PRIMARY image or robust normalized difference, native coadd VARIANCE, FLAGS,
     EPOCHS table (index, mjd, mjd_min, mjd_max, wave_um, n_exp)."""
     from astropy.io import fits
     from astropy.table import Table
@@ -161,13 +162,19 @@ def to_fits(st: Stack, path, what: str = "coadd", overwrite: bool = False) -> Pa
         raise ValueError("what: 'coadd' или 'diff'")
     data = st.cube if what == "coadd" else diff(st)
     hdr = st.wcs.to_header()
-    hdr["BUNIT"] = "MJy/sr" if what == "coadd" else "sigma"
+    hdr["BUNIT"] = "MJy/sr" if what == "coadd" else "1"
+    if what == "diff":
+        hdr["DIFFUNIT"] = "robust_residual_scale"
+        hdr["HISTORY"] = "Not calibrated statistical significance; VARIANCE is the coadd variance."
     hdr["CONTENT"] = (what, "coadd image or diff vs other epochs")
     hdr["OBJECT"] = st.target.name
     hdr["ORIGIN"] = "spxhack (NASA SPHEREx via NASA/IPAC IRSA)"
     hdr["DATE"] = Time.now().isot[:19]
     prim = fits.PrimaryHDU(data.astype(np.float32), header=hdr)
-    var = fits.ImageHDU(st.variance.astype(np.float32), header=st.wcs.to_header(), name="VARIANCE")
+    vh = st.wcs.to_header()
+    vh["BUNIT"] = "(MJy/sr)^2"
+    vh["VARTYPE"] = ("COADD", "Variance of coadd, not normalized difference")
+    var = fits.ImageHDU(st.variance.astype(np.float32), header=vh, name="VARIANCE")
     flg = fits.ImageHDU(st.flags.astype(np.uint8), header=st.wcs.to_header(), name="FLAGS")
     tab = Table({"index": np.arange(len(st)), "mjd": st.mjd,
                  "mjd_min": [f.mjd_min for f in st.frames], "mjd_max": [f.mjd_max for f in st.frames],
