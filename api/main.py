@@ -94,16 +94,20 @@ def resolve_ep(target: str):
 
 @app.get("/api/view")
 def view(target: str | None = None, ra: str | None = None, dec: str | None = None, fov: str | None = None,
-         det: str | None = None, mode: str | None = None, max_per_epoch: str | None = None):
-    status, payload = jobs.view(_p(target, ra, dec, fov, det, mode, max_per_epoch))
+         det: str | None = None, mode: str | None = None, max_per_epoch: str | None = None, snapshot: str | None = None):
+    p = _p(target, ra, dec, fov, det, mode, max_per_epoch)
+    if snapshot:
+        return jobs.snapshot_result(p, snapshot)
+    status, payload = jobs.view(p)
     return JSONResponse(payload, status_code=status)
 
 
 @app.get("/api/export.gif")
 def export_gif(target: str | None = None, ra: str | None = None, dec: str | None = None, fov: str | None = None,
-               det: str | None = None, mode: str | None = None, max_per_epoch: str | None = None):
+               det: str | None = None, mode: str | None = None, max_per_epoch: str | None = None, snapshot: str | None = None):
     """GIF from already rendered frames. 409 if /api/view has not produced them yet."""
-    return Response(jobs.gif(_p(target, ra, dec, fov, det, mode, max_per_epoch)), media_type="image/gif")
+    p = _p(target, ra, dec, fov, det, mode, max_per_epoch)
+    return Response(jobs.gif(p, snapshot) if snapshot else jobs.gif(p), media_type="image/gif")
 
 
 @app.get("/api/spectrum")
@@ -146,7 +150,16 @@ def dev_redirect():
     return RedirectResponse("/dev/")
 
 
-app.mount("/cache", StaticFiles(directory=cache.CACHE), name="cache")
+if os.environ.get("SPHEREX_DATABASE_URL"):
+    @app.get("/cache/{key}/{filename}", include_in_schema=False)
+    def stored_image(key: str, filename: str):
+        from . import postgres
+        data = postgres.read_image(key, filename)
+        if data is None:
+            raise ApiError(404, "not_found", "Кадр не найден")
+        return Response(data, media_type="image/png")
+else:
+    app.mount("/cache", StaticFiles(directory=cache.CACHE), name="cache")
 # "/" is the team's frontend (frontend/index.html, same origin as the API, so one link for the demo);
 # the API developer's test page stays available at /dev/.
 app.mount("/dev", StaticFiles(directory=_ROOT / "static", html=True), name="dev")

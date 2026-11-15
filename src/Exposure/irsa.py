@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import os
 import warnings
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -34,6 +35,14 @@ class _ArchiveSession(requests.Session):
         return super().request(method, url, **kwargs)
 
 
+def archive_collections():
+    value = os.environ.get("SPHEREX_COLLECTIONS", ",".join(DEFAULT_COLLECTIONS))
+    collections = tuple(dict.fromkeys(c.strip() for c in value.split(",") if c.strip()))
+    if not collections:
+        raise ValueError("SPHEREX_COLLECTIONS must name at least one IRSA collection")
+    return collections
+
+
 def _query_sia(coord, collections):
     for attempt in range(3):
         try:
@@ -50,12 +59,13 @@ def _query_sia(coord, collections):
 
 
 def query_spherex(coord: SkyCoord, *, detector: int | None = None,
-                  collections=DEFAULT_COLLECTIONS):
+                  collections=None):
     """Все спектральные снимки SPHEREx, покрывающие точку `coord`.
 
     Возвращает astropy Table со столбцами SIA (access_url, obs_id, t_min, t_max,
     energy_bandpassname, ...) + добавленными detector и mjd, отсортированную по времени.
     """
+    collections = archive_collections() if collections is None else tuple(collections)
     tbl = _query_sia(coord, collections)
     if len(tbl) == 0:
         return tbl
@@ -123,7 +133,7 @@ def download_rows(rows, coord: SkyCoord, size_deg: float, *, workers: int = 6,
 
 def fetch_exposures(coord: SkyCoord, size_deg: float = 0.1, *, detector: int | None = None,
                     max_files: int | None = None, workers: int = 6,
-                    collections=DEFAULT_COLLECTIONS) -> list[Exposure]:
+                    collections=None) -> list[Exposure]:
     """Ищет снимки и скачивает ВЫРЕЗКИ (не полные 70-МБ файлы). Сбойные загрузки пропускает."""
     tbl = query_spherex(coord, detector=detector, collections=collections)
     if max_files is not None:

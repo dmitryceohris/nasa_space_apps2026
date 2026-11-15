@@ -19,6 +19,8 @@ from astropy.io import ascii, fits
 from astropy.io.fits.verify import VerifyError
 from astropy.io.votable import parse_single_table
 
+from Exposure.irsa import archive_collections
+
 from .cache import CACHE
 from .errors import ApiError
 
@@ -27,7 +29,7 @@ IRSA = "https://irsa.ipac.caltech.edu"
 SEM = threading.BoundedSemaphore(6)  # at most 6 simultaneous requests to IRSA for the whole server
 _tap_probe_lock = threading.Lock()
 _tap_retry_at = 0.0
-SIA_LIMITATION = "Поиск выполнен через IRSA SIA2 (DR1/QR3): новые наблюдения могут появляться примерно на сутки позже TAP"
+SIA_LIMITATION = "Поиск выполнен через IRSA SIA2 (текущие коллекции): новые наблюдения могут появляться примерно на сутки позже TAP"
 warnings.filterwarnings("ignore")
 
 
@@ -119,8 +121,9 @@ class ExposureRows(list):
 
 
 def _sia_exposures(ra, dec, det):
+    collections = archive_collections()
     response = _send("GET", f"{IRSA}/SIA", params={
-        "POS": f"CIRCLE {ra} {dec} 0", "COLLECTION": ["spherex_dr1", "spherex_qr3"],
+        "POS": f"CIRCLE {ra} {dec} 0", "COLLECTION": list(collections),
         "DPTYPE": "image", "MAXREC": "10000",
     })
     try:
@@ -134,7 +137,7 @@ def _sia_exposures(ra, dec, det):
         table = document.get_first_table().to_table(use_names_over_ids=True)
         rows, seen = [], set()
         # DR1 takes priority over duplicate QR3 entries, matching the Python library.
-        rank = {"spherex_dr1": 0, "spherex_qr3": 1}
+        rank = {collection: i for i, collection in enumerate(collections)}
         for row in sorted(table, key=lambda r: rank.get(str(r["obs_collection"]), 99)):
             if str(row["energy_bandpassname"]) != f"SPHEREx-D{det}":
                 continue
@@ -155,7 +158,8 @@ def _sia_exposures(ra, dec, det):
 
 def _tap_exposures(ra, dec, det):
     global _tap_retry_at
-    f = CACHE / f"exp_{ra:.3f}_{dec:.3f}_d{det}.json"
+    release = hashlib.sha256(",".join(archive_collections()).encode()).hexdigest()[:12]
+    f = CACHE / f"exp_{ra:.3f}_{dec:.3f}_d{det}_{release}.json"
     try:
         saved = json.loads(f.read_text())
         if isinstance(saved, dict):

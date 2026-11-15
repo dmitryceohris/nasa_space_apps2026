@@ -27,6 +27,7 @@
 </head>
 <body>
 <h2>SPHEREx Sky Viewer</h2>
+<p><a style="color:#8fd7ff" href="/challenge-demo/">Five targets · saved GIF gallery</a></p>
 
 <!-- INPUT -->
 <div class="row">
@@ -47,6 +48,14 @@
     <option>4</option><option>5</option><option>6</option></select>
   </label>
 </div>
+
+<label>Image source
+  <select id="snapshot"><option value="">Latest IRSA</option><option value="2026-11-15">Saved observations · 15 Nov 2026</option></select>
+</label>
+<details id="share" hidden><summary>Share or embed this view</summary>
+  <label>View URL <input id="share-url" readonly style="width:100%"></label>
+  <label>Embed HTML <textarea id="share-html" readonly rows="3" style="width:100%;box-sizing:border-box"></textarea></label>
+</details>
 
 <!-- MODES -->
 <div class="row" id="modes"></div>
@@ -163,6 +172,7 @@ async function getFrames(ra, dec, fov, det, mode, my) {
   if (ra !== "" && dec !== "") { q.set("ra", ra); q.set("dec", dec); }
   else if (target) q.set("target", target);
   else throw new Error("Pick a test object or type a name or RA and Dec");
+  if ($("snapshot").value) q.set("snapshot", $("snapshot").value);
   const url = `${API}/api/view?${q}`;
 
   while (true) {                                   // ask again until the job is ready
@@ -410,10 +420,19 @@ function syncUrl() {
   const p = new URLSearchParams(location.search);   // keeps ?api= and ?mock=
   ["target", "ra", "dec"].forEach(k => $(k).value ? p.set(k, $(k).value) : p.delete(k));
   p.set("fov", $("fov").value); p.set("det", $("det").value); p.set("mode", mode);
+  $("snapshot").value ? p.set("snapshot", $("snapshot").value) : p.delete("snapshot");
   history.replaceState(null, "", "?" + p.toString());
+  const iframe = document.createElement("iframe");
+  iframe.src = location.href;
+  iframe.title = "SPHEREx Sky Viewer";
+  iframe.style.cssText = "width:100%;height:800px;border:0";
+  iframe.loading = "lazy";
+  $("share-url").value = iframe.src;
+  $("share-html").value = iframe.outerHTML;
 }
 function loadUrl() {
   const p = new URLSearchParams(location.search);
+  $("snapshot").value = p.get("snapshot") || "";
   $("target").value = p.get("target") || "";
   $("ra").value = p.get("ra") || "";
   $("dec").value = p.get("dec") || "";
@@ -438,6 +457,7 @@ async function update() {
   $("field-center").textContent = "";
   $("frame-quality").textContent = "";
   $("method").hidden = true;
+  $("share").hidden = true;
   if (!$("target").value.trim() && !$("ra").value.trim() && !$("dec").value.trim() && !USE_MOCK) {
     $("info").textContent = "Enter RA and Dec, an object name, or choose a test object.";
     return;
@@ -449,6 +469,7 @@ async function update() {
     plotMessage("Please enter both RA and Dec coordinates.");
     return;
   }
+  $("share").hidden = location.protocol === "file:";
   $("info").textContent = "Loading...";
   try {
     const f = await getFrames(ra, dec, $("fov").value, $("det").value, mode, my);
@@ -460,7 +481,7 @@ async function update() {
   }
 
 }
-["ra", "dec", "fov", "det"].forEach(id => $(id).onchange = update);
+["ra", "dec", "fov", "det", "snapshot"].forEach(id => $(id).onchange = update);
 $("target").onchange = () => { $("ra").value = ""; $("dec").value = ""; update(); };
 
 $("preset").onchange = () => {

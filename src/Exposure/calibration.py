@@ -94,6 +94,28 @@ def _registered_calibration(manifest_path, manifest_mtime, detector, release, pi
         return None
     row = candidates[0]
     wave, angle = path.parent / row["wave_file"], path.parent / row["solid_angle_file"]
+    if os.environ.get("SPHEREX_CALIBRATION_CACHE"):
+        import tempfile
+        import httpx
+        directory = Path(os.environ["SPHEREX_CALIBRATION_CACHE"])
+        directory.mkdir(exist_ok=True, parents=True)
+        wave, angle = directory / wave.name, directory / angle.name
+        for kind, dest in (("wave", wave), ("solid_angle", angle)):
+            if dest.exists():
+                continue
+            with tempfile.NamedTemporaryFile(dir=directory, delete=False) as stream:
+                temporary = Path(stream.name)
+            try:
+                with httpx.stream("GET", row[f"{kind}_url"], timeout=45) as response:
+                    response.raise_for_status()
+                    with temporary.open("wb") as output:
+                        for chunk in response.iter_bytes():
+                            output.write(chunk)
+                if hashlib.sha256(temporary.read_bytes()).hexdigest() != row[f"{kind}_sha256"]:
+                    raise ValueError("calibration_checksum_mismatch")
+                temporary.replace(dest)
+            finally:
+                temporary.unlink(missing_ok=True)
     result = load_calibration(wave, angle, detector=detector,
                               expected_sha256={wave.name:row["wave_sha256"],angle.name:row["solid_angle_sha256"]})
     result.provenance.update({k:row[k] for k in ("wave_url","solid_angle_url","releases","pipeline_versions")})

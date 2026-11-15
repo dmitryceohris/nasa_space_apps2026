@@ -59,6 +59,9 @@ class Job:
 
 def _poll(k: str, runner):
     """-> (http_status, payload): 200 cached/ready/error, 202 running. Starts runner(job) if nothing runs for k."""
+    if os.environ.get("SPHEREX_DATABASE_URL"):
+        from . import postgres
+        return postgres.run(Job(k, uuid.uuid4().hex[:8]), runner)
     res = cache.read(k)
     if res:
         return 200, res
@@ -126,10 +129,12 @@ def _model_key(key, r):
     return hashlib.sha1((key + model).encode()).hexdigest()[:16]
 
 
-def _view_key(p: Params, r: dict) -> str:
+def _view_key(p: Params, r: dict, *, source=None) -> str:
     ra, dec = r["center"]
     key = cache.key(ra, dec, p.fov, p.det, p.mode, p.max_per_epoch)
-    key = hashlib.sha1((key + irsa.selection_token()).encode()).hexdigest()[:16]
+    if source is None:
+        source = irsa.selection_token() + "|" + ",".join(irsa.archive_collections())
+    key = hashlib.sha1((key + source).encode()).hexdigest()[:16]
     return _model_key(key, r)
 
 
@@ -139,14 +144,38 @@ def view(p: Params):
 
 
 def cached_result(p: Params):
-    return cache.read(_view_key(p, resolve.for_params(p)))
+    key = _view_key(p, resolve.for_params(p))
+    if os.environ.get("SPHEREX_DATABASE_URL"):
+        from . import postgres
+        with postgres.connect() as conn:
+            return postgres.read(conn, key)
+    return cache.read(key)
 
 
-def gif(p: Params) -> bytes:
-    res = cached_result(p)
+def snapshot_result(p: Params, snapshot):
+    if snapshot != "2026-11-15":
+        raise ApiError(400, "bad_param", "Неизвестная дата сохранённой выборки")
+    key = _view_key(p, resolve.for_params(p, epoch=61358), source="archive")
+    if os.environ.get("SPHEREX_DATABASE_URL"):
+        from . import postgres
+        with postgres.connect() as conn:
+            result = postgres.read(conn, key)
+        if result and result.get("archive_source") == "saved_sia2_replay":
+            return result
+    raise ApiError(404, "no_snapshot", "Для этих параметров нет сохранённого кадра. Выберите Latest IRSA.")
+
+
+def gif(p: Params, snapshot=None) -> bytes:
+    res = snapshot_result(p, snapshot) if snapshot else cached_result(p)
     if not res or not res.get("frames"):
         raise ApiError(409, "not_ready", "результат ещё не готов: сначала откройте /api/view")
     paths = [cache.CACHE / f["image_url"].removeprefix("/cache/") for f in res["frames"]]
+    if os.environ.get("SPHEREX_DATABASE_URL"):
+        from . import postgres
+        data = [postgres.read_image(path.parent.name, path.name) for path in paths]
+        if any(image is None for image in data):
+            raise ApiError(409, "not_ready", "Кадры обновляются")
+        paths = [io.BytesIO(image) for image in data]
     buf = io.BytesIO()
     render.save_gif(paths, buf)
     return buf.getvalue()
@@ -432,7 +461,9 @@ def _spectrum_job(j, r):
 def spectrum_view(p: Params):
     """Only target / ra+dec of p are used."""
     r = resolve.for_params(p)
-    return _poll(_model_key(cache.key_spectrum(*r["center"]), r), lambda j: _spectrum_job(j, r))
+    key = cache.key_spectrum(*r["center"])
+    key = hashlib.sha1((key + ",".join(irsa.archive_collections())).encode()).hexdigest()[:16]
+    return _poll(_model_key(key, r), lambda j: _spectrum_job(j, r))
 
 
 def default_window(det: int):
