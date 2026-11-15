@@ -1,0 +1,559 @@
+{
+  "status": "ready",
+  "query": {
+    "ra": 76.95656226204122,
+    "dec": 30.401242187536766,
+    "fov": 3.0,
+    "det": 2,
+    "mode": "diff",
+    "target": "RW Aur"
+  },
+  "grid": {
+    "width_px": 29,
+    "height_px": 29,
+    "pixel_scale_arcsec": 6.15,
+    "wcs": {
+      "CTYPE1": "RA---TAN",
+      "CTYPE2": "DEC--TAN",
+      "CRVAL1": 76.95656226204122,
+      "CRVAL2": 30.401242187536766,
+      "CRPIX1": 15.0,
+      "CRPIX2": 15.0,
+      "CDELT1": -0.0017083333333333334,
+      "CDELT2": 0.0017083333333333334
+    }
+  },
+  "frames": [
+    {
+      "index": 0,
+      "label": "Эпоха 1",
+      "mjd": 60926.2758,
+      "date": "2025-09-08",
+      "mjd_span": [
+        60926.2758,
+        60926.2758
+      ],
+      "det": 2,
+      "wave_um": 1.4405,
+      "n_exp": 1,
+      "image_url": "/challenge-demo/snapshots/215ae3a66c1dd6e1/f0.png",
+      "flags_url": "/challenge-demo/snapshots/215ae3a66c1dd6e1/f0_flags.png",
+      "predicted_px": [
+        14.0,
+        13.995
+      ],
+      "prediction_status": "in_frame",
+      "measured_px": null,
+      "measured_candidates": [
+        {
+          "kind": "largest+central",
+          "sign": 1,
+          "xy": [
+            3.145,
+            27.936
+          ],
+          "err_px": [
+            0.063,
+            0.039
+          ],
+          "area_px": 13,
+          "snr": 24.3,
+          "quality": "poor",
+          "flags": [
+            "touches_nodata",
+            "touches_edge",
+            "elongated"
+          ]
+        },
+        {
+          "kind": "largest+central",
+          "sign": -1,
+          "xy": [
+            14.985,
+            13.665
+          ],
+          "err_px": [
+            0.076,
+            0.075
+          ],
+          "area_px": 36,
+          "snr": 26.0,
+          "quality": "poor",
+          "flags": [
+            "touches_nodata"
+          ]
+        }
+      ],
+      "measurement": {
+        "status": "ok",
+        "reason": null,
+        "quality": "poor",
+        "flags": [
+          "touches_nodata",
+          "touches_edge",
+          "elongated"
+        ],
+        "n_rejected_hot": 0,
+        "n_low_snr": 1,
+        "target_association": "far_from_prediction",
+        "offset_from_prediction_px": 17.669,
+        "err_px": [
+          0.063,
+          0.039
+        ]
+      },
+      "quality": {
+        "status": "limited",
+        "verified": false,
+        "coverage_fraction": 0.97146,
+        "reasons": [
+          "incomplete_pixel_coverage",
+          "contaminated_pixels"
+        ]
+      },
+      "validation": {
+        "status": "provisional",
+        "reasons": [
+          "visualization_only",
+          "independent_registration_missing"
+        ],
+        "checks": {
+          "scientific_astrometry": false
+        }
+      },
+      "time_sources": [
+        {
+          "obs_id": "2025W37_1A_0068_1",
+          "source": "MJD-AVG",
+          "assumptions": []
+        }
+      ],
+      "wavelength_samples": [
+        {
+          "obs_id": "2025W37_1A_0068_1",
+          "wave_um": 1.4404887260735235,
+          "bw_um": 0.035267621064098136,
+          "source": "cwave_cband"
+        }
+      ],
+      "span_days": 0.0,
+      "bg_offsets": [
+        0.087426
+      ],
+      "diff_noise_scale": 0.8719,
+      "obs_ids": [
+        "2025W37_1A_0068_1"
+      ]
+    },
+    {
+      "index": 1,
+      "label": "Эпоха 2",
+      "mjd": 61100.206,
+      "date": "2026-03-01",
+      "mjd_span": [
+        61100.206,
+        61100.206
+      ],
+      "det": 2,
+      "wave_um": 1.2687,
+      "n_exp": 1,
+      "image_url": "/challenge-demo/snapshots/215ae3a66c1dd6e1/f1.png",
+      "flags_url": "/challenge-demo/snapshots/215ae3a66c1dd6e1/f1_flags.png",
+      "predicted_px": [
+        14.002,
+        13.997
+      ],
+      "prediction_status": "in_frame",
+      "measured_px": null,
+      "measured_candidates": [
+        {
+          "kind": "largest+central",
+          "sign": 1,
+          "xy": [
+            15.031,
+            13.43
+          ],
+          "err_px": [
+            0.065,
+            0.081
+          ],
+          "area_px": 35,
+          "snr": 28.1,
+          "quality": "poor",
+          "flags": [
+            "touches_nodata",
+            "elongated"
+          ]
+        },
+        {
+          "kind": "largest",
+          "sign": -1,
+          "xy": [
+            0.23,
+            18.03
+          ],
+          "err_px": [
+            0.041,
+            0.14
+          ],
+          "area_px": 13,
+          "snr": 13.5,
+          "quality": "poor",
+          "flags": [
+            "touches_edge",
+            "elongated"
+          ]
+        },
+        {
+          "kind": "central",
+          "sign": -1,
+          "xy": [
+            9.343,
+            14.891
+          ],
+          "err_px": [
+            0.089,
+            0.099
+          ],
+          "area_px": 3,
+          "snr": 5.3,
+          "quality": "good",
+          "flags": []
+        }
+      ],
+      "measurement": {
+        "status": "ok",
+        "reason": null,
+        "quality": "poor",
+        "flags": [
+          "touches_nodata",
+          "elongated"
+        ],
+        "n_rejected_hot": 0,
+        "n_low_snr": 0,
+        "target_association": "far_from_prediction",
+        "offset_from_prediction_px": 1.175,
+        "err_px": [
+          0.065,
+          0.081
+        ]
+      },
+      "quality": {
+        "status": "limited",
+        "verified": false,
+        "coverage_fraction": 0.98216,
+        "reasons": [
+          "incomplete_pixel_coverage",
+          "contaminated_pixels"
+        ]
+      },
+      "validation": {
+        "status": "provisional",
+        "reasons": [
+          "visualization_only",
+          "independent_registration_missing"
+        ],
+        "checks": {
+          "scientific_astrometry": false
+        }
+      },
+      "time_sources": [
+        {
+          "obs_id": "2026W09_2A_0503_1",
+          "source": "MJD-AVG",
+          "assumptions": []
+        }
+      ],
+      "wavelength_samples": [
+        {
+          "obs_id": "2026W09_2A_0503_1",
+          "wave_um": 1.268665882979375,
+          "bw_um": 0.030832096434441007,
+          "source": "cwave_cband"
+        }
+      ],
+      "span_days": 0.0,
+      "bg_offsets": [
+        0.092668
+      ],
+      "diff_noise_scale": 0.9357,
+      "obs_ids": [
+        "2026W09_2A_0503_1"
+      ]
+    },
+    {
+      "index": 2,
+      "label": "Эпоха 3",
+      "mjd": 61293.3791,
+      "date": "2026-09-10",
+      "mjd_span": [
+        61293.3791,
+        61293.3791
+      ],
+      "det": 2,
+      "wave_um": 1.4616,
+      "n_exp": 1,
+      "image_url": "/challenge-demo/snapshots/215ae3a66c1dd6e1/f2.png",
+      "flags_url": "/challenge-demo/snapshots/215ae3a66c1dd6e1/f2_flags.png",
+      "predicted_px": [
+        14.0,
+        13.999
+      ],
+      "prediction_status": "in_frame",
+      "measured_px": null,
+      "measured_candidates": [
+        {
+          "kind": "largest+central",
+          "sign": 1,
+          "xy": [
+            11.652,
+            12.646
+          ],
+          "err_px": [
+            0.108,
+            0.095
+          ],
+          "area_px": 6,
+          "snr": 7.5,
+          "quality": "poor",
+          "flags": [
+            "touches_nodata"
+          ]
+        },
+        {
+          "kind": "largest",
+          "sign": -1,
+          "xy": [
+            4.066,
+            27.69
+          ],
+          "err_px": [
+            0.057,
+            0.051
+          ],
+          "area_px": 11,
+          "snr": 19.5,
+          "quality": "poor",
+          "flags": [
+            "touches_nodata",
+            "touches_edge"
+          ]
+        },
+        {
+          "kind": "central",
+          "sign": -1,
+          "xy": [
+            14.352,
+            11.864
+          ],
+          "err_px": [
+            0.047,
+            0.056
+          ],
+          "area_px": 4,
+          "snr": 11.1,
+          "quality": "poor",
+          "flags": [
+            "touches_nodata",
+            "elongated"
+          ]
+        }
+      ],
+      "measurement": {
+        "status": "ok",
+        "reason": null,
+        "quality": "poor",
+        "flags": [
+          "touches_nodata",
+          "overlaps_negative_residual"
+        ],
+        "n_rejected_hot": 1,
+        "n_low_snr": 1,
+        "target_association": "far_from_prediction",
+        "offset_from_prediction_px": 2.71,
+        "err_px": [
+          0.108,
+          0.095
+        ]
+      },
+      "quality": {
+        "status": "limited",
+        "verified": false,
+        "coverage_fraction": 0.91677,
+        "reasons": [
+          "incomplete_pixel_coverage",
+          "contaminated_pixels"
+        ]
+      },
+      "validation": {
+        "status": "provisional",
+        "reasons": [
+          "visualization_only",
+          "independent_registration_missing"
+        ],
+        "checks": {
+          "scientific_astrometry": false
+        }
+      },
+      "time_sources": [
+        {
+          "obs_id": "2026W37_1A_0615_1",
+          "source": "MJD-AVG",
+          "assumptions": []
+        }
+      ],
+      "wavelength_samples": [
+        {
+          "obs_id": "2026W37_1A_0615_1",
+          "wave_um": 1.461614630257723,
+          "bw_um": 0.03562756762431853,
+          "source": "cwave_cband"
+        }
+      ],
+      "span_days": 0.0,
+      "bg_offsets": [
+        0.086467
+      ],
+      "diff_noise_scale": 0.8904,
+      "obs_ids": [
+        "2026W37_1A_0615_1"
+      ]
+    }
+  ],
+  "trail_url": "/challenge-demo/snapshots/215ae3a66c1dd6e1/trail.png",
+  "motion": {
+    "pm_reference_arcsec_yr": [
+      0.0049,
+      -0.0246
+    ],
+    "source": "Gaia DR3 / gaiadr3.gaia_source",
+    "pm_measured_arcsec_yr": null
+  },
+  "target_info": {
+    "name": "RW Aur",
+    "id": "rwaur",
+    "ra": 76.9565443110343,
+    "dec": 30.401316149887936,
+    "pmra_masyr": 4.90603392110511,
+    "pmdec_masyr": -24.577534567492915,
+    "parallax_mas": 5.454096456582266,
+    "rv_kms": null,
+    "ref_epoch": 2016.0,
+    "ref_epoch_format": "jyear",
+    "ref_epoch_scale": "tcb",
+    "source": "Gaia DR3 / gaiadr3.gaia_source",
+    "source_id": "156430817820015232",
+    "source_url": "https://gea.esac.esa.int/tap-server/tap/sync?REQUEST=doQuery&LANG=ADQL&FORMAT=csv&QUERY=SELECT+%2A+FROM+gaiadr3.gaia_source+WHERE+source_id+%3D+156430817820015232",
+    "canonical_id": "Gaia DR3 156430817820015232",
+    "component": "A in the literature; eastern component",
+    "coordinate_frame": "ICRS",
+    "ra_error_basis": "sigma_alpha_cosdec",
+    "coordinate_model": "geocenter_geometric",
+    "assumptions": [
+      "geocenter_geometric",
+      "no_aberration",
+      "no_new_covariance",
+      "rv_assumed_zero",
+      "gaia_ruwe_high",
+      "literature_A_eastern_component_blended_pair"
+    ],
+    "limitations": "A определена по литературе как восточная звезда; текущая SIMBAD обозначает эту запись V* RW Aur B. Запись 156430822114424576 лежит к юго-западу и соответствует литературной B. RUWE=16.422132: формальные ошибки не описывают все систематики. Снимки с неразрешенной парой смешивают A и B. RV в Gaia для этой записи отсутствует.",
+    "errors": {
+      "ra_error_mas": 0.28157705,
+      "dec_error_mas": 0.17749709,
+      "pmra_error_mas_yr": 0.32915834,
+      "pmdec_error_mas_yr": 0.25464907,
+      "parallax_error_mas": 0.33244956,
+      "radial_velocity_error_km_s": null
+    }
+  },
+  "center_mjd": 61358,
+  "data_status": "available",
+  "warnings": [
+    "Сохранённая выборка IRSA, повторно обработанная локально; новый поиск архива не выполнялся",
+    "Независимая регистрация по опорным звёздам не проверена; точность измеренного движения не подтверждена",
+    "Центроиды — кандидаты, не подтверждённые положения цели; ошибки центроидов не включают все систематические эффекты",
+    "Различия яркости и разностные остатки не подтверждают переменность или движение: нужны сопоставимые полосы/отклики, проверка масок и точности совмещения",
+    "Цель снята в разных спектральных каналах (1.27-1.46 мкм, ширина канала ≈ 0.035 мкм): разница яркости может быть связана с формой спектра; переменность и движение по этим остаткам не подтверждены",
+    "В центре поля есть насыщенные или загрязнённые пиксели (слой флагов)"
+  ],
+  "credits": "NASA SPHEREx via NASA/IPAC IRSA",
+  "processing": {
+    "epochs": {
+      "gap_days": 30.0,
+      "max_span_days": 20.0,
+      "description": "снимки с разрывом больше gap_days — разные эпохи; эпоха не длиннее max_span_days (иначе быстрый объект размажется внутри одного кадра)"
+    },
+    "background": {
+      "name": "zodi_model_plus_clipped_median",
+      "description": "Из каждой экспозиции вычитается модель зодиакального света (HDU ZODI), затем остаточный постоянный фон: 3σ-клиппированная медиана по пикселям без флага SOURCE на общей сетке.",
+      "limitations": [
+        "вычитается только постоянная: градиент фона на больших полях остаётся",
+        "в плотных полях слабые незафлаганные источники слегка завышают фон"
+      ]
+    },
+    "registration": {
+      "name": "header_wcs_reprojection",
+      "independently_verified": false,
+      "astrometric_precision_arcsec": null
+    },
+    "difference": {
+      "name": "leave_one_out_median",
+      "description": "Кадр минус медиана ОСТАЛЬНЫХ эпох (без самого кадра), делённая на шум; шум затем нормирован робастно (MAD) по самому разностному кадру. Шкала показывает относительные остатки.",
+      "units": "robust_residual_scale",
+      "limitations": [
+        "это не откалиброванная статистическая значимость: корреляции интерполяции и оценка фона не распространены полностью",
+        "λ в точке может различаться между эпохами (LVF): у объектов с крутым спектром остаток бывает не движением",
+        "переменная звезда даёт остаток того же знака на месте, а не пару «+/−»",
+        "медленное движение (меньше ~1 пикселя между эпохами) даёт слабую пару, слившуюся в один диполь"
+      ]
+    },
+    "measurement": {
+      "name": "threshold_moment_centroid",
+      "version": 2,
+      "description": "Порог k·σ над робастным фоном (медиана/MAD) после сглаживания, связные области, центроид как взвешенный по потоку первый момент. В разностных кадрах «+» и «−» измеряются отдельно, положение берётся по «+».",
+      "params": {
+        "k_sigma": 3.0,
+        "min_area_px": 3,
+        "smooth_sigma_px": 1.0
+      },
+      "error_model": "err_px: шум центроида из шума фона (σ·√Σ(x−x̄)²/F); систематику (PSF, блендинг, края маски) не включает",
+      "quality": {
+        "good": "без флагов",
+        "fair": "есть маскированные/насыщенные пиксели или вытянутая форма",
+        "poor": "касается края кадра или маски"
+      },
+      "min_snr": 5.0,
+      "limitations": [
+        "фон оценивается по всему кадру: если объект занимает большую часть поля, порог завышен",
+        "соприкасающиеся объекты сливаются в один (флаг elongated), разделения нет",
+        "у объекта, касающегося маски или края кадра, центр смещён внутрь видимой части",
+        "одиночный горячий пиксель отбрасывается только если он ярче ~10σ и соседи почти пустые",
+        "в разностном кадре «+» ближе 5 пикс. к «−» смещён от него (при сдвиге 1.3 пикс. на 0.9 пикс.): такой центр помечается overlaps_negative_residual и не считается положением",
+        "объекты с S/N < 5 не выбираются (на чистом шуме порог 3σ даёт такие пятна), только считаются",
+        "погрешность учитывает только шум, а не форму PSF и пиксельную дискретизацию"
+      ],
+      "not_implemented": [
+        "PSF-фиттинг",
+        "деблендинг",
+        "нейросетевое обнаружение и центроиды"
+      ]
+    }
+  },
+  "archive_source": "saved_sia2_replay",
+  "exposure_counts": {
+    "selected": 3,
+    "failed": 0,
+    "used": 3,
+    "rejected": 0
+  },
+  "spectral_sampling": {
+    "wave_min_um": 1.2687,
+    "wave_max_um": 1.4616,
+    "channel_width_um": 0.0353,
+    "different_channels": true,
+    "n_samples": 3
+  },
+  "snapshot_date": "2026-11-15",
+  "snapshot_version": 12
+}

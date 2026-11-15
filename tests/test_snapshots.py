@@ -20,9 +20,10 @@ def client(monkeypatch):
 
 @pytest.mark.parametrize("target", resolve.PRESETS, ids=lambda t: t["id"])
 @pytest.mark.parametrize("mode", ["single", "coadd", "diff", "trail"])
-def test_saved_targets_have_real_mode_specific_frames(client, target, mode):
+@pytest.mark.parametrize("maximum", [6, 1])
+def test_saved_targets_have_real_mode_specific_frames(client, target, mode, maximum):
     query = {"target": target["id"], "det": target["det"], "fov": target["fov"],
-             "mode": mode, "snapshot": "2026-11-15"}
+             "mode": mode, "snapshot": "2026-11-15", "max_per_epoch": maximum}
     response = client.get("/api/view", params=query)
     assert response.status_code == 200, response.text
     result = response.json()
@@ -59,3 +60,30 @@ def test_snapshot_does_not_substitute_another_field(client):
 def test_unknown_snapshot_date_is_rejected(client):
     response = client.get("/api/view", params={"target": "barnard", "snapshot": "2026-01-01"})
     assert response.status_code == 400
+
+
+@pytest.mark.parametrize("mode", ["single", "coadd", "diff", "trail"])
+def test_exact_coordinate_snapshot_keeps_fixed_field_semantics(client, mode):
+    response = client.get("/api/view", params={"ra": "08h55m10.831s", "dec": "-7d14m42.53s",
+        "det": 6, "fov": 6, "mode": mode, "max_per_epoch": 1, "snapshot": "2026-11-15"})
+    assert response.status_code == 200
+    result = response.json()
+    assert result["target_info"] is None
+    assert all(f["predicted_px"] is None for f in result["frames"])
+
+
+def test_packaged_snapshot_and_gif_do_not_open_configured_database(client, monkeypatch):
+    from api import postgres
+    monkeypatch.setenv("SPHEREX_DATABASE_URL", "unused")
+    monkeypatch.setattr(postgres, "connect", lambda: pytest.fail("packaged snapshot used database"))
+    query = {"target": "barnard", "det": 3, "fov": 3, "mode": "trail", "snapshot": "2026-11-15"}
+    assert client.get("/api/view", params=query).status_code == 200
+    assert client.get("/api/export.gif", params=query).status_code == 200
+
+
+def test_incompatible_snapshot_processing_version_is_not_served(client, monkeypatch):
+    from api import cache
+    monkeypatch.setattr(cache, "VERSION", 999)
+    response = client.get("/api/view", params={"target": "barnard", "det": 3, "fov": 3,
+                                              "mode": "single", "snapshot": "2026-11-15"})
+    assert response.status_code == 404

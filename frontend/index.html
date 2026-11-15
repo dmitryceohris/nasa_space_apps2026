@@ -152,6 +152,7 @@
 // ================= DATA LAYER (the only part that changes later) =================
 const P = new URLSearchParams(location.search);
 const API = P.get("api") || "";
+let imageSourceChosen = P.has("snapshot");
 // Double-click the file (no ?api=) -> fake data. Any server address -> real data.
 const USE_MOCK = P.get("mock") === "1" || (location.protocol === "file:" && !P.get("api"));
 document.getElementById("demo-note").hidden = !USE_MOCK;
@@ -219,8 +220,11 @@ async function getFrames(ra, dec, fov, det, mode, my) {
   if (ra !== "" && dec !== "") { q.set("ra", ra); q.set("dec", dec); }
   else if (target) q.set("target", target);
   else throw new Error("Pick a test object or type a name or RA and Dec");
-  if ($("snapshot").value) q.set("snapshot", $("snapshot").value);
-  const url = `${API}/api/view?${q}`;
+  const snapshot = $("snapshot").value;
+  if (snapshot) q.set("snapshot", snapshot);
+  // Saved frames belong to this release; a separate live API may be an older build.
+  const viewAPI = snapshot ? "" : API;
+  const url = `${viewAPI}/api/view?${q}`;
 
   while (true) {                                   // ask again until the job is ready
     if (my !== reqId) return null;                 // user changed something: stop
@@ -247,7 +251,7 @@ async function getFrames(ra, dec, fov, det, mode, my) {
     const fr = p => p ? [(p[0] + 0.5) / g.width_px, (p[1] + 0.5) / g.height_px] : null;
     let out = d.frames.map(f => ({
       displayDate: f.date, date: f.mjd_span ? `${f.date} (MJD UTC ${f.mjd_span.join("–")})` : f.date, wavelength: f.wave_um != null ? f.wave_um.toFixed(2) : "", n_exp: f.n_exp,
-      url: API + f.image_url, flagsUrl: f.flags_url ? API + f.flags_url : null,
+      url: viewAPI + f.image_url, flagsUrl: f.flags_url ? viewAPI + f.flags_url : null,
       expected: fr(f.predicted_px), measured: fr(f.measured_px),
       candidates: (f.measured_candidates || []).map(c => ({...c, xy: fr(c.xy)})), measurement: f.measurement || null,
       quality: f.quality, predictionStatus: f.prediction_status,
@@ -257,7 +261,7 @@ async function getFrames(ra, dec, fov, det, mode, my) {
     if (mode === "trail" && d.trail_url) {
       // one picture with every epoch: residuals coloured by time (blue = first, yellow = last)
       const n = out.length;
-      out = [{displayDate: `${out[0].displayDate} → ${out[n - 1].displayDate}`, date: `${out[0].date} → ${out[n - 1].date}`, url: API + d.trail_url, trail: true, epochs: n}];
+      out = [{displayDate: `${out[0].displayDate} → ${out[n - 1].displayDate}`, date: `${out[0].date} → ${out[n - 1].date}`, url: viewAPI + d.trail_url, trail: true, epochs: n}];
     }
     $("info").textContent = "Loading pictures...";
     await Promise.all(out.map(f => new Promise((res, reject) => {   // preload: no flicker while blinking
@@ -528,8 +532,13 @@ async function update() {
   }
 
 }
-["ra", "dec", "fov", "det", "snapshot"].forEach(id => $(id).onchange = update);
-$("target").onchange = () => { $("ra").value = ""; $("dec").value = ""; update(); };
+["ra", "dec", "fov", "det"].forEach(id => $(id).onchange = update);
+$("snapshot").onchange = () => { imageSourceChosen = true; update(); };
+$("target").onchange = () => {
+  $("ra").value = ""; $("dec").value = "";
+  if (!imageSourceChosen) $("snapshot").value = "";
+  update();
+};
 
 $("preset").onchange = () => {
   const o = $("preset").selectedOptions[0];
@@ -537,6 +546,7 @@ $("preset").onchange = () => {
   if (o.dataset.fov) {                     // real presets from /api/targets
     $("target").value = o.value; $("ra").value = ""; $("dec").value = "";
     $("fov").value = o.dataset.fov; $("det").value = o.dataset.det;
+    if (!imageSourceChosen) $("snapshot").value = "2026-11-15";
   } else {                                 // the demo option with coordinates
     const [ra, dec] = o.value.split(","); $("ra").value = ra; $("dec").value = dec; $("target").value = "";
   }
