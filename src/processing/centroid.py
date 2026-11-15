@@ -236,3 +236,16 @@ def find(img, signed=False, k=K_SIGMA, min_area=MIN_AREA, smooth=SMOOTH, saturat
     """-> list of candidates {kind: 'largest'|'central'|'largest+central', sign, xy, err_px, area, flux, snr,
     quality, flags, ...}. signed=True: "+" and "-" residuals are separate objects (see module docstring)."""
     return measure(img, signed, saturated, k, min_area, smooth)["candidates"]
+
+
+def detect(img, signed=False, saturated=None, k=K_SIGMA, min_area=MIN_AREA, smooth=SMOOTH):
+    """Every object with S/N >= LOW_SNR (not only the largest/central ones), same detection as measure().
+    -> list of {sign, xy, err_px, area, n_masked, flux, snr, axis_ratio, quality, flags}; xy 0-based, y up."""
+    a = np.asarray(img, float)
+    sat = None if saturated is None else np.asarray(saturated, bool)
+    out = []
+    for sg in ((1, -1) if signed else (1,)):
+        objs, _, _ = _detect(sg * a, k, min_area, smooth, sat, sg if signed else None)
+        out += [{k2: o[k2] for k2 in ("sign", "xy", "err_px", "area", "n_masked", "flux", "snr", "axis_ratio",
+                                       "quality", "flags")} for o in _split_faint(objs)[0]]
+    return out

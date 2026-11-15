@@ -235,3 +235,23 @@ def test_outside_prediction_is_hidden_through_http(synthetic, monkeypatch):
     assert len(result['frames']) == 2
     assert all(frame['predicted_px'] is None and frame['prediction_status']=='outside_field' for frame in result['frames'])
     assert any('маркер скрыт' in warning for warning in result['warnings'])
+
+
+def test_explain_endpoint_reads_the_cached_view(synthetic, monkeypatch):
+    from fastapi.testclient import TestClient
+    from api.main import app
+    client = TestClient(app)
+    query = {'ra': CENTER.ra.deg, 'dec': CENTER.dec.deg, 'fov': 3, 'det': 3, 'mode': 'coadd'}
+    box = {'x0': 5, 'y0': 5, 'x1': 23, 'y1': 23}
+    early = client.get('/api/explain', params={**query, **box})
+    assert early.status_code == 409  # nothing cached yet: the view must be opened first
+    result = _http_result('coadd')
+    n = result['grid']['width_px']
+    response = client.get('/api/explain', params={**query, 'x0': 0, 'y0': 0, 'x1': n - 1, 'y1': n - 1})
+    assert response.status_code == 200
+    body = response.json()
+    assert body['footer'] == 'This is an automatic reading of the data, not a confirmed discovery.'
+    assert [c['verdict'] for c in body['cards']] == ['nothing']  # one constant star in two epochs
+    assert body['cards'][0]['paragraphs'] == [
+        'Nothing in this area changes beyond the [noise] level across 2 [epochs|epoch].']
+    assert client.get('/api/explain', params={**query, 'x0': 1, 'y0': 1, 'x1': 1, 'y1': 9}).status_code == 400

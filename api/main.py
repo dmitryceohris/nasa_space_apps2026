@@ -1,5 +1,6 @@
 """Run: uvicorn api.main:app --port 8000   (or: bash start.sh)"""
 import logging
+import math
 import os
 import threading
 from pathlib import Path
@@ -21,7 +22,8 @@ app = FastAPI(title="SPHEREx blink API", version=VERSION)
 
 
 request_limiter = RequestLimiter(int(os.environ.get("API_RATE_LIMIT_PER_MINUTE", "120")))
-_LIMITED_PATHS = {"/api/view", "/api/spectrum", "/api/lightcurve", "/api/resolve", "/api/export.gif"}
+_LIMITED_PATHS = {"/api/view", "/api/spectrum", "/api/lightcurve", "/api/resolve", "/api/export.gif",
+                  "/api/explain"}
 
 
 def _err(status, code, message, headers=None):
@@ -104,6 +106,20 @@ def export_gif(target: str | None = None, ra: str | None = None, dec: str | None
                det: str | None = None, mode: str | None = None, max_per_epoch: str | None = None):
     """GIF from already rendered frames. 409 if /api/view has not produced them yet."""
     return Response(jobs.gif(_p(target, ra, dec, fov, det, mode, max_per_epoch)), media_type="image/gif")
+
+
+@app.get("/api/explain")
+def explain(x0: str, y0: str, x1: str, y1: str, target: str | None = None, ra: str | None = None,
+            dec: str | None = None, fov: str | None = None, det: str | None = None, mode: str | None = None,
+            max_per_epoch: str | None = None):
+    """What happens in a rectangle of an /api/view result (PNG pixels, y down). 409 until /api/view is ready."""
+    try:
+        box = tuple(float(v) for v in (x0, y0, x1, y1))
+    except ValueError:
+        raise ApiError(400, "bad_param", "x0, y0, x1, y1 must be numbers (PNG pixels)")
+    if not all(math.isfinite(v) for v in box) or box[0] == box[2] or box[1] == box[3]:
+        raise ApiError(400, "bad_param", "the rectangle must have a non-zero width and height")
+    return jobs.explain(_p(target, ra, dec, fov, det, mode, max_per_epoch), box)
 
 
 @app.get("/api/spectrum")

@@ -380,6 +380,9 @@ def _pipeline(j, p, r):
         prender.save_rgb(trail(diffs), d / "trail.png", background=template, vmin=vmin, vmax=vmax)
         res["trail_url"] = f"/cache/{j.key}/trail.png"
 
+    if frames:
+        _save_arrays(d, frames, wcs, shape, r)
+
     ss = res["spectral_sampling"] = spectral_sampling(frames)
     if ss["different_channels"]:
         width = f", ширина канала ≈ {ss['channel_width_um']:.3f} мкм" if ss["channel_width_um"] else ""
@@ -398,6 +401,58 @@ def _pipeline(j, p, r):
             res["warnings"].append(f"Объект смещается на {sm:.1f} пикс. за эпоху ({worst.span_days:.0f} сут): "
                                    "внутри кадра он размазан, центр — среднее положение за эпоху")
     return res
+
+
+ARRAYS = "arrays.npz"
+
+
+def _save_arrays(d, frames, wcs, shape, r):
+    """Per-epoch grids for /api/explain, written before result.json (whose presence means all files exist)."""
+    pred = np.full((len(frames), 2), np.nan)
+    if r["motion"]:
+        for i, f in enumerate(frames):
+            x, y = wcs.world_to_pixel(_sky(r, f.mjd))
+            if np.isfinite([x, y]).all():
+                pred[i] = (float(x), float(y))
+    waves = [[s["wave_um"] for s in f.wavelength_samples if s["wave_um"] is not None] for f in frames]
+    widths = [s["bw_um"] for f in frames for s in f.wavelength_samples if s.get("bw_um")]
+    codes = [f.flag_codes if f.flag_codes is not None else f.contam.astype(np.uint16) << 8 for f in frames]
+    tmp = d / "arrays.tmp.npz"
+    np.savez_compressed(
+        tmp, image=np.array([f.image for f in frames], np.float32),
+        variance=np.array([f.variance for f in frames], np.float32),
+        codes=np.array(codes, np.uint16), mjd=np.array([f.mjd for f in frames]),
+        wave_min=np.array([min(w) if w else np.nan for w in waves]),
+        wave_max=np.array([max(w) if w else np.nan for w in waves]),
+        channel_width=np.array(np.median(widths) if widths else np.nan), predicted=pred)
+    tmp.replace(d / ARRAYS)
+
+
+def explain(p: Params, box_png: tuple[float, float, float, float]) -> dict:
+    """Explanation of a rectangle of the cached /api/view result. box_png: x0, y0, x1, y1 in PNG pixels."""
+    from processing.explain import analyse
+
+    from . import explain_text
+
+    r = resolve.for_params(p)
+    key = _view_key(p, r)
+    res = cache.read(key)
+    path = cache.CACHE / key / ARRAYS
+    if not res or not path.exists():
+        raise ApiError(409, "not_ready", "result is not ready yet: open /api/view first")
+    with np.load(path) as a:
+        arrays = {k: a[k] for k in a.files}
+    h = arrays["image"].shape[1]
+    x0, y0, x1, y1 = box_png
+    box = (min(x0, x1), h - 1 - max(y0, y1), max(x0, x1), h - 1 - min(y0, y1))  # PNG (y down) -> FITS (y up)
+    info = res.get("target_info") or {}
+    facts = analyse(arrays, box, pixel_scale_arcsec=res["grid"]["pixel_scale_arcsec"],
+                    target=info.get("name") if r["motion"] else None, parallax_mas=info.get("parallax_mas"))
+    out = explain_text.render(facts)
+    for card in out["cards"]:  # positions back to PNG pixels, like every other coordinate sent to the front
+        card["xy"] = None if card["xy"] is None else prender.fits_to_png_xy(card["xy"][0], card["xy"][1], h)
+    out["box_px"] = [float(v) for v in box_png]
+    return out
 
 
 # ---------------------------------------------------------------- spectrum and light curve
